@@ -51,6 +51,34 @@ But a specification without a reference implementation is just a document. No op
 
 `agent-exec-trace` fills that gap. It is the reference implementation that makes OTel GenAI agent conventions actionable.
 
+### 1.5 Why Standardized Views Matter
+
+Observability products mature when they stop being "a pile of traces" and become a shared operational language. The same thing happened in service observability: waterfall traces, RED views, service maps, and drill-down workflows became standard because teams needed common views they could teach, document, and automate around.
+
+Agent observability needs the same standardization layer. Without shared views, every team builds its own dashboards, every investigation starts from scratch, and every incident review becomes a one-off interpretation exercise.
+
+`agent-exec-trace` should define a small set of **standardized operator views** that work across frameworks and backends:
+
+- **Run Timeline**: the canonical answer to "what happened in this run?"
+- **Fleet Health**: the canonical answer to "which agents need attention right now?"
+- **Version Compare**: the canonical answer to "did this change improve or degrade behavior?"
+- **Anomaly Inbox**: the canonical answer to "what needs investigation first?"
+- **Cost Attribution**: the canonical answer to "where is budget going and is it buying reliability?"
+
+These views are product features, not just UI screens. They create shared vocabulary for developers, operators, and managers, and they make interop possible with systems like Grafana, Tempo, Jaeger, Prometheus, CI pipelines, alert managers, and governance tooling.
+
+### 1.6 Product Maturity Thesis
+
+The product should evolve in three recognizable stages:
+
+| Stage | What users get | Product risk |
+|---|---|---|
+| **Developing** | Trace capture + single-run debugging | Product is useful but reactive. Operators still have to know what to look for. |
+| **Maturing** | Fleet views, comparison, anomaly surfacing, cost visibility | Product becomes operationally useful. Teams can manage a portfolio of agents, not just debug one run. |
+| **Mature** | Standardized views, workflow integration, interop, governance overlays, reference conventions | Product becomes part of the operating model. It is where teams triage, compare, route, and explain agent behavior. |
+
+This PRD intentionally focuses on moving from **developing** to **maturing** without pretending to be a full AI platform. The product becomes mature by being the best at runtime behavior observability and by integrating cleanly with the broader observability and governance ecosystem.
+
 ---
 
 ## 2. WHAT — Product Scope
@@ -65,6 +93,35 @@ But a specification without a reference implementation is just a document. No op
 | F4 | Run explorer UI | Single-run timeline view showing plan→tool→memory→cost events in a waterfall. Clickable spans with detail panels. Search and filter across runs. |
 | F5 | Fleet behavior dashboard | Cross-agent views: tool mix, cost-per-success, intervention rate. Groupable by agent, team, workload type. |
 | F6 | Anomaly detection engine | Loop detection (tool called > N times in sequence), cost surge detection (run cost exceeds baseline), retry storm detection. |
+
+### 2.1.1 v0.1.0 Standardized Operator Views
+
+v0.1.0 should not just ship raw features. It should ship **opinionated default views** that turn OTel traces into repeatable operator workflows.
+
+| View | Primary user | Core question answered | Required inputs |
+|---|---|---|---|
+| **Run Timeline** | Agent developer, on-call engineer | What happened in this run, in order? | `invoke_agent`, `plan`, `execute_tool`, retrieval, memory, cost, error spans |
+| **Run Summary Panel** | Agent developer | Why was this run expensive / slow / wrong? | Aggregated cost, tool count, retries, loop flags, intervention events |
+| **Fleet Health Board** | LLMOps engineer, platform engineer | Which agents changed behavior or need investigation? | Cost-per-run, anomaly counts, success rate, tool mix, drift score |
+| **Trace Search** | Developer, operator | Can I find all runs matching this pattern? | Indexed span attributes, tags, cost, dates, status |
+
+The principle is: if two teams instrument different frameworks but follow OTel semconv, they should land in the same mental model once they open the product.
+
+### 2.1.2 v0.1.0 Interoperability Requirements
+
+Interoperability is a product requirement, not an implementation detail.
+
+| Interop target | Why it matters | v0.1.0 expectation |
+|---|---|---|
+| **OpenTelemetry Collector** | Standard ingest pipeline and vendor-neutral transport | Native OTLP export, documented collector config |
+| **Tempo / Jaeger** | Existing trace backends most teams already run | First-class support and tested demo stacks |
+| **Prometheus** | Fleet-level aggregation and alerting | Export metrics for anomaly counts, cost summaries, run outcomes |
+| **Grafana** | Standard dashboarding and drill-down environment | Linkable dashboards and trace deep-links |
+| **Alertmanager / webhooks** | Ops workflows need routing and ownership | Anomalies emitted as alert-friendly events |
+| **GitHub / CI pipelines** | Version comparison becomes valuable at release boundaries | Version metadata attachable to traces from CI/CD |
+| **Policy / approval systems** | Mature agents have governance touchpoints | Trace model must leave room for approval and policy overlays |
+
+The product should never require users to replace their tracing backend to adopt it. Adoption becomes easier when `agent-exec-trace` behaves like an opinionated, agent-aware layer on top of infrastructure they already trust.
 
 ### 2.2 Deferred to v0.2+
 
@@ -97,6 +154,48 @@ But a specification without a reference implementation is just a document. No op
 | - | Public demo workload pack | P3 | - | Seeded bad runs (loops, cost spikes, drift) as a downloadable demo. "Run this and see what agent-exec-trace catches." |
 | - | Benchmark-driven diagnostics | P3 | - | Standard benchmark agents instrumented. Publish diagnostics from real runs. |
 
+### 2.3.1 v0.2.0 Release Goal
+
+**Goal:** move from a strong debugger to a usable operating surface for multiple agents.
+
+v0.2.0 is where the product becomes clearly more than a trace viewer. The release should make it possible for a team to manage several agents over time, compare changes, understand cost behavior, and investigate decisions without dropping into raw backend tooling.
+
+**What success looks like:**
+
+- Teams can compare agent versions without custom notebooks
+- Operators can search and group runs without knowing exact run IDs
+- Cost is explainable at the run, agent, and workload level
+- Memory behavior and human interventions are visible enough to review in incident and rollout meetings
+- A second runtime adapter proves the model is not LangGraph-specific
+
+### 2.3.2 v0.3.0 Backlog (Maturing Product)
+
+| Feature | Priority | Why it matters now |
+|---|---|---|
+| **Multi-agent interaction maps** | P0 | Once teams adopt supervisor/subagent patterns, a single linear trace is not enough. They need a system view of agent-to-agent delegation. |
+| **Approval / policy overlays** | P0 | Mature teams need to correlate behavior with governance boundaries: human approvals, deny decisions, escalation reasons. |
+| **Drift scoring and baselines** | P0 | Operators need statistical baselines by agent, tool path, and workload, not just threshold-based alerts. |
+| **Workload cohorts** | P1 | Compare behavior by request class, user segment, repository, environment, or task type. Useful for separating "agent got worse" from "inputs changed." |
+| **Release-aware version compare** | P1 | Tie behavior deltas to commits, deployment windows, prompt versions, model changes, and tool schema changes. |
+| **Exportable investigation packets** | P1 | Share a trace plus summary, anomalies, versions, and cost context as a reusable artifact for postmortems and reviews. |
+| **Backend compatibility matrix** | P2 | Confirm what works with Tempo, Jaeger, Grafana, and vendor OTLP endpoints so adoption scales. |
+
+**v0.3.0 release goal:** move from team-level debugging to organization-level operational review.
+
+### 2.3.3 v0.4.0 Backlog (Mature Product)
+
+| Feature | Priority | Why it matters at maturity |
+|---|---|---|
+| **Standardized investigation workflows** | P0 | Product should guide users through repeatable flows: investigate expensive run, compare release, review intervention-heavy agent, audit memory corruption. |
+| **Reference semantic convention extensions** | P0 | Publish a stable extension package for loops, approvals, cost attribution, drift, and memory mutation while upstream OTel catches up. |
+| **Governance-ready audit views** | P1 | Leadership and risk teams need views for approvals, tool writes, sensitive-memory access, and policy exceptions. |
+| **Cross-system correlation** | P1 | Link agent traces to logs, incidents, deploys, feature flags, and service traces to answer "what else changed around this run?" |
+| **Pluggable detectors** | P1 | Mature users want custom anomaly detectors for their own tool chains and behaviors without forking the product. |
+| **Team operating packs** | P2 | Opinionated presets for common cases: coding agents, DevOps agents, support agents, RAG agents. |
+| **OTel upstream contribution path** | P2 | By this point the product should have enough field evidence to propose stable upstream semconv additions backed by reference data and examples. |
+
+**v0.4.0 release goal:** become the reference operational layer for agent traces in OTel-native environments.
+
 ### 2.4 Non-Goals (Will Not Build)
 
 | Not building | Why |
@@ -108,6 +207,16 @@ But a specification without a reference implementation is just a document. No op
 | Policy enforcement engine | Observability, not governance. Integrates with policy tools but does not enforce. |
 
 ### 2.5 Architecture
+
+### 2.5.1 Architecture Principles
+
+| Principle | Why it exists |
+|---|---|
+| **OTel first** | If a concept can be expressed with existing OTel semconv, use it. Add extensions only when the standard is missing something important. |
+| **Backend neutral** | Product must work with Tempo, Jaeger, and OTLP-compatible vendors. |
+| **Views over raw queries** | Most users should succeed through standard views before they need advanced query tools. |
+| **Interop over replacement** | Integrate with systems teams already run rather than trying to replace their tracing, dashboards, or alerting stack. |
+| **Reference implementation mindset** | The SDK and example stacks should teach the ecosystem how OTel-native agent observability should look. |
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -170,6 +279,15 @@ But a specification without a reference implementation is just a document. No op
 | UI | React + Tailwind | Clean, responsive. |
 | Analytics | Python (pandas/numpy) | Compute loops, anomalies, drifts. |
 | Sample workloads | LangGraph agents + raw Python agents | Real agents, seeded bad runs. |
+
+### 2.6.1 Product Surface by Maturity Stage
+
+| Stage | Product surface | Primary value |
+|---|---|---|
+| **v0.1.0** | SDK, OTLP export, run timeline, fleet board, anomaly detection | Make one bad run and one fleet understandable |
+| **v0.2.0** | Version compare, search, cost attribution, memory audit, interventions, second runtime adapter | Make several agents manageable over time |
+| **v0.3.0** | Multi-agent views, policy overlays, workload cohorts, release-aware comparison | Make org-scale operations and release reviews possible |
+| **v0.4.0** | Standardized workflows, audit views, cross-system correlation, pluggable detectors | Make the product the operational home for agent trace investigations |
 
 ---
 
@@ -334,6 +452,22 @@ These are exactly the building blocks needed. `agent-exec-trace` will implement 
 | LangSmith | ❌ Proprietary | ⚠️ LangChain-only | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Arize Phoenix | ❌ Proprietary | ❌ LLM calls | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️ |
 
+### 4.2.1 What Mature Products in Adjacent Categories Teach Us
+
+Research across Tempo, Jaeger, and large observability products points to several maturity signals that matter here:
+
+- **Queryless drill-down matters**: Grafana Tempo explicitly emphasizes point-and-click trace analysis, automatic comparison, and simplified visualizations. Mature products reduce dependence on expert query syntax.
+- **Standard backends win adoption**: Jaeger and Tempo succeed because they fit existing OTel pipelines instead of forcing a net-new data plane.
+- **Compatibility is part of the product**: Jaeger documents version compatibility and backend support policies. Mature observability tools make interop explicit.
+- **Standard views beat bespoke dashboards**: RED views, service maps, and trace drill-down became sticky because teams could align around them. Agent observability needs the equivalent.
+
+For `agent-exec-trace`, this means maturity is not just more features. It is:
+
+1. Standardized operator views
+2. Stable interop contracts
+3. Clear release and support promises
+4. Opinionated workflows that reduce investigation time
+
 ### 4.3 Gaps We Fill (Potential OTel Contribution)
 
 The OTel GenAI agent conventions are **in Development.** Several concepts are missing that `agent-exec-trace` could propose back:
@@ -354,6 +488,24 @@ The OTel GenAI agent conventions are **in Development.** Several concepts are mi
 2. **v0.1.0** — Custom attributes (`gen_ai.agent.loop.count`, `gen_ai.agent.cost.estimated`, etc.) are prefixed and documented as extensions pending OTel adoption.
 3. **Post-v0.1.0** — Open an issue/PR against `open-telemetry/semantic-conventions-genai` proposing the extensions above as formal semconv additions.
 4. **Goal** — Become the reference implementation. When someone asks "how do I instrument agents with OTel GenAI conventions?", the answer is `agent-exec-trace`.
+
+### 4.5 Standardized View Catalog
+
+To avoid becoming a generic trace UI, the product should maintain a stable catalog of first-class views.
+
+| View | Maturity target | Why it should exist |
+|---|---|---|
+| **Run Timeline** | v0.1.0 | The core behavioral story for a single run |
+| **Run Summary** | v0.1.0 | A fast answer to cost, retries, tools, and interventions |
+| **Fleet Health** | v0.1.0 | Triage multiple agents without clicking every run |
+| **Version Compare** | v0.2.0 | Make rollout decisions evidence-based |
+| **Search & Cohorts** | v0.2.0 | Investigate patterns across many runs |
+| **Decision Inspector** | v0.2.0 | Explain why a choice was made |
+| **Interaction Map** | v0.3.0 | Understand multi-agent delegation and fan-out |
+| **Governance Review** | v0.3.0 | Surface approvals, denials, and policy boundaries |
+| **Audit Lens** | v0.4.0 | Support mature review, compliance, and postmortem workflows |
+
+These views should remain stable enough that teams can write playbooks against them.
 
 ---
 
