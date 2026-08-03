@@ -42,6 +42,21 @@ Recommended ownership buckets:
 - Infra
 - Docs / OSS
 
+## Issue Taxonomy
+
+Suggested issue types for later GitHub conversion:
+
+- `adapter`
+- `detector`
+- `view`
+- `backend`
+- `interop`
+- `db`
+- `docs`
+- `oss`
+- `field-test`
+- `design-followup`
+
 ## Milestone-to-Issue Mapping
 
 | Milestone | GitHub issue bucket |
@@ -59,6 +74,37 @@ Recommended ownership buckets:
 | Milestone 10 | testing/hardening issues |
 | Milestone 11 | docs/OSS readiness issues |
 | Milestone 12 | release validation issues |
+
+## Phased Issue Creation Strategy
+
+To avoid creating too many tickets too early, issue creation should happen in waves.
+
+### Wave 1
+
+- Milestone 0
+- Milestone 1
+- Milestone 2
+- Milestone 3
+
+### Wave 2
+
+- Milestone 4
+- Milestone 5
+- Milestone 6
+
+### Wave 3
+
+- Milestone 7
+- Milestone 8
+- Milestone 9
+
+### Wave 4
+
+- Milestone 10
+- Milestone 11
+- Milestone 12
+
+This keeps the tracker aligned with actual execution readiness.
 
 ## Minimum Definition of Field Test
 
@@ -504,6 +550,16 @@ This task protects the product from becoming too version-only in its thinking. E
 - [ ] Add environment or deployment grouping if available
 - [ ] Document which cohort dimensions are first-class in the first release
 
+### 5.5 Database schema sketch review
+
+This task gives the read-model layer enough explicit shape that future issues and migrations are not invented ad hoc. It is not the final migration set, but it should make the intended tables and lookup patterns concrete.
+
+**Success looks like:** maintainers can point to a documented sketch of the core Postgres tables, their purpose, and their main lookup paths before schema work spreads across services.
+
+- [ ] Document main read-model tables and their purpose
+- [ ] Document primary lookup keys per table
+- [ ] Document expected rebuild/recompute ownership for each table
+
 ---
 
 ## Milestone 6: Anomaly Engine
@@ -660,6 +716,17 @@ This task prepares the API layer to be used beyond the first web app. Even if no
 - [ ] Document response contract conventions
 - [ ] Document error payload conventions
 - [ ] Document filtering and sorting conventions across endpoints
+
+### 7.7 Endpoint example payload alignment
+
+This task keeps the spec and implementation synchronized. Since the spec now includes example payloads, the API work should stay traceable to those shapes.
+
+**Success looks like:** implemented endpoint models match or intentionally evolve the documented payload examples, and differences are captured explicitly rather than drifting silently.
+
+- [ ] Cross-check run timeline response against spec example
+- [ ] Cross-check fleet health response against spec example
+- [ ] Cross-check version compare response against spec example
+- [ ] Cross-check anomaly inbox response against spec example
 
 ---
 
@@ -894,6 +961,18 @@ This task ties tests back to product stories. It should validate not just techni
 - [ ] Validate anomaly drill-down workflow
 - [ ] Validate fleet triage workflow
 - [ ] Validate version compare workflow
+
+### 10.6 Service readiness checks
+
+This task splits release thinking by service so one polished area does not hide another weak one. Each service should have its own readiness signal before overall release validation begins.
+
+**Success looks like:** SDK, analytics, API, web, and docs each have explicit readiness checks and no major service is assumed ready by association.
+
+- [ ] Confirm SDK readiness
+- [ ] Confirm analytics service readiness
+- [ ] Confirm API service readiness
+- [ ] Confirm web app readiness
+- [ ] Confirm docs/OSS readiness
 
 ---
 

@@ -45,6 +45,17 @@ v0.1.0 is not a full AI platform. It is a focused architecture for:
 | Detector strategy | Deterministic-first | Trustworthy, reproducible, tunable anomaly logic |
 | Delivery strategy | Demo-first | Trace model should be derived from reality, not from abstraction |
 
+## ADR Candidate List
+
+These do not need to be full ADR documents yet, but they are significant enough to track as named decisions.
+
+- **ADR-001**: Use a monorepo for SDK, API, analytics, and web
+- **ADR-002**: Keep analytics as a separate service from API
+- **ADR-003**: Use Postgres as the normalized read-model store
+- **ADR-004**: Make anomaly detection deterministic-first in `v0.1.0`
+- **ADR-005**: Default to metadata-only trace capture
+- **ADR-006**: Be Jaeger-first while preserving Tempo compatibility
+
 ---
 
 ## System Context
@@ -445,6 +456,49 @@ Principles:
 - derived records may be dropped and rebuilt
 - analytics processing must be idempotent enough to support reprocessing
 
+## Trace-to-Read-Model Mapping
+
+This mapping keeps the architecture honest across instrumentation, analytics, storage, and UI.
+
+| Trace/source concept | Normalized product concept | Storage target | Used by |
+|---|---|---|---|
+| Root `invoke_agent` span | Run | `run_summaries` | timeline, fleet, compare |
+| `plan` span | Planning segment | run detail payload / derived summary fields | timeline |
+| `execute_tool` span | Tool usage segment | run detail payload + tool aggregates | timeline, compare |
+| `retrieval` span | Retrieval segment | run detail payload | timeline |
+| memory spans | Memory activity segment | run detail payload + future memory review | timeline, future memory audit |
+| cost-related attributes | Run cost summary | `run_summaries`, version cohorts, fleet rollups | summary, fleet, compare, anomaly |
+| retry counts / loop flags | Behavior risk summary | `run_summaries`, `anomalies` | summary, anomaly inbox, fleet |
+| version metadata | Version cohort identity | `version_cohort_summaries` | compare, fleet |
+| workload metadata | Cohort dimension | `run_summaries`, `fleet_rollups` | fleet, future field testing |
+
+## Service Contracts
+
+### SDK → Trace backend
+
+- Emits OTel spans and extension attributes via OTLP
+- Does not write directly to Postgres
+- Does not know about UI views
+
+### Trace backend / collector path → Analytics
+
+- Analytics reads traces or trace-accessible data as its source truth
+- Analytics normalizes trace structures into product entities
+- Analytics is responsible for rebuild and replay logic
+
+### Analytics → Postgres
+
+- Writes run summaries
+- Writes anomaly records
+- Writes fleet rollups
+- Writes version cohort summaries
+
+### API → Web
+
+- Serves product-facing responses from normalized read models
+- May enrich responses with trace-linked detail payloads
+- Must not expose backend-specific query semantics as the primary UI contract
+
 ---
 
 ## Privacy and Safety Architecture
@@ -499,6 +553,17 @@ Recovery stance:
 - derived records should be rebuildable
 - duplicate processing should be safe or detectable
 - backend unavailability should fail visibly, not silently
+
+## Risk Ranking
+
+| Risk | Likelihood | Impact | Priority |
+|---|---|---|---|
+| Trace shape inconsistent across adapters | Medium | High | High |
+| Analytics read path from Jaeger proves awkward | Medium | High | High |
+| Metadata-only mode leaves too little debugging value | Medium | Medium | Medium |
+| Detector noise reduces trust | High | High | High |
+| Postgres read model grows more complex than expected | Medium | Medium | Medium |
+| Tempo compatibility lags behind Jaeger-first path | Medium | Medium | Medium |
 
 ## Schema Evolution Policy
 

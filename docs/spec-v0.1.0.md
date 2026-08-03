@@ -328,6 +328,29 @@ Response must include:
 - anomaly markers linked to spans when possible
 - aggregate counters: tool calls, retries, cost, interventions
 
+Example response shape:
+
+```json
+{
+  "run": {
+    "run_id": "run_123",
+    "agent_name": "demo-agent",
+    "agent_version": "v1",
+    "status": "error",
+    "estimated_cost_usd": 1.82,
+    "retry_count": 3,
+    "intervention_count": 0
+  },
+  "summary": {
+    "tool_call_count": 9,
+    "loop_detected": true,
+    "duration_ms": 18420
+  },
+  "spans": [],
+  "anomalies": []
+}
+```
+
 ### Fleet Health API
 
 Purpose: return fleet-level rollups grouped by agent/version/workload.
@@ -339,6 +362,24 @@ Response must include:
 - average cost per run
 - anomaly counts
 - drift-ready comparison fields even if drift scoring is not fully implemented yet
+
+Example response shape:
+
+```json
+{
+  "rows": [
+    {
+      "agent_name": "demo-agent",
+      "agent_version": "v1",
+      "workload_type": "code-review",
+      "run_count": 42,
+      "success_rate": 0.83,
+      "avg_cost_usd": 0.41,
+      "anomaly_count": 5
+    }
+  ]
+}
+```
 
 ### Version Compare API
 
@@ -352,6 +393,21 @@ Response must include:
 - retry deltas
 - top tool usage deltas
 
+Example response shape:
+
+```json
+{
+  "left": {"version": "v1", "run_count": 30},
+  "right": {"version": "v2", "run_count": 28},
+  "deltas": {
+    "avg_cost_usd": 0.14,
+    "retry_rate": -0.07,
+    "success_rate": 0.08
+  },
+  "tool_deltas": []
+}
+```
+
 ### Anomaly Inbox API
 
 Purpose: return anomaly records with enough context to triage.
@@ -363,6 +419,143 @@ Response must include:
 - run reference
 - short explanation
 - direct trace link key
+
+Example response shape:
+
+```json
+{
+  "items": [
+    {
+      "anomaly_id": "anom_1",
+      "type": "loop",
+      "severity": "high",
+      "agent_name": "demo-agent",
+      "run_id": "run_123",
+      "summary": "Tool repeated 7 times",
+      "explanation": "Same tool executed repeatedly without meaningful state change"
+    }
+  ]
+}
+```
+
+## View Definitions
+
+### Run Timeline View
+
+Required fields:
+
+- header: agent name, version, run ID, status, duration, cost
+- filters: span type, anomaly-only toggle
+- main body: ordered span tree / timeline
+- actions: expand/collapse, open details, jump to anomaly-linked span
+- states: loading, no run found, no spans available
+
+### Fleet Health View
+
+Required cards:
+
+- total runs
+- total anomalies
+- avg cost per run
+- success rate
+
+Required filters:
+
+- agent
+- version
+- workload type
+- time window
+
+Required table columns:
+
+- agent name
+- version
+- workload type
+- run count
+- anomaly count
+- avg cost
+- success rate
+
+### Version Compare View
+
+Required inputs:
+
+- left cohort selector
+- right cohort selector
+- time window
+
+Required outputs:
+
+- cost delta
+- retry delta
+- success delta
+- top tool usage shifts
+- exemplar run links
+
+### Anomaly Inbox View
+
+Required fields:
+
+- anomaly type
+- severity
+- agent name
+- run ID
+- explanation summary
+
+Required filters:
+
+- type
+- severity
+- agent
+- time window
+
+## Detector Contracts
+
+### Loop detector
+
+- inputs: ordered tool spans within one run
+- configurable threshold: yes
+- output: loop anomaly record + loop count on run summary
+- explanation requirement: must identify repeated tool pattern
+- known risk: false positives for legitimate retry-like workflows
+
+### Retry storm detector
+
+- inputs: retry counts or repeated failure transitions within one run
+- configurable threshold: yes
+- output: retry anomaly record
+- explanation requirement: must explain why retry count was considered excessive
+- known risk: some agents intentionally retry under expected transient conditions
+
+### Cost spike detector
+
+- inputs: estimated cost per run + baseline or threshold
+- configurable threshold: yes
+- output: cost anomaly record
+- explanation requirement: must explain absolute or relative threshold breach
+- known risk: sparse baselines may overreact early
+
+## Version Comparison Semantics
+
+Rules:
+
+- `agent_version` is required for compare workflows
+- prompt/model/tool-schema versions are optional supporting dimensions
+- compare cohorts should be large enough to be meaningful; sparse cohorts should be marked as low-confidence in docs or UI later
+- overlapping time windows are acceptable if version identity remains distinct
+- compare output should favor understandable deltas over statistical sophistication in `v0.1.0`
+
+## Field-Testing Dimensions Catalog
+
+The future field-test plan should cover at least:
+
+- workload types
+- failure types
+- anomaly usefulness judged by a human
+- false positive review
+- metadata-only mode usefulness
+- replay/rebuild behavior
+- Jaeger-first and Tempo-compatible interop checks
 
 ---
 
