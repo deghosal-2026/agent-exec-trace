@@ -79,6 +79,21 @@ The product should evolve in three recognizable stages:
 
 This PRD intentionally focuses on moving from **developing** to **maturing** without pretending to be a full AI platform. The product becomes mature by being the best at runtime behavior observability and by integrating cleanly with the broader observability and governance ecosystem.
 
+### 1.7 OSS Adoption Story
+
+Open-source observability tools win when they are easy to adopt incrementally. Teams rarely replace their stack in one move. They add one new layer where the pain is highest.
+
+`agent-exec-trace` should be adoptable in stages:
+
+| Adoption stage | What the user does | What they get |
+|---|---|---|
+| **First 30 minutes** | Run a demo stack locally, instrument one LangGraph or raw Python agent, open one trace | Immediate proof that agent behavior appears differently from generic traces |
+| **First day** | Use the run timeline to debug a single expensive or broken run | Time-to-diagnose drops for one real problem |
+| **First week** | Add fleet dashboard and anomaly alerts for 2-3 agents | Teams stop relying on ad hoc log dives and manual cost checks |
+| **First month** | Instrument more agents, attach version metadata from CI, compare releases | The product becomes part of rollout and review workflows |
+
+The product must therefore optimize for **low-friction first success**, not just long-term completeness.
+
 ---
 
 ## 2. WHAT — Product Scope
@@ -122,6 +137,25 @@ Interoperability is a product requirement, not an implementation detail.
 | **Policy / approval systems** | Mature agents have governance touchpoints | Trace model must leave room for approval and policy overlays |
 
 The product should never require users to replace their tracing backend to adopt it. Adoption becomes easier when `agent-exec-trace` behaves like an opinionated, agent-aware layer on top of infrastructure they already trust.
+
+### 2.1.3 Interoperability Matrix
+
+| System / runtime | Level | v0.1.0 expectation | Future direction |
+|---|---|---|---|
+| **LangGraph** | First-class | Instrumented and demoed | Advanced graph-aware views |
+| **Raw Python agents** | First-class | `@trace_agent` decorator and manual span helpers | More patterns and helper wrappers |
+| **PydanticAI** | Planned | Not shipped | v0.2.0 adapter |
+| **OpenTelemetry Collector** | First-class | Tested collector config and examples | Reference deployment bundles |
+| **Tempo** | First-class | Documented, tested local stack | Richer deep-linking and derived metrics |
+| **Jaeger** | First-class | Documented, tested local stack | Long-term compatibility matrix |
+| **Prometheus** | First-class | Metrics export for anomalies, costs, outcomes | More derived behavior metrics |
+| **Grafana** | First-class | Dashboard overlays and trace drill-down links | Standard dashboard packs |
+| **Alertmanager / webhooks** | First-class | Route anomaly alerts | Richer incident integrations |
+| **Vendor OTLP backends** | Compatible | Best-effort OTLP compatibility | Explicit support matrix over time |
+| **CI / GitHub Actions** | Integrated metadata | Version/build metadata can be attached to runs | Release-aware comparison workflows |
+| **Policy / approval systems** | Extensible | Leave room in the trace model | Native overlays in v0.3.0+ |
+
+This matrix matters because mature observability tools are judged not only by their own features, but by how cleanly they fit into existing workflows.
 
 ### 2.2 Deferred to v0.2+
 
@@ -206,6 +240,39 @@ v0.2.0 is where the product becomes clearly more than a trace viewer. The releas
 | SaaS/cloud-hosted version | Local-first OSS. Self-hosted only. |
 | Policy enforcement engine | Observability, not governance. Integrates with policy tools but does not enforce. |
 
+### 2.4.1 Product Principles
+
+| Principle | Meaning in practice |
+|---|---|
+| **OTel first** | Reuse OpenTelemetry semconv whenever possible. Avoid a proprietary event model. |
+| **Behavior over raw prompts** | Focus on runtime behavior and decision paths, not becoming a prompt studio. |
+| **Standard views before custom builders** | Ship strong defaults that solve common investigations before adding flexible but weak abstractions. |
+| **Interop before reinvention** | Integrate with collectors, backends, alerts, and dashboards users already run. |
+| **Explainability over dashboard density** | Every screen should help a user make an operational decision, not just show more widgets. |
+| **Local-first trust** | Users should be able to validate the product on their own machine before committing to broader adoption. |
+
+### 2.4.2 Data Sensitivity and Privacy Stance
+
+Agent traces can contain:
+
+- prompt and system instruction content
+- tool arguments and tool responses
+- retrieval context
+- memory records and mutations
+- user inputs and potentially PII
+
+This makes privacy posture a product feature, not a compliance afterthought.
+
+| Requirement | Product stance |
+|---|---|
+| **Safe by default** | Full content capture should be opt-in, not default-on |
+| **Redaction-friendly** | Support truncation, hashing, omission, and field-level redaction hooks |
+| **Separation of metadata and content** | Useful behavior summaries should still work when sensitive payloads are hidden |
+| **Local-first review** | Users should be able to inspect traces locally before exporting beyond their machine |
+| **Documented risk zones** | README/docs should call out where prompts, tool args, memory, and outputs may leak sensitive content |
+
+The mature version of the product should allow teams to get behavioral visibility without forcing them to store raw sensitive content in every environment.
+
 ### 2.5 Architecture
 
 ### 2.5.1 Architecture Principles
@@ -288,6 +355,31 @@ v0.2.0 is where the product becomes clearly more than a trace viewer. The releas
 | **v0.2.0** | Version compare, search, cost attribution, memory audit, interventions, second runtime adapter | Make several agents manageable over time |
 | **v0.3.0** | Multi-agent views, policy overlays, workload cohorts, release-aware comparison | Make org-scale operations and release reviews possible |
 | **v0.4.0** | Standardized workflows, audit views, cross-system correlation, pluggable detectors | Make the product the operational home for agent trace investigations |
+
+### 2.6.2 Success Metrics
+
+The product should be judged by operator outcomes, not just feature completion.
+
+| Metric | Why it matters | Target direction |
+|---|---|---|
+| **Median time-to-diagnose a bad run** | The clearest signal of actual operational value | Down materially from log-based debugging baseline |
+| **Anomaly usefulness rate** | If alerts are noisy, operators stop trusting the system | Majority of anomalies should be judged actionable |
+| **Version comparison usage in release decisions** | Proves the tool participates in engineering workflow, not just debugging | Increasing share of agent releases reviewed with compare view |
+| **Cost avoided via loop / spike detection** | Connects observability to business value | Detect and prevent meaningful waste events |
+| **Fleet coverage** | Measures whether the product works for many agents, not one demo | More instrumented agents and workloads over time |
+| **Framework coverage** | Shows whether the trace model is truly portable | Grow from LangGraph + raw Python to additional runtimes |
+| **Interop adoption** | Signals product maturity in real stacks | More users running with Tempo/Jaeger/Grafana/Prometheus without custom glue |
+
+### 2.6.3 Risks and Failure Modes
+
+| Risk | Why it matters | Mitigation direction |
+|---|---|---|
+| **Trace noise overwhelms users** | Too many spans or weak defaults make the product unusable | Strong defaults, summarized views, collapse/expand patterns |
+| **Sensitive content capture blocks adoption** | Teams will reject tooling that stores prompts or memory unsafely | Opt-in content capture, redaction controls, clear docs |
+| **Schema overfits one runtime** | Product loses credibility as a standard layer | Start with LangGraph + raw Python, add PydanticAI early |
+| **Users fall back to backend-native tools** | Then the product is just an extra screen | Make standard views clearly faster than raw querying |
+| **Standards evolve underneath us** | OTel GenAI semconv is still developing | Treat extensions as documented provisional fields and stay close to upstream |
+| **Local-first breaks at larger scale** | Maturing teams need stronger patterns than a laptop demo | Keep architecture backend-neutral so scale comes from existing tracing infra |
 
 ---
 
