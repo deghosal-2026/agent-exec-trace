@@ -181,6 +181,12 @@ The backend stores traces, but traces alone are not the product. The product is 
 - per-agent fleet summaries
 - version-cohort summaries
 
+**Detection strategy in v0.1.0:**
+
+- anomaly detection is deterministic-first
+- no LLM is required to decide whether a loop, retry storm, or cost spike occurred
+- any future LLM usage belongs in explanation, clustering, or operator assistance layers, not in the truth path for detection
+
 **Design principle:**
 Analytics should be computed from trace data, not from framework-specific side channels, so the logic remains portable.
 
@@ -278,6 +284,13 @@ This read-model layer is required to make standard views stable and backend-neut
 2. Matching runs produce anomaly records.
 3. Alerts are exposed via API and optional webhook/export path.
 4. Operator opens anomaly and jumps to exact trace.
+
+### Flow E: Field Testing
+
+1. Seeded demo runs are generated for normal, loop, retry-heavy, and high-cost scenarios.
+2. Deterministic detectors are evaluated against expected outcomes.
+3. At least one non-demo or more realistic workload is instrumented to confirm the model holds outside the happy path.
+4. Detector usefulness, false positives, and trace readability are reviewed before claiming `v0.1.0` value.
 
 ---
 

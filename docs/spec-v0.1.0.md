@@ -238,6 +238,27 @@ Minimum configuration:
 - `absolute_cost_threshold_usd: float | None`
 - `baseline_multiplier_threshold: float | None`
 
+### LLM Use in Anomaly Detection
+
+`v0.1.0` does not require an LLM for anomaly detection.
+
+Rules:
+
+- detection logic must be deterministic and reproducible
+- alert firing must not depend on model judgment
+- operators must be able to explain why an anomaly fired from stored evidence alone
+
+Allowed later:
+
+- LLM-assisted explanation of anomaly context
+- LLM-assisted clustering or summarization of many anomaly records
+- LLM-assisted operator guidance layered on top of deterministic detections
+
+Not allowed in `v0.1.0`:
+
+- model-only anomaly classification
+- opaque anomaly scoring that cannot be inspected or tuned
+
 ---
 
 ## API Surfaces
@@ -385,3 +406,9 @@ The product is not done unless this stack can be run locally as a documented dem
 
 - raw content is absent by default
 - metadata-only mode still produces usable run and anomaly views
+
+### Field testing
+
+- seeded demo scenarios must validate each detector against expected outcomes
+- at least one more realistic workload beyond the smallest happy-path demo should be instrumented before release sign-off
+- detector usefulness and false-positive behavior must be reviewed as part of release validation
