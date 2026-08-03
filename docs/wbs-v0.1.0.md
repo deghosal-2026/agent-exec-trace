@@ -106,6 +106,364 @@ To avoid creating too many tickets too early, issue creation should happen in wa
 
 This keeps the tracker aligned with actual execution readiness.
 
+## Wave 1 Issue Bodies
+
+These are the first issues to create. Each follows the recommended issue body shape: context, checklist, success criteria, dependencies, suggested labels.
+
+### Issue: Monorepo skeleton
+
+**Context:** Create the physical repo layout matching the product architecture. Contributor-facing clarity must be achieved immediately.
+
+**Dependencies:** none.
+
+**Suggested labels:** `infra`
+
+**Success criteria:**
+- `packages/python-sdk/`, `services/api/`, `services/analytics/`, `apps/web/`, `deploy/`, `examples/`, `docs/` exist
+- repo tree clearly maps to architecture document
+- no future restructuring required
+
+**Checklist:**
+- [ ] Create `packages/python-sdk/`
+- [ ] Create `services/api/`
+- [ ] Create `services/analytics/`
+- [ ] Create `apps/web/`
+- [ ] Create `deploy/`
+- [ ] Create `examples/`
+- [ ] Create `tests/`
+
+---
+
+### Issue: Root project scaffolding
+
+**Context:** Add root-level operating surface: README layout summary, gitignore, Makefile entrypoints, compose placeholder, developer setup doc.
+
+**Dependencies:** monorepo skeleton.
+
+**Suggested labels:** `infra`, `docs`
+
+**Success criteria:**
+- new contributor can open repo, understand layout from root README, see how local stack will work, understand workspace governance
+
+**Checklist:**
+- [ ] Add root `README.md` section for monorepo layout
+- [ ] Update root `.gitignore` for monorepo paths
+- [ ] Add root `Makefile` or task runner entrypoints
+- [ ] Add root `docker-compose.yml` placeholder
+- [ ] Add root developer setup doc
+
+---
+
+### Issue: Shared dev conventions
+
+**Context:** Remove ambiguity about versions, formatting, and developer expectations. Keep setup light but lock enough that multi-service work does not drift immediately.
+
+**Dependencies:** monorepo skeleton.
+
+**Suggested labels:** `infra`
+
+**Success criteria:**
+- Python and web tooling are predictable
+- local setup instructions match actual versions
+
+**Checklist:**
+- [ ] Define Python version target
+- [ ] Define Node version target for web app
+- [ ] Define formatting/lint tools for Python
+- [ ] Define formatting/lint tools for web app
+- [ ] Add pre-commit hooks
+
+---
+
+### Issue: Demo agent scenario definition
+
+**Context:** This is the reality anchor for the whole product. Define one LangGraph agent with three paths: normal, loop, high-cost.
+
+**Dependencies:** none.
+
+**Suggested labels:** `demo`, `design-followup`
+
+**Success criteria:**
+- documented example scenario clearly explains happy path, bad path, and expensive path
+- later SDK/UI/analytics work can reference this as truth
+
+**Checklist:**
+- [ ] Choose one LangGraph demo agent scenario
+- [ ] Document what "bad run" looks like
+- [ ] Document what normal run looks like
+- [ ] Define one seeded loop scenario
+- [ ] Define one seeded high-cost scenario
+
+---
+
+### Issue: Demo agent skeleton
+
+**Context:** Turn the scenario into runnable code. Must be small, deterministic, and manipulable for repeatable seeded failures.
+
+**Dependencies:** demo agent scenario definition.
+
+**Suggested labels:** `demo`, `sdk`
+
+**Success criteria:**
+- example agent runs locally
+- exercises at least one tool path
+- can be forced into loop-like behavior
+- carries version metadata through execution
+
+**Checklist:**
+- [ ] Create example LangGraph app folder under `examples/`
+- [ ] Add minimal graph workflow
+- [ ] Add at least one tool call path
+- [ ] Add at least one path that can loop under seeded conditions
+- [ ] Add version metadata injection
+
+---
+
+### Issue: Demo datasets and fixtures
+
+**Context:** Make the demo reproducible. Named fixtures for success, loop, and high-cost with expected outcomes.
+
+**Dependencies:** demo agent skeleton.
+
+**Suggested labels:** `demo`
+
+**Success criteria:**
+- named fixtures exist for all three cases
+- contributor can run them intentionally and know what to expect
+
+**Checklist:**
+- [ ] Add sample inputs for success case
+- [ ] Add sample inputs for loop case
+- [ ] Add sample inputs for high-cost case
+- [ ] Add expected run outcomes doc
+- [ ] Create scenario matrix doc mapping inputs to expected anomalies and views
+
+---
+
+### Issue: SDK package setup
+
+**Context:** Create the home for the instrumentation SDK. Keep layout publishable later without over-building packaging now.
+
+**Dependencies:** monorepo skeleton, shared dev conventions.
+
+**Suggested labels:** `sdk`
+
+**Success criteria:**
+- SDK package installs locally
+- source layout is conventional
+- tests/docs can be added without moving files later
+
+**Checklist:**
+- [ ] Create `packages/python-sdk/pyproject.toml`
+- [ ] Create package source layout
+- [ ] Add package README stub
+- [ ] Add unit test folder
+
+---
+
+### Issue: Base tracing primitives
+
+**Context:** Core building blocks: config, tracer bootstrap, run context, attribute mapping, redaction support. Every adapter leans on these.
+
+**Dependencies:** SDK package setup.
+
+**Suggested labels:** `sdk`
+
+**Success criteria:**
+- later tasks can build adapters and spans using shared primitives
+- no duplicated setup logic across adapters
+
+**Checklist:**
+- [ ] Create SDK config object
+- [ ] Create tracer initialization helper
+- [ ] Create run context model
+- [ ] Create helper for OTel attribute mapping
+- [ ] Create redaction configuration model
+
+---
+
+### Issue: Root run instrumentation
+
+**Context:** Every agent run must become a coherent root span with enough metadata for run views, fleet views, and version comparisons.
+
+**Dependencies:** base tracing primitives.
+
+**Suggested labels:** `sdk`
+
+**Success criteria:**
+- one agent run creates one stable root span
+- agent identity, version, runtime context, and run ID are attached consistently
+
+**Checklist:**
+- [ ] Implement root `invoke_agent` span creation
+- [ ] Attach agent name
+- [ ] Attach agent version when provided
+- [ ] Attach model/provider metadata when provided
+- [ ] Attach workload type when provided
+- [ ] Attach generated run ID
+
+---
+
+### Issue: Nested behavior spans
+
+**Context:** Make traces behaviorally meaningful. Planning, tool execution, retrieval, and memory become first-class observability concepts.
+
+**Dependencies:** root run instrumentation.
+
+**Suggested labels:** `sdk`
+
+**Success criteria:**
+- a single run can express its full behavior as a navigable span tree
+
+**Checklist:**
+- [ ] Implement `plan` span helper
+- [ ] Implement `execute_tool` span helper
+- [ ] Implement `retrieval` span helper
+- [ ] Implement memory operation span helper
+- [ ] Implement generic event helper
+
+---
+
+### Issue: Raw Python adapter
+
+**Context:** Prove the product is not locked to one framework. Mirror the same semantic model used for LangGraph.
+
+**Dependencies:** nested behavior spans.
+
+**Suggested labels:** `sdk`, `adapter`
+
+**Success criteria:**
+- a plain Python agent can be instrumented with decorator and helpers
+- traces look structurally consistent with LangGraph adapter output
+
+**Checklist:**
+- [ ] Implement `@trace_agent` decorator
+- [ ] Implement nested helper context manager for tools
+- [ ] Implement nested helper context manager for planning
+- [ ] Implement nested helper context manager for retrieval
+- [ ] Add tests for decorator-based tracing
+
+---
+
+### Issue: LangGraph adapter
+
+**Context:** First first-class framework integration. Preserve LangGraph execution shape in OTel-first model.
+
+**Dependencies:** nested behavior spans, demo agent skeleton.
+
+**Suggested labels:** `sdk`, `adapter`
+
+**Success criteria:**
+- demo workload emits coherent run tree with root spans and nested behavior spans
+- metadata is propagated without graph-specific hacks
+
+**Checklist:**
+- [ ] Define LangGraph wrapper integration surface
+- [ ] Map graph lifecycle to run root span
+- [ ] Map graph planning step to `plan` span
+- [ ] Map tool nodes to `execute_tool` spans
+- [ ] Propagate version and run metadata
+- [ ] Add adapter tests against demo graph
+
+---
+
+### Issue: Privacy defaults
+
+**Context:** Enforce trust posture at earliest boundary. Sensitive content decisions happen in SDK before data fans out.
+
+**Dependencies:** base tracing primitives.
+
+**Suggested labels:** `sdk`
+
+**Success criteria:**
+- metadata-only is default
+- unsafe content absent unless explicitly enabled
+- opt-in capture paths configurable and documented
+
+**Checklist:**
+- [ ] Set metadata-only mode as default
+- [ ] Ensure prompts are not captured by default
+- [ ] Ensure tool args are not captured by default
+- [ ] Ensure memory content is not captured by default
+- [ ] Add opt-in config for truncated or hashed content capture
+
+---
+
+### Issue: OTLP configuration
+
+**Context:** Make SDK operationally useful outside local function calls. OTLP-first, backend details hidden behind config.
+
+**Dependencies:** root run instrumentation.
+
+**Suggested labels:** `sdk`, `backend`
+
+**Success criteria:**
+- instrumented agent can emit traces through OTLP to collector or direct backend without code changes
+
+**Checklist:**
+- [ ] Add SDK exporter configuration for OTLP
+- [ ] Support collector endpoint configuration
+- [ ] Support direct Jaeger OTLP endpoint configuration
+- [ ] Document environment variables for exporter setup
+
+---
+
+### Issue: Jaeger local stack
+
+**Context:** Primary local proof path. Jaeger is the first backend users should see in docs and demos.
+
+**Dependencies:** OTLP configuration.
+
+**Suggested labels:** `infra`, `backend`
+
+**Success criteria:**
+- contributor can run local stack, execute demo agent, inspect traces in Jaeger
+
+**Checklist:**
+- [ ] Add Jaeger service to `docker-compose.yml`
+- [ ] Add collector service config
+- [ ] Validate SDK traces appear in Jaeger UI
+- [ ] Capture validation note in docs
+
+---
+
+### Issue: Tempo compatibility path
+
+**Context:** Preserve long-term OTel positioning. Tempo compatibility must be real enough to prevent accidental Jaeger lock-in.
+
+**Dependencies:** Jaeger local stack.
+
+**Suggested labels:** `backend`, `interop`
+
+**Success criteria:**
+- same trace data viewable in Tempo with only config changes
+- compatibility notes documented clearly
+
+**Checklist:**
+- [ ] Add optional Tempo service config
+- [ ] Validate same SDK traces can be viewed in Tempo
+- [ ] Document compatibility notes
+
+---
+
+### Issue: Collector interoperability
+
+**Context:** Ensure the product stays OTel-first. Collector path treated as product contract, not local convenience.
+
+**Dependencies:** Jaeger local stack, Tempo compatibility path.
+
+**Suggested labels:** `interop`, `backend`
+
+**Success criteria:**
+- SDK emits through collector cleanly
+- backend switching does not require code rewrites
+
+**Checklist:**
+- [ ] Validate collector-based OTLP export to Jaeger
+- [ ] Validate collector-based OTLP export to Tempo
+- [ ] Document collector config expectations
+- [ ] Document backend-specific caveats
+
 ## Minimum Definition of Field Test
 
 The separate field-test plan will be written later, but the term should already mean something specific in this WBS.

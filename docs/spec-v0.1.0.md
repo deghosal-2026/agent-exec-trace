@@ -438,6 +438,70 @@ Example response shape:
 }
 ```
 
+## API Model Variants
+
+Each endpoint should handle predictable edge cases and error states.
+
+### Run Timeline — additional variants
+
+Run not found:
+```json
+{ "error": "run_not_found", "run_id": "unknown", "message": "No run with this ID exists in the system" }
+```
+
+Run present but no behavior spans captured:
+```json
+{
+  "run": { "run_id": "run_456", "agent_name": "demo", "status": "ok" },
+  "summary": { "tool_call_count": 0, "duration_ms": 1200 },
+  "spans": [],
+  "anomalies": [],
+  "warning": "no_behavior_spans"
+}
+```
+
+### Fleet Health — additional variants
+
+No runs yet:
+```json
+{ "rows": [], "message": "no_data", "hint": "Instrument an agent and generate some runs first" }
+```
+
+Filter returns no results:
+```json
+{ "rows": [], "message": "no_results", "hint": "Try broadening your filter" }
+```
+
+### Version Compare — additional variants
+
+Sparse cohort warning:
+```json
+{
+  "left": { "version": "v1", "run_count": 3 },
+  "right": { "version": "v2", "run_count": 2 },
+  "deltas": {},
+  "warning": "sparse_cohorts",
+  "note": "Cohorts are small; deltas may not be statistically meaningful"
+}
+```
+
+One version not found:
+```json
+{ "error": "version_not_found", "version": "v3", "message": "No runs exist for this version identifier" }
+```
+
+### Anomaly Inbox — additional variants
+
+No anomalies:
+```json
+{ "items": [], "message": "no_anomalies", "note": "No anomalies detected in the current window" }
+```
+
+Filter returns nothing:
+```json
+{ "items": [], "message": "no_results", "hint": "Try broadening your type, severity, or agent filter" }
+```
+
 ## View Definitions
 
 ### Run Timeline View
@@ -509,6 +573,50 @@ Required filters:
 - agent
 - time window
 
+## Per-View UI State Matrices
+
+### Run Timeline states
+
+| State | What to render |
+|---|---|
+| Loading | Skeleton timeline with placeholder rows |
+| Empty (no run ID entered) | Prompt to enter a run ID or select from anomalies / fleet |
+| Run not found | Error message with link back to fleet or anomaly inbox |
+| Run loaded with data | Full timeline with spans, summary header, anomaly markers |
+| Run loaded but spans are empty | Summary header only, note that no behavior spans were captured |
+| Error fetching run | Retry prompt with error detail |
+
+### Fleet Health states
+
+| State | What to render |
+|---|---|
+| Loading | Skeleton cards and table |
+| Empty (no runs yet) | Prompt to instrument an agent and start generating traces |
+| Data available | Cards + table with populated rows |
+| Filter returns no results | Message suggesting broader filter |
+| Error | Retry prompt |
+
+### Version Compare states
+
+| State | What to render |
+|---|---|
+| Initial (no versions selected) | Two version selectors visible, summary area empty |
+| One version selected | Prompt to select second version |
+| Both selected, loading | Skeleton deltas |
+| Both selected, data available | Delta cards and tool usage section |
+| Sparse cohort warning | Low-count notice if either cohort is too small for confidence |
+| Error | Retry prompt |
+
+### Anomaly Inbox states
+
+| State | What to render |
+|---|---|
+| Loading | Skeleton rows |
+| Empty (no anomalies) | Positive message: no anomalies detected in current window |
+| Items present | Sortable/filterable list |
+| Filter returns nothing | Message to broaden filter |
+| Error | Retry prompt |
+
 ## Detector Contracts
 
 ### Loop detector
@@ -534,6 +642,34 @@ Required filters:
 - output: cost anomaly record
 - explanation requirement: must explain absolute or relative threshold breach
 - known risk: sparse baselines may overreact early
+
+## Detector False-Positive Case Catalog
+
+Knowing what should NOT fire is as important as knowing what should fire.
+
+### Loop detector — expected safe cases
+
+| Case | Why it should not fire |
+|---|---|
+| Agent intentionally polls for status updates (e.g., wait-for-deploy) | Health-check tool calls are legitimate repeated behavior with slow external state changes |
+| Tool is called twice with different arguments and useful output each time | Not a loop; meaningful work happened between calls |
+| Model retries with different reasoning when a tool returns an error | Repeated tool use under explicit error-handling logic is productive, not stuck |
+| Tool is called N times across M distinct planning phases | Repetition across phases is architecturally different from repetition inside one stuck phase |
+
+### Retry storm detector — expected safe cases
+
+| Case | Why it should not fire |
+|---|---|
+| Agent retries a transient network error and succeeds on second or third attempt | Low retry counts under real transient conditions are normal |
+| Retry count thresholds are tuned per workload | A one-size threshold will misfire; the detector should support workload-aware tuning |
+
+### Cost spike detector — expected safe cases
+
+| Case | Why it should not fire |
+|---|---|
+| Agent deliberately processes a large input or complex workflow | Cost can legitimately spike when work scales without being wasteful |
+| Early cold-start runs with small baselines | A sparse baseline overreacts; detector should either defer or note low-confidence |
+| Model switch from cheap to expensive tier for a legitimate business reason | Cost spike is expected after intentional model changes |
 
 ## Version Comparison Semantics
 

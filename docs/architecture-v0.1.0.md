@@ -472,6 +472,76 @@ This mapping keeps the architecture honest across instrumentation, analytics, st
 | version metadata | Version cohort identity | `version_cohort_summaries` | compare, fleet |
 | workload metadata | Cohort dimension | `run_summaries`, `fleet_rollups` | fleet, future field testing |
 
+## Database Table Sketches
+
+These are not final migrations, but they are explicit enough to guide schema work and prevent ad hoc table design later.
+
+### `run_summaries`
+
+| Column | Type | Purpose |
+|---|---|---|
+| `run_id` | text PK | Unique run identifier from trace |
+| `agent_name` | text not null | Agent identity |
+| `agent_version` | text | Version label if available |
+| `workload_type` | text | Workload classification |
+| `status` | text not null | ok / error / cancelled |
+| `started_at` | timestamptz | Run start |
+| `ended_at` | timestamptz | Run end |
+| `duration_ms` | int | Computed from start/end |
+| `estimated_cost_usd` | float | Best-effort cost |
+| `tool_call_count` | int | Number of execute_tool spans |
+| `retry_count` | int | Derived retry count |
+| `intervention_count` | int | Human intervention count |
+| `loop_detected` | boolean | Set by loop detector |
+| `created_at` | timestamptz | When summary was computed |
+
+Primary lookup: `run_id`. Secondary: `agent_name`, `agent_version`, `workload_type`.
+
+### `anomalies`
+
+| Column | Type | Purpose |
+|---|---|---|
+| `anomaly_id` | text PK | Unique anomaly identifier |
+| `type` | text not null | loop / retry_storm / cost_spike |
+| `severity` | text not null | low / medium / high |
+| `agent_name` | text not null | Which agent triggered this |
+| `run_id` | text references run_summaries | The run that caused the anomaly |
+| `summary` | text | Short human label |
+| `explanation` | text | Why the anomaly fired |
+| `created_at` | timestamptz | When anomaly was generated |
+
+Primary lookup: `anomaly_id`. Secondary: `agent_name`, `type`, `severity`.
+
+### `fleet_rollups`
+
+| Column | Type | Purpose |
+|---|---|---|
+| `agent_name` | text not null | Grouping key |
+| `agent_version` | text | Grouping key |
+| `workload_type` | text | Grouping key |
+| `window_start` | timestamptz | Rollup window boundary |
+| `window_end` | timestamptz | Rollup window boundary |
+| `run_count` | int | Runs in window |
+| `success_rate` | float | ok / total |
+| `avg_cost_usd` | float | Mean cost per run |
+| `anomaly_count` | int | Anomaly count in window |
+
+Primary lookup by grouping dimensions + window.
+
+### `version_cohort_summaries`
+
+| Column | Type | Purpose |
+|---|---|---|
+| `agent_name` | text not null | |
+| `agent_version` | text not null | |
+| `run_count` | int | Runs for this version |
+| `success_rate` | float | |
+| `avg_cost_usd` | float | |
+| `avg_retry_count` | float | |
+| `top_tool_names` | jsonb / text[] | Most common tools |
+
+Primary lookup by agent_name + agent_version.
+
 ## Service Contracts
 
 ### SDK → Trace backend
