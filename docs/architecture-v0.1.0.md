@@ -31,6 +31,20 @@ v0.1.0 is not a full AI platform. It is a focused architecture for:
 5. **Framework-agnostic shape**
    - LangGraph and raw Python land in v0.1.0, but the model must not be structurally dependent on LangGraph internals.
 
+## Decision Log
+
+| Decision | Chosen path | Why |
+|---|---|---|
+| Repo structure | Monorepo | Best path toward `1.0`; SDK, API, analytics, and web are distinct product units |
+| Analytics placement | Separate analytics service | Clearer long-term separation of computation and query serving |
+| Product read model | Materialized Postgres read model | Better for stable views, compare, fleet, and anomaly workflows |
+| Primary backend | Jaeger-first | Stronger initial familiarity and OSS credibility |
+| Secondary backend | Tempo-compatible | Preserves OTel-first future without backend lock-in |
+| Frontend | React | Standard views are interaction-heavy |
+| Privacy default | Metadata-only | Stronger trust and safer local/enterprise adoption |
+| Detector strategy | Deterministic-first | Trustworthy, reproducible, tunable anomaly logic |
+| Delivery strategy | Demo-first | Trace model should be derived from reality, not from abstraction |
+
 ---
 
 ## System Context
@@ -412,6 +426,25 @@ Even though policy enforcement is out of scope for v0.1.0, the architecture shou
 
 This matters because a mature agent observability product needs to sit next to governance systems, not pretend they do not exist.
 
+## Data Lifecycle Rules
+
+The system must be clear about what is source-of-truth data and what is derived product state.
+
+| Data class | Source of truth | Rebuildable? | Notes |
+|---|---|---|---|
+| Raw traces | OTel backend path (Jaeger/Tempo) | N/A | Canonical behavioral evidence |
+| Run summaries | Derived in Postgres | Yes | Must be rebuildable from traces |
+| Fleet rollups | Derived in Postgres | Yes | May be recomputed at any time |
+| Version cohort summaries | Derived in Postgres | Yes | Depends on stable version metadata |
+| Anomaly records | Derived in Postgres | Yes | Detector logic changes must allow recomputation |
+
+Principles:
+
+- trace backends hold behavioral truth
+- Postgres holds product-facing read models
+- derived records may be dropped and rebuilt
+- analytics processing must be idempotent enough to support reprocessing
+
 ---
 
 ## Privacy and Safety Architecture
@@ -431,6 +464,52 @@ Because traces may include prompts, tool arguments, memory contents, and user da
 **Locked privacy posture:** metadata-only by default.
 
 This is important architecturally because privacy choices affect storage, indexing, API schemas, and UI expectations.
+
+## Product Self-Observability
+
+The observability product must expose enough health signals about itself to be trustworthy during development and field testing.
+
+Minimum internal signals to plan for:
+
+- analytics worker processing lag
+- trace fetch / normalization failures
+- count of processed runs
+- count of skipped duplicate runs
+- anomaly generation counts by type
+- read-model freshness timestamp
+- replay / rebuild success and failure counts
+
+These do not all need polished UI in `v0.1.0`, but the architecture should allow them to be emitted and inspected.
+
+## Failure Recovery Workflows
+
+The architecture should assume partial failure and recovery needs.
+
+Key recovery scenarios:
+
+- analytics crashes mid-processing
+- Postgres is reset and must be rebuilt from trace truth
+- Jaeger is temporarily unavailable
+- replay produces duplicate candidate runs
+- detector logic changes require anomaly recomputation
+
+Recovery stance:
+
+- analytics jobs should be replayable
+- derived records should be rebuildable
+- duplicate processing should be safe or detectable
+- backend unavailability should fail visibly, not silently
+
+## Schema Evolution Policy
+
+Because the product uses provisional `gen_ai.agent.*` extension fields, the architecture should assume schema evolution.
+
+Rules:
+
+- upstream OTel alignment takes precedence over internal convenience
+- provisional fields must be documented with meaning and intended evolution
+- extension fields may change before `v0.2.0` if needed for stronger semantics
+- read-model migrations must be expected as detector and cohort logic mature
 
 ---
 

@@ -25,6 +25,23 @@ Recommended label families:
 - `oss`
 - `field-test`
 
+Recommended issue metadata fields:
+
+- **Suggested labels**
+- **Depends on**
+- **Primary deliverable**
+- **Acceptance notes**
+- **Demo / screenshot needed?**
+
+Recommended ownership buckets:
+
+- SDK
+- Analytics
+- API
+- Web
+- Infra
+- Docs / OSS
+
 ## Milestone-to-Issue Mapping
 
 | Milestone | GitHub issue bucket |
@@ -99,6 +116,20 @@ The project should explicitly track these likely limitations during implementati
 - anomaly classes intentionally narrow in first release
 - field testing still pending beyond seeded demo validation
 
+## Demo Acceptance Bar
+
+The demo-first strategy should be judged against a concrete bar.
+
+A strong `v0.1.0` demo should show:
+
+- one normal run visible end-to-end
+- one loop anomaly detected and drill-down capable
+- one cost spike anomaly detected and explainable
+- one fleet view with more than one meaningful grouping row
+- one version compare view with a non-trivial delta
+
+If the product cannot demonstrate these cleanly, more implementation work is needed before claiming readiness.
+
 ## Milestone 0: Foundation and Repo Layout
 
 ### 0.1 Create monorepo skeleton
@@ -139,6 +170,16 @@ This task removes ambiguity early. The point is to avoid a repo where each servi
 - [ ] Define formatting/lint tools for web app
 - [ ] Add pre-commit or equivalent baseline hooks if desired
 
+### 0.4 Record assumptions and open questions
+
+This task keeps planning uncertainty visible instead of letting it disappear into implementation chatter. It should create an explicit place where contributors can see what is assumed, what is unresolved, and what may need revisiting.
+
+**Success looks like:** assumptions and open questions from the spec are visible, current, and easy to convert into future issues if they become blockers.
+
+- [ ] Link assumptions register from implementation-facing docs
+- [ ] Link open questions register from implementation-facing docs
+- [ ] Mark which open questions are safe to defer past `v0.1.0`
+
 ---
 
 ## Milestone 1: Demo-First Agent Workload
@@ -177,6 +218,17 @@ This task makes the demo reproducible. The same inputs should create the same ca
 - [ ] Add sample inputs for loop case
 - [ ] Add sample inputs for high-cost case
 - [ ] Add expected run outcomes doc
+
+### 1.4 Build scenario matrix
+
+This task expands the demo from "a few example inputs" into a product validation matrix. The matrix should make it easy to see which scenarios exist, which detectors they exercise, and which views they are expected to populate.
+
+**Success looks like:** there is a clear scenario table mapping each seeded run to its expected outcome, anomaly behavior, and UI surfaces.
+
+- [ ] Create scenario matrix doc in `docs/` or `examples/`
+- [ ] Map each scenario to expected run outcome
+- [ ] Map each scenario to expected anomaly types
+- [ ] Map each scenario to expected UI views that should show useful data
 
 ---
 
@@ -303,6 +355,17 @@ This task preserves the long-term OTel positioning of the product. Even though J
 - [ ] Validate same SDK traces can be viewed in Tempo
 - [ ] Document compatibility notes
 
+### 3.4 Collector interoperability checks
+
+This task ensures the product stays OTel-first rather than backend-first. The collector path should be treated as a product contract, not just a local convenience layer.
+
+**Success looks like:** the SDK can emit through the collector path cleanly, backend switching does not require code rewrites, and the collector setup is documented as a first-class integration path.
+
+- [ ] Validate collector-based OTLP export to Jaeger
+- [ ] Validate collector-based OTLP export to Tempo
+- [ ] Document collector config expectations
+- [ ] Document any backend-specific caveats discovered in testing
+
 ---
 
 ## Milestone 4: Analytics Service Skeleton
@@ -376,6 +439,18 @@ This task makes the analytics service resilient to detector evolution. An observ
 - [ ] Support rerunning anomaly detection from trace truth
 - [ ] Document the rebuild workflow for developers
 
+### 4.7 Analytics self-observability
+
+This task makes the analytics service debuggable as a system in its own right. Since analytics is responsible for derived truth, it must emit enough signals that maintainers can tell whether it is healthy or stale.
+
+**Success looks like:** maintainers can inspect worker lag, processing counts, duplicate-skip behavior, replay success, and read-model freshness without guessing.
+
+- [ ] Emit processed-run counters
+- [ ] Emit failed-run counters
+- [ ] Emit duplicate-skip counters
+- [ ] Emit replay/rebuild counters
+- [ ] Record read-model freshness signal
+
 ---
 
 ## Milestone 5: Summary Materialization
@@ -417,6 +492,17 @@ This task enables meaningful version comparison. The key is to define stable coh
 - [ ] Materialize cost aggregates by version
 - [ ] Materialize retry aggregates by version
 - [ ] Materialize top tool usage counts by version
+
+### 5.4 Workload and cohort dimension support
+
+This task protects the product from becoming too version-only in its thinking. Even in `v0.1.0`, the data model should leave room for meaningful workload and grouping dimensions.
+
+**Success looks like:** summaries can be grouped by more than just agent name, and the fleet and compare views are not blocked from cohorting by workload type or environment.
+
+- [ ] Define minimum cohort dimensions for `v0.1.0`
+- [ ] Add workload-type grouping to summary materialization
+- [ ] Add environment or deployment grouping if available
+- [ ] Document which cohort dimensions are first-class in the first release
 
 ---
 
@@ -490,6 +576,18 @@ This task does not create the full field-test plan yet. It creates the explicit 
 - [ ] List minimum future field-test dimensions: multiple workloads, false positives, detector usefulness, operator feedback
 - [ ] Mark field-test planning as a required follow-on artifact before final release confidence claims
 
+### 6.7 Anomaly validation matrix
+
+This task turns detector development into something reviewable. Each detector should have named scenarios it is expected to catch and scenarios it should ignore.
+
+**Success looks like:** there is a detector-by-scenario matrix showing expected true positives and known non-goals, making false-positive discussions much easier later.
+
+- [ ] Create detector validation matrix doc
+- [ ] Map loop detector to seeded positive and negative cases
+- [ ] Map retry detector to seeded positive and negative cases
+- [ ] Map cost detector to seeded positive and negative cases
+- [ ] Note known blind spots for each detector in `v0.1.0`
+
 ---
 
 ## Milestone 7: API Service
@@ -553,6 +651,16 @@ This endpoint powers the triage surface. It should be simple to query, filter, a
 - [ ] Support severity/type/agent filtering
 - [ ] Include run link fields
 
+### 7.6 API issue templates for future integrations
+
+This task prepares the API layer to be used beyond the first web app. Even if no public API strategy exists yet, the internal contracts should be explicit and test-friendly.
+
+**Success looks like:** endpoint contracts are consistent enough that future CLI, automation, or external UI integrations would not require redesigning the response model.
+
+- [ ] Document response contract conventions
+- [ ] Document error payload conventions
+- [ ] Document filtering and sorting conventions across endpoints
+
 ---
 
 ## Milestone 8: React Web App
@@ -581,6 +689,17 @@ This is the flagship UI surface. It should make one run explainable quickly and 
 - [ ] Render per-span detail panel
 - [ ] Render anomaly markers in the timeline
 
+### 8.2.1 Run timeline interaction details
+
+This task makes the timeline truly operational rather than just visually interesting. The page should support the exact interactions an operator needs during a real investigation.
+
+**Success looks like:** a user can expand/collapse spans, select a span, inspect summary details, and quickly identify where the run changed course.
+
+- [ ] Add span expand/collapse behavior
+- [ ] Add selected-span detail state
+- [ ] Add clear display of timing and cost context per span
+- [ ] Add visual emphasis for anomaly-linked spans
+
 ### 8.3 Fleet health view
 
 This view proves the product is more than a single-trace debugger. It should make it obvious which agents or cohorts deserve attention next.
@@ -591,6 +710,17 @@ This view proves the product is more than a single-trace debugger. It should mak
 - [ ] Add grouping/filter controls
 - [ ] Display cost, success, anomaly counts
 - [ ] Add drill-down action into related runs
+
+### 8.3.1 Fleet dashboard detail design
+
+This task specifies the information architecture of the fleet page. Since this is one of the core product views, the cards, columns, and filters should be intentional rather than improvised in implementation.
+
+**Success looks like:** the fleet page has a clearly defined set of top-level cards, grouping controls, table columns, and drill-down actions that reflect the PRD's standard view model.
+
+- [ ] Define top summary cards
+- [ ] Define primary grouping controls
+- [ ] Define required table columns
+- [ ] Define default sort behavior
 
 ### 8.4 Version compare view
 
@@ -603,6 +733,17 @@ This view is where observability meets release review. It should help a team ans
 - [ ] Render cost/retry/tool delta sections
 - [ ] Add drill-down links into exemplar runs
 
+### 8.4.1 Compare view interpretation aids
+
+This task makes compare usable by normal engineers and managers, not only by people comfortable reading raw deltas. The UI should help explain what changed and whether that change likely matters.
+
+**Success looks like:** compare output includes enough labeling, context, and interpretation hints that a reviewer can make a release decision without writing custom analysis.
+
+- [ ] Add explicit "version A vs version B" framing
+- [ ] Add positive/negative/neutral visual signals for deltas
+- [ ] Add inline explanation labels for each metric block
+- [ ] Add quick links to representative runs for both cohorts
+
 ### 8.5 Anomaly inbox view
 
 This view should feel like an actionable inbox, not a generic error list. It must prioritize clarity, severity, and direct links into the run context.
@@ -613,6 +754,17 @@ This view should feel like an actionable inbox, not a generic error list. It mus
 - [ ] Add severity/type filters
 - [ ] Show explanation text
 - [ ] Link anomaly to run timeline page
+
+### 8.5.1 Inbox triage ergonomics
+
+This task keeps the anomaly inbox from becoming a generic list page. It should support real triage behavior: scan, filter, prioritize, and drill in fast.
+
+**Success looks like:** a user can move from a broad list of anomalies to the one they should investigate next without confusion or extra navigation.
+
+- [ ] Define default sort order for anomalies
+- [ ] Add visible severity styling
+- [ ] Add anomaly type badges
+- [ ] Add one-click drill-down action
 
 ---
 
@@ -660,6 +812,28 @@ This task verifies the product loop, not just individual services. It should con
 - [ ] Validate one loop anomaly run
 - [ ] Validate fleet view shows multiple runs/cohorts
 - [ ] Validate version compare shows non-empty deltas
+
+### 9.4 Interoperability smoke checks
+
+This task checks whether the stack still behaves like an OTel-native product rather than a tightly coupled local demo. The goal is to catch hidden assumptions early.
+
+**Success looks like:** the local reference stack proves Jaeger-first operation while preserving collector-first and Tempo-compatible behavior with documented caveats.
+
+- [ ] Smoke test Jaeger-first stack
+- [ ] Smoke test Tempo-compatible path
+- [ ] Smoke test collector-mediated export
+- [ ] Record interop findings in docs
+
+### 9.5 Failure-recovery smoke checks
+
+This task verifies that the chosen architecture can recover from predictable development-time failures. The goal is not full chaos engineering, just enough confidence that the system can be reset and rebuilt without heroics.
+
+**Success looks like:** developers can recover from common failures such as Postgres resets or analytics reprocessing needs using documented workflows.
+
+- [ ] Validate Postgres reset + rebuild flow
+- [ ] Validate analytics reprocessing flow after detector changes
+- [ ] Validate duplicate-run handling during replay
+- [ ] Document known weak recovery paths in `v0.1.0`
 
 ---
 
@@ -710,6 +884,17 @@ This task ensures the main views remain navigable and intelligible as the produc
 - [ ] Interaction tests for filters/navigation
 - [ ] End-to-end happy-path UI test if feasible
 
+### 10.5 Acceptance scenario checks
+
+This task ties tests back to product stories. It should validate not just technical correctness, but whether the product can actually support the main investigation workflows promised in the PRD.
+
+**Success looks like:** at least one automated or semi-automated check exists for each `v0.1.0` standard view using seeded scenarios.
+
+- [ ] Validate single bad run workflow
+- [ ] Validate anomaly drill-down workflow
+- [ ] Validate fleet triage workflow
+- [ ] Validate version compare workflow
+
 ---
 
 ## Milestone 11: Documentation and OSS Readiness
@@ -724,6 +909,17 @@ This task turns the internal architecture into something another engineer can ac
 - [ ] Add architecture summary doc links
 - [ ] Add instrumentation quickstart
 - [ ] Add privacy/configuration doc
+
+### 11.1.1 Configuration documentation
+
+This task turns the configuration surface into something maintainable. Since the product spans SDK, analytics, API, and web, configuration drift would otherwise become a hidden source of failure.
+
+**Success looks like:** contributors can find one clear place that lists all major config knobs and understands which service owns each one.
+
+- [ ] Document SDK configuration surface
+- [ ] Document analytics configuration surface
+- [ ] Document API configuration surface
+- [ ] Document web app configuration surface
 
 ### 11.2 Product docs
 
@@ -791,6 +987,17 @@ This task makes the first public release consumable. It covers the presentation 
 - [ ] Add release notes draft for the first OSS release
 - [ ] Add known limitations section for `v0.1.0`
 
+### 11.7 GitHub issue generation prep
+
+This task makes the planning docs ready to turn into tracked work items. Since each WBS subsection is intended to become one issue, the repo should have enough structure to make that conversion straightforward.
+
+**Success looks like:** maintainers can lift a subsection into a GitHub issue with minimal rewriting and consistent metadata.
+
+- [ ] Add suggested labels to issue conversion guidance
+- [ ] Add dependency notation guidance
+- [ ] Add example issue body template in docs if helpful
+- [ ] Identify milestone subsections that should become the first issue batch
+
 ---
 
 ## Milestone 12: Release Validation
@@ -807,6 +1014,18 @@ This task maps the implementation back to the PRD promises. The release should n
 - [ ] Confirm anomaly inbox works end-to-end
 - [ ] Confirm version compare works end-to-end
 - [ ] Confirm the need for a separate field-test plan is documented and tracked as a required follow-on before stronger production confidence claims
+
+### 12.1.1 Demo acceptance verification
+
+This task explicitly checks the demo acceptance bar instead of assuming it is implied by other validations. Since demo-first is a design choice, the release should prove the demo is actually strong.
+
+**Success looks like:** the product can be shown cleanly through the minimum demo scenarios and each standard view contributes something meaningful to that demonstration.
+
+- [ ] Validate one normal run demo
+- [ ] Validate one loop anomaly demo
+- [ ] Validate one cost spike anomaly demo
+- [ ] Validate one fleet grouping demo
+- [ ] Validate one version compare demo
 
 ### 12.2 Final packaging
 
@@ -828,6 +1047,17 @@ This task prepares the project to be shown and evaluated as a real OSS release. 
 - [ ] Capture screenshots or demo artifacts
 - [ ] Prepare initial issues for `v0.2.0`
 - [ ] Prepare known limitations doc for `v0.1.0`
+
+### 12.4 Post-release follow-on tracking
+
+This task prevents `v0.1.0` from ending with undocumented next steps. It should capture the immediate follow-ons that are already known from the PRD and WBS.
+
+**Success looks like:** the project has a visible and honest follow-on list covering field testing, additional adapters, richer anomaly work, and deeper interop tasks.
+
+- [ ] Track separate field-test plan as follow-on work
+- [ ] Track PydanticAI adapter as follow-on work
+- [ ] Track memory review and policy overlay as follow-on work
+- [ ] Track `v0.2.0` issue creation as a next step
 
 ---
 

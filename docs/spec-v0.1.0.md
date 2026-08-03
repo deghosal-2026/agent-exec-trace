@@ -38,6 +38,60 @@ Excluded from `v0.1.0`:
 - intervention review dashboard
 - pluggable custom detectors
 
+## Assumptions Register
+
+| Assumption | Why it matters |
+|---|---|
+| LangGraph exposes enough lifecycle hooks to create useful behavior spans | If false, adapter scope changes materially |
+| Jaeger trace access is sufficient for early normalization and replay workflows | If false, ingestion strategy needs redesign |
+| Cost estimation can be computed consistently enough to support cost-spike detection | If false, cost anomaly scope may narrow |
+| Metadata-only mode still leaves enough evidence for useful run debugging | If false, privacy defaults and view design need adjustment |
+| One demo workload plus one more realistic workload is enough for early product validation | If false, field-test scope expands sooner |
+
+## Open Questions Register
+
+| Question | Current stance |
+|---|---|
+| What exact Jaeger read/query path should analytics use in `v0.1.0`? | Open; implementation detail to resolve during analytics work |
+| How much run detail should be stored in Postgres vs fetched from backend on demand? | Open; likely hybrid approach |
+| Should drift scoring be a placeholder field or minimally implemented in `v0.1.0`? | Open; fleet summaries should at least leave room for it |
+| How should estimated cost be derived when provider billing detail is incomplete? | Open; likely documented best-effort logic |
+| What is the minimum acceptable replay/rebuild flow for first release? | Open; must be good enough for seeded scenarios and detector reprocessing |
+
+## Configuration Surface Inventory
+
+The implementation should treat configuration as a deliberate product surface.
+
+### SDK config
+
+- OTLP endpoint
+- agent name default
+- agent version default
+- workload type
+- privacy mode
+- content capture toggles
+
+### Analytics config
+
+- Postgres DSN
+- backend read endpoint
+- loop threshold
+- retry threshold
+- cost thresholds
+- polling interval / replay controls
+- webhook target and credentials if used
+
+### API config
+
+- Postgres DSN
+- service host/port
+- pagination defaults
+
+### Web config
+
+- API base URL
+- local stack routing values
+
 ---
 
 ## Product Entities
@@ -380,6 +434,28 @@ Must show:
 - Postgres read-model database
 
 The product is not done unless this stack can be run locally as a documented demo.
+
+## Security Model
+
+`v0.1.0` does not need enterprise-grade security breadth, but it does need a clear stance.
+
+Rules:
+
+- metadata-only is the default trace content posture
+- secrets, prompts, tool args, and memory contents must not be logged casually in local service logs
+- webhook integrations should assume authenticated or signed delivery will be needed later
+- local stack docs should call out where sensitive data could leak if content capture is enabled
+
+## Not Yet List
+
+These are legitimate product ideas, but they are intentionally not required for `v0.1.0`:
+
+- LLM-assisted anomaly explanation
+- multi-agent topology maps
+- policy overlay and governance review views
+- full memory audit UI
+- pluggable detector ecosystem
+- PydanticAI adapter
 
 ---
 
