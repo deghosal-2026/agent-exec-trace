@@ -2,6 +2,103 @@
 
 > Checklist-style, granular, execution-oriented breakdown for `v0.1.0`.
 
+## WBS to GitHub Issue Conversion Notes
+
+Each subsection in this WBS is intended to become one GitHub issue, not one checkbox per issue.
+
+Recommended issue body shape:
+
+- context
+- checklist
+- success criteria
+- dependencies
+- suggested labels
+
+Recommended label families:
+
+- `sdk`
+- `analytics`
+- `api`
+- `web`
+- `infra`
+- `docs`
+- `oss`
+- `field-test`
+
+## Milestone-to-Issue Mapping
+
+| Milestone | GitHub issue bucket |
+|---|---|
+| Milestone 0 | repo/setup issues |
+| Milestone 1 | demo workload issues |
+| Milestone 2 | SDK issues |
+| Milestone 3 | ingest/backend issues |
+| Milestone 4 | analytics service issues |
+| Milestone 5 | read-model/materialization issues |
+| Milestone 6 | anomaly engine issues |
+| Milestone 7 | API issues |
+| Milestone 8 | web UI issues |
+| Milestone 9 | local stack/demo issues |
+| Milestone 10 | testing/hardening issues |
+| Milestone 11 | docs/OSS readiness issues |
+| Milestone 12 | release validation issues |
+
+## Minimum Definition of Field Test
+
+The separate field-test plan will be written later, but the term should already mean something specific in this WBS.
+
+A valid field test must include:
+
+- more than one workload or scenario family
+- more than one failure shape (loop, retry-heavy, cost spike, or similar)
+- at least one human usefulness review of anomaly quality
+- explicit review of false positives and false negatives where practical
+
+Seeded demo validation is necessary, but it does not count as the full field test.
+
+## Release Blockers
+
+The following conditions should be treated as blockers for `v0.1.0` release confidence:
+
+- trace shape is inconsistent across LangGraph and raw Python adapters
+- anomaly output is too noisy to trust
+- local stack is too hard to boot reliably
+- run timeline is not materially better than backend-native debugging alone
+- version comparison cannot produce stable, understandable deltas
+- field-test plan requirement is undocumented or ignored
+
+## Non-Functional Expectations
+
+Even in `v0.1.0`, the implementation should satisfy a few operational expectations:
+
+- local stack startup should be straightforward and documented
+- main product views should load from materialized data rather than expensive live trace queries
+- analytics processing should be idempotent for already-processed runs
+- metadata-only mode must remain the default
+- read-model rebuilds should be possible without changing the trace semantics
+
+## Trace Replay and Reprocessing Requirement
+
+Trace replay is part of both the demo story and the testing story.
+
+`v0.1.0` should assume:
+
+- seeded traces can be replayed intentionally
+- analytics can reprocess runs when detector logic changes
+- read models can be rebuilt from trace truth when necessary
+
+This requirement is important enough to appear in milestone work below.
+
+## Known `v0.1.0` Limitation Tracking
+
+The project should explicitly track these likely limitations during implementation:
+
+- no PydanticAI adapter yet
+- no policy overlay view yet
+- no full memory audit UI yet
+- anomaly classes intentionally narrow in first release
+- field testing still pending beyond seeded demo validation
+
 ## Milestone 0: Foundation and Repo Layout
 
 ### 0.1 Create monorepo skeleton
@@ -268,6 +365,17 @@ This task makes analytics asynchronous and repeatable. It should support both li
 - [ ] Add idempotency guard for already-processed runs
 - [ ] Add logging/metrics for processing success/failure
 
+### 4.6 Reprocessing and rebuild support
+
+This task makes the analytics service resilient to detector evolution. An observability product should be able to rebuild its summaries and anomaly records when logic changes, instead of treating the first computation as immutable truth.
+
+**Success looks like:** a contributor can replay or reprocess stored trace inputs and rebuild materialized run summaries and anomaly records without hand-editing the database.
+
+- [ ] Define reprocessing entrypoint or command
+- [ ] Support rerunning summary materialization from trace truth
+- [ ] Support rerunning anomaly detection from trace truth
+- [ ] Document the rebuild workflow for developers
+
 ---
 
 ## Milestone 5: Summary Materialization
@@ -532,6 +640,16 @@ This task makes the local stack demonstrable and testable. A good OSS project sh
 - [ ] Add script to seed bad runs
 - [ ] Add script or doc to replay traces into the stack
 
+### 9.2.1 Replay acceptance requirement
+
+This subtask makes replay a first-class requirement rather than a nice-to-have script. The product should be demonstrable repeatedly and should support debugging detector changes against stable evidence.
+
+**Success looks like:** the same seeded traces or scenarios can be replayed multiple times to validate instrumentation, analytics, APIs, and UI behaviors predictably.
+
+- [ ] Confirm replay works after clean database reset
+- [ ] Confirm replay works after analytics code changes
+- [ ] Confirm replay outcomes are documented for demo and test use
+
 ### 9.3 End-to-end validation
 
 This task verifies the product loop, not just individual services. It should confirm that trace generation, storage, analytics, APIs, and UI all line up in the ways the PRD promises.
@@ -616,6 +734,16 @@ This task explains the product surfaces in user terms. The documentation should 
 - [ ] Add "what each view means" doc
 - [ ] Add anomaly explanation doc
 - [ ] Add version compare interpretation doc
+
+### 11.2.1 Versioning rules documentation
+
+This task makes the compare model understandable. Since version comparison is a product feature, the project should document what counts as a version and how optional version dimensions are expected to behave.
+
+**Success looks like:** users can read one doc and understand the required `agent_version` field, optional secondary version dimensions, and how compare cohorts are formed.
+
+- [ ] Document required `agent_version`
+- [ ] Document optional prompt/model/tool-schema version dimensions
+- [ ] Document compare cohort expectations and caveats
 
 ### 11.3 OSS readiness
 
