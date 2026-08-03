@@ -443,6 +443,144 @@ The project should be shaped like a platform-friendly OSS project, not a monolit
 
 The OSS goal is not just stars. It is to become the place where the ecosystem converges on how agent runtime traces should be captured, viewed, and explained.
 
+### 2.6.6 Release Criteria
+
+Each release should have a product-level definition of done, not just a merged feature checklist.
+
+| Release | Done when |
+|---|---|
+| **v0.1.0** | One real LangGraph or raw Python agent is materially easier to debug with `agent-exec-trace` than with logs, generic traces, or intuition alone. The run timeline, fleet board, and anomaly view all work end-to-end on real traces. |
+| **v0.2.0** | A team can use version compare, search, cost attribution, and memory/intervention views in a real release or incident review without building custom analysis notebooks. |
+| **v0.3.0** | Multi-agent traces, workload cohorts, and policy overlays work well enough for a team operating several agents and several releases at once. |
+| **v0.4.0** | The product is mature enough to act as the operational home for agent investigations in an OTel-native stack, with standardized views, cross-system correlation, and stable extension conventions. |
+
+### 2.6.7 Outcomes by Persona
+
+| Persona | Success outcome |
+|---|---|
+| **Agent developer** | Can explain a bad run quickly, reproduce the behavioral path, and change the agent with confidence |
+| **On-call / operator** | Can triage anomalies and route attention without manually scraping logs or backend trace tools |
+| **LLMOps engineer** | Can compare versions, detect drift, and explain cost/regression tradeoffs during rollouts |
+| **Platform engineer** | Can standardize instrumentation and views across teams without forcing one framework or backend |
+| **Engineering manager / platform lead** | Can understand agent fleet health, cost concentration, and where human oversight is still required |
+
+### 2.6.8 Core Data Model Summary
+
+The product needs a stable mental model even if implementation details evolve.
+
+| Entity | Product meaning |
+|---|---|
+| **Agent** | A named, versioned runtime that performs work via model calls, tools, memory, and workflows |
+| **Run** | One end-to-end execution of an agent for a given task or request |
+| **Span** | A unit of work inside a run (`invoke_agent`, `plan`, `execute_tool`, `retrieval`, `memory` op) |
+| **Event** | A time-stamped detail attached to a span (warning, anomaly flag, state change, approval note) |
+| **Version** | The release identity for the agent, prompt, model, tool schema set, or workflow configuration |
+| **Tool** | An external or internal callable dependency used by the agent |
+| **Memory record** | A persisted or retrieved piece of state the agent reads or mutates |
+| **Intervention** | A human approval, denial, escalation, or review event during a run |
+| **Cohort** | A meaningful grouping of runs (by version, workload, team, repo, environment, task type) |
+| **Anomaly** | A system-generated signal that a run or cohort deviates from baseline behavior |
+
+This model should stay legible in docs, UI labels, APIs, and semantic convention extensions.
+
+### 2.6.9 Glossary / Canonical Terms
+
+| Term | Definition |
+|---|---|
+| **Run** | One execution instance of an agent from start to finish |
+| **Trace** | The full tree of spans and events representing a run |
+| **Behavior event** | A domain-specific event describing something meaningful about agent behavior beyond generic RPC tracing |
+| **Loop** | Repeated tool or workflow behavior that appears unproductive or regressive relative to expected progression |
+| **Drift** | A measurable change in behavior over time or across versions, even if the agent still technically succeeds |
+| **Intervention** | Any moment where a human is asked to inspect, approve, deny, or override behavior |
+| **Cohort** | A grouped slice of runs used for comparison or trend analysis |
+| **Version** | The identity of an agent release or behavior-affecting configuration set |
+| **Workload** | The type of task or request an agent is handling (for example PR review, incident triage, doc search) |
+| **Standard view** | A first-class, opinionated product surface that supports a repeatable investigation workflow |
+
+### 2.6.10 Alert Philosophy
+
+Anomaly detection is only valuable if operators trust it.
+
+| Principle | Meaning |
+|---|---|
+| **Trace-linked** | Every alert must link to the exact run or cohort that triggered it |
+| **Explainable** | The user should be able to see why the alert fired: threshold, baseline delta, repeated tool sequence, cost jump, etc. |
+| **Low-noise by default** | A new install should not drown teams in alerts from normal experimentation |
+| **Behavior-first grouping** | Alerts should group by meaningful patterns (loop, retry storm, cost surge, intervention spike) rather than raw errors alone |
+| **Tunable without code** | Operators should be able to adjust thresholds and routing through configuration, not forks |
+
+The anomaly inbox should feel like a triage surface, not a bucket of generic notifications.
+
+### 2.6.11 Opinionated Default Dashboards
+
+The product should ship with default dashboards or view packs that demonstrate the standard operating model.
+
+| Dashboard / pack | Purpose |
+|---|---|
+| **Fleet Health** | Which agents are changing, failing more often, or costing more than expected |
+| **Cost & Waste** | Where loops, retries, or model choices are creating concentrated cost |
+| **Release Compare** | How the latest version differs from the last known good cohort |
+| **Human Intervention** | Where human approvals, denials, and escalations are clustering |
+| **Memory Risk** | Where stale or conflicting memory behavior correlates with failures |
+
+These packs should work both as in-product views and as templates for Grafana-style integrations where appropriate.
+
+### 2.6.12 Compatibility / Support Policy
+
+Mature observability tools make support boundaries explicit.
+
+| Dimension | Initial policy direction |
+|---|---|
+| **Python support** | Current stable Python versions only; no long tail support promises in early releases |
+| **Runtime support levels** | LangGraph and raw Python first-class; PydanticAI planned; others best-effort until explicitly supported |
+| **Trace backends** | Tempo and Jaeger tested first-class; OTLP vendors compatible but initially best-effort |
+| **Semconv compatibility** | Track OTel GenAI semconv closely; document any provisional extension fields explicitly |
+| **Dashboard packs** | Maintain tested packs for in-product defaults and core Grafana-style integrations |
+
+Publishing this policy early helps users trust the project and reduces ambiguity when the ecosystem evolves.
+
+### 2.6.13 Contribution Map
+
+Contributors should know where high-value work exists.
+
+| Contribution area | Examples |
+|---|---|
+| **Runtime adapters** | PydanticAI adapter, additional orchestration frameworks, richer raw Python patterns |
+| **Detectors** | Loop detectors, cost anomaly rules, workload-specific heuristics, drift models |
+| **View packs** | Additional dashboard presets, new standard views, Grafana overlays |
+| **Docs and examples** | Quickstarts, deployment examples, investigative playbooks |
+| **Demo workloads** | Seeded bad runs and reproducible scenarios |
+| **Semconv work** | Drafting, refining, and upstreaming extension fields |
+
+This makes the project easier to contribute to and helps the community grow around clear seams.
+
+### 2.6.14 Day-in-the-Life Scenario
+
+To tie the product together, here is the ideal end-to-end story:
+
+1. A team ships a new version of a coding agent on Friday.
+2. Over the weekend, anomaly detection flags a cost surge and a retry storm.
+3. On Monday, the operator opens the **Anomaly Inbox** and clicks the linked trace.
+4. The **Run Timeline** shows a loop beginning after a tool schema change.
+5. The developer opens **Version Compare** and sees tool usage jumped while success rate dropped.
+6. The platform lead checks **Fleet Health** and confirms the issue is isolated to one workload cohort.
+7. The team rolls back the version and documents the issue using the trace permalink.
+8. In the follow-up review, they use **Human Intervention** and **Memory Risk** views to confirm no secondary governance or data-integrity issues occurred.
+
+That is the bar: one product, one operating surface, one explainable story from release through incident through review.
+
+### 2.6.15 OSS Trust Stance
+
+To build credibility as an OSS observability project, the product should remain clear about what it is not doing:
+
+- no proprietary data plane assumptions
+- no requirement for a hosted SaaS control point
+- no closed-core instrumentation model
+- no lock-in to one framework, one backend, or one dashboard stack
+
+This stance is strategically important. The product should gain trust by fitting open systems, documenting its behavior clearly, and turning field experience into shared standards.
+
 ---
 
 ## 3. CUSTOMER JOURNEY — Full Vision (10 Journeys)
