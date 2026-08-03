@@ -2,6 +2,23 @@
 
 > Checklist-style, granular, execution-oriented breakdown for `v0.1.0`.
 
+## Quality Gates — Required for Every Milestone
+
+Every milestone exits through these gates. No task is complete if any gate fails.
+
+| Gate | Requirement | Command / Tool |
+|---|---|---|
+| **Code review** | All changes reviewed by at least one other pair of human eyes before merge | PR review, not self-approval |
+| **Comments** | Public API, complex logic, and design decisions have clear inline comments | Manual review |
+| **Ruff** | Zero ruff violations on Python code | `ruff check .` |
+| **Mypy strict** | Strict type checking passes with zero errors | `mypy --strict .` |
+| **Tests pass** | All unit and integration tests pass | `pytest` |
+| **Coverage > 90%** | Line coverage at or above 90% for new/changed code | `pytest --cov --cov-report=term` |
+
+These gates are non-negotiable. A milestone is not ready for review if any gate is red.
+
+At the end of each milestone below, a quality gate checklist line is repeated as a reminder. In practice, these are the same gates verified once per milestone.
+
 ## WBS to GitHub Issue Conversion Notes
 
 Each subsection in this WBS is intended to become one GitHub issue, not one checkbox per issue.
@@ -584,6 +601,14 @@ This task keeps planning uncertainty visible instead of letting it disappear int
 - [ ] Link open questions register from implementation-facing docs
 - [ ] Mark which open questions are safe to defer past `v0.1.0`
 
+**Milestone 0 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+
 ---
 
 ## Milestone 1: Demo-First Agent Workload
@@ -633,6 +658,14 @@ This task expands the demo from "a few example inputs" into a product validation
 - [ ] Map each scenario to expected run outcome
 - [ ] Map each scenario to expected anomaly types
 - [ ] Map each scenario to expected UI views that should show useful data
+
+**Milestone 1 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
@@ -723,6 +756,14 @@ This task enforces the trust posture at the earliest possible boundary. Sensitiv
 - [ ] Ensure memory content is not captured by default
 - [ ] Add opt-in config for truncated or hashed content capture
 
+**Milestone 2 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+
 ---
 
 ## Milestone 3: OTel Export and Jaeger Path
@@ -769,6 +810,14 @@ This task ensures the product stays OTel-first rather than backend-first. The co
 - [ ] Validate collector-based OTLP export to Tempo
 - [ ] Document collector config expectations
 - [ ] Document any backend-specific caveats discovered in testing
+
+**Milestone 3 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
@@ -855,6 +904,14 @@ This task makes the analytics service debuggable as a system in its own right. S
 - [ ] Emit replay/rebuild counters
 - [ ] Record read-model freshness signal
 
+**Milestone 4 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+
 ---
 
 ## Milestone 5: Summary Materialization
@@ -917,6 +974,14 @@ This task gives the read-model layer enough explicit shape that future issues an
 - [ ] Document main read-model tables and their purpose
 - [ ] Document primary lookup keys per table
 - [ ] Document expected rebuild/recompute ownership for each table
+
+**Milestone 5 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
@@ -1002,6 +1067,14 @@ This task turns detector development into something reviewable. Each detector sh
 - [ ] Map cost detector to seeded positive and negative cases
 - [ ] Note known blind spots for each detector in `v0.1.0`
 
+**Milestone 6 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+
 ---
 
 ## Milestone 7: API Service
@@ -1085,6 +1158,14 @@ This task keeps the spec and implementation synchronized. Since the spec now inc
 - [ ] Cross-check fleet health response against spec example
 - [ ] Cross-check version compare response against spec example
 - [ ] Cross-check anomaly inbox response against spec example
+
+**Milestone 7 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
@@ -1191,6 +1272,14 @@ This task keeps the anomaly inbox from becoming a generic list page. It should s
 - [ ] Add anomaly type badges
 - [ ] Add one-click drill-down action
 
+**Milestone 8 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+
 ---
 
 ## Milestone 9: End-to-End Local Stack
@@ -1259,6 +1348,14 @@ This task verifies that the chosen architecture can recover from predictable dev
 - [ ] Validate analytics reprocessing flow after detector changes
 - [ ] Validate duplicate-run handling during replay
 - [ ] Document known weak recovery paths in `v0.1.0`
+
+**Milestone 9 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
@@ -1331,6 +1428,14 @@ This task splits release thinking by service so one polished area does not hide 
 - [ ] Confirm API service readiness
 - [ ] Confirm web app readiness
 - [ ] Confirm docs/OSS readiness
+
+**Milestone 10 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
@@ -1435,6 +1540,14 @@ This task makes the planning docs ready to turn into tracked work items. Since e
 - [ ] Add example issue body template in docs if helpful
 - [ ] Identify milestone subsections that should become the first issue batch
 
+**Milestone 11 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+
 ---
 
 ## Milestone 12: Release Validation
@@ -1495,6 +1608,14 @@ This task prevents `v0.1.0` from ending with undocumented next steps. It should 
 - [ ] Track PydanticAI adapter as follow-on work
 - [ ] Track memory review and policy overlay as follow-on work
 - [ ] Track `v0.2.0` issue creation as a next step
+
+**Milestone 12 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
