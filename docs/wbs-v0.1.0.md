@@ -628,6 +628,41 @@ This task prepares the repo to receive outside contributors. The goal is to make
 - [ ] Add issue templates if desired
 - [ ] Add roadmap reference to PRD/docs
 
+### 11.4 OSS community scaffolding
+
+This task prepares the repo to behave like a serious OSS project instead of a private build log that happens to be public. The goal is to reduce friction for first-time contributors and make the repo legible to people evaluating whether the project is real.
+
+**Success looks like:** the repository has the minimum community and governance surfaces expected of a credible OSS project, and a new visitor can understand how to participate.
+
+- [ ] Add `CODE_OF_CONDUCT.md`
+- [ ] Add or refine `CONTRIBUTING.md`
+- [ ] Add issue templates for bug, feature request, and adapter proposal
+- [ ] Add pull request template
+- [ ] Add `SECURITY.md`
+
+### 11.5 OSS maintainer guidance
+
+This task creates the basic maintainer-facing operational layer. It should make it easier to accept contributions, review issues, and explain the project roadmap without improvising policy later.
+
+**Success looks like:** the repo documents who the project is for, what contribution seams are welcomed, how roadmap work is organized, and how maintainers should evaluate incoming changes.
+
+- [ ] Add maintainer notes or `MAINTAINERS.md` if desired
+- [ ] Document supported contribution seams: adapters, detectors, views, docs, demo workloads
+- [ ] Document how semconv extension proposals should be discussed and tracked
+- [ ] Add a short roadmap snapshot for `v0.1.0` and `v0.2.0`
+
+### 11.6 OSS release packaging
+
+This task makes the first public release consumable. It covers the presentation and packaging details that often determine whether an OSS project feels usable or unfinished.
+
+**Success looks like:** the release includes clear install/run instructions, visible screenshots or demo references, and enough packaging polish that someone can evaluate the project without reading the full codebase.
+
+- [ ] Add screenshots or animated captures for key views
+- [ ] Add quickstart section for running the local stack
+- [ ] Add SDK quickstart for instrumenting one demo agent
+- [ ] Add release notes draft for the first OSS release
+- [ ] Add known limitations section for `v0.1.0`
+
 ---
 
 ## Milestone 12: Release Validation
