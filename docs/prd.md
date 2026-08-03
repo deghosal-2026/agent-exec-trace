@@ -94,6 +94,36 @@ Open-source observability tools win when they are easy to adopt incrementally. T
 
 The product must therefore optimize for **low-friction first success**, not just long-term completeness.
 
+### 1.8 Champion, Daily User, and Expansion Path
+
+OSS adoption usually spreads through a champion, not a central purchasing process. The PRD should make that motion explicit.
+
+| Role in adoption | Typical persona | What they care about |
+|---|---|---|
+| **Champion / installer** | Platform engineer, LLMOps engineer | Can I instrument one agent quickly and prove value without replacing our stack? |
+| **Daily operator** | Agent developer, on-call engineer | Can I debug faster than I can with logs, backend UIs, and intuition? |
+| **Expansion sponsor** | Engineering manager, platform lead | Can this reduce incident time, explain release risk, and standardize team workflows? |
+
+This matters because the product must be strong at all three layers:
+
+- simple enough for the champion to deploy
+- useful enough for the daily operator to keep open
+- clear enough in its outcomes that a manager wants more teams to adopt it
+
+### 1.9 Operating Model Fit
+
+The product should feel native in the lifecycle of an agent system, not like a bolt-on dashboard.
+
+| Stage of work | How the product fits |
+|---|---|
+| **Development** | Debug one broken or expensive run. Confirm that instrumentation is telling the truth. |
+| **Release / rollout** | Compare versions, detect regressions, and review cost changes before broad rollout. |
+| **Operations** | Watch fleet health, anomaly inbox, and drift indicators. |
+| **Incident response** | Use trace, cost, tool, and memory views to explain what happened fast. |
+| **Governance review** | Review interventions, approvals, memory mutations, and policy-adjacent events. |
+
+This operating-model fit is part of the differentiation. The product is not just for debugging; it is for running agent systems responsibly over time.
+
 ---
 
 ## 2. WHAT — Product Scope
@@ -380,6 +410,38 @@ The product should be judged by operator outcomes, not just feature completion.
 | **Users fall back to backend-native tools** | Then the product is just an extra screen | Make standard views clearly faster than raw querying |
 | **Standards evolve underneath us** | OTel GenAI semconv is still developing | Treat extensions as documented provisional fields and stay close to upstream |
 | **Local-first breaks at larger scale** | Maturing teams need stronger patterns than a laptop demo | Keep architecture backend-neutral so scale comes from existing tracing infra |
+
+### 2.6.4 Standard View Definitions
+
+The view catalog should be specific enough that implementation teams know what each view is for and what decision it enables.
+
+| View | Target user | Inputs | Outputs | Decision enabled |
+|---|---|---|---|---|
+| **Run Timeline** | Developer, on-call operator | Single run trace with child spans and events | Ordered behavioral story with duration, cost, tool calls, memory operations | Where did behavior degrade? |
+| **Run Summary** | Developer, operator | Aggregated run metadata | Cost summary, retries, tools used, anomaly badges, intervention count | Is this run normal, expensive, risky, or broken? |
+| **Fleet Health** | LLMOps, platform engineer | Aggregated runs across agents/workloads | Success rate, cost-per-success, drift score, anomaly counts | Which agents need attention now? |
+| **Version Compare** | Developer, release owner | Two version cohorts + time windows | Behavior deltas, cost deltas, retries, tool usage shifts | Ship, rollback, or continue experiment? |
+| **Search & Cohorts** | Investigator, analyst | Indexed run/span attributes | Matching run sets, saved filters, grouped cohorts | Does this pattern happen elsewhere? |
+| **Decision Inspector** | Developer | Decision point trace + surrounding context | Candidate tools, reasoning context, preceding events | Why this choice instead of another? |
+| **Cost Attribution** | Manager, platform lead | Run, agent, workload, team dimensions | Spend summaries, trends, cost-vs-success curves | Is cost concentrated, justified, or regressing? |
+| **Intervention Review** | Ops lead, governance reviewer | Approval / escalation events | Intervention rates, reasons, wait times, outcome summaries | Where is human involvement still required? |
+| **Interaction Map** | Platform engineer | Multi-agent traces | Delegation topology and fan-out/fan-in patterns | Which agent interaction path is unstable or expensive? |
+| **Audit Lens** | Governance / security reviewer | Sensitive events, policy overlays, memory access | Reviewable evidence trail | Can we explain and defend what the system did? |
+
+### 2.6.5 Open Source Strategy
+
+The project should be shaped like a platform-friendly OSS project, not a monolith.
+
+| Area | OSS seam | Why it matters |
+|---|---|---|
+| **Runtime adapters** | LangGraph, raw Python, PydanticAI, later others | Lets the community expand framework coverage without changing the core model |
+| **Detectors** | Loop detection, cost spikes, drift, custom pattern detectors | Gives users a reason to contribute domain-specific logic |
+| **View packs / dashboards** | Grafana dashboards, standard view presets | Makes adoption easier and gives visible contribution surfaces |
+| **Semantic convention extensions** | Draft fields for loops, approvals, memory mutation, drift | Turns field experience into upstream standards work |
+| **Demo workload packs** | Seeded bad runs and repeatable scenarios | Makes the repo teachable and testable |
+| **Example deployments** | Tempo, Jaeger, Collector, Grafana bundles | Reduces adoption friction for new users |
+
+The OSS goal is not just stars. It is to become the place where the ecosystem converges on how agent runtime traces should be captured, viewed, and explained.
 
 ---
 
