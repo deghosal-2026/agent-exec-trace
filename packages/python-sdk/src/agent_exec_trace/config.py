@@ -32,6 +32,9 @@ DEFAULT_OTLP_ENDPOINT = "http://localhost:4317"
 class SDKConfig:
     """Immutable runtime configuration for the instrumentation SDK.
 
+    Frozen so a single config object can be shared safely across threads, adapters,
+    and span helpers without copy-on-write concerns.
+
     Attributes:
         service_name: OTel service name attached to the trace resource (shows up as
             the service column in Jaeger/Tempo).

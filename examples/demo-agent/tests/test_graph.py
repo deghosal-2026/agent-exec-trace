@@ -11,6 +11,7 @@ from typing import Any, cast
 
 import pytest
 from langgraph.graph.state import CompiledStateGraph
+
 from request_triage.graph import MAX_STEPS, TriageState, build_graph
 from request_triage.seeds import (
     all_requests,

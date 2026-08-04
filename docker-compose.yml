@@ -37,3 +37,45 @@ services:
     command: [ "-config.file=/etc/tempo-config.yml" ]
     volumes:
       - ./deploy/tempo-config.yml:/etc/tempo-config.yml:ro
+
+  # Postgres: product read-model database for the analytics service.
+  # Stores run summaries, anomalies, fleet rollups, and version cohort
+  # summaries materialized from raw traces.
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: analytics
+      POSTGRES_PASSWORD: analytics
+      POSTGRES_DB: analytics
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U analytics"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # API service: product-facing read API for the web app.
+  # Serves run timelines, fleet health, version compare, and anomaly inbox
+  # from the normalized Postgres read model.
+  api:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      API_DB_DSN: postgresql://analytics:analytics@postgres:5432/analytics
+      API_HOST: "0.0.0.0"
+      API_PORT: "8000"
+      API_CORS_ORIGINS: '["http://localhost:5173","http://localhost:3000"]'
+      API_LOG_LEVEL: "INFO"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["api"]
+
+volumes:
+  pgdata:

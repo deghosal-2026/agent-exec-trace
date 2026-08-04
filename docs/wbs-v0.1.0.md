@@ -861,7 +861,9 @@ This task ensures the product stays OTel-first rather than backend-first. The co
 
 ---
 
-## Milestone 4: Analytics Service Skeleton
+## Milestone 4: Analytics Service Skeleton  ✅
+
+**Issue:** [#20](https://github.com/deghosal-2026/agent-exec-trace/issues/20) — **CLOSED**
 
 ### 4.1 Service setup
 
@@ -869,92 +871,106 @@ This creates the service that turns traces into product value. It should start s
 
 **Success looks like:** analytics can run as its own service process, has a clean project shape, and is ready to own read-model materialization and anomaly logic.
 
-- [ ] Create `services/analytics/pyproject.toml`
-- [ ] Create analytics app entrypoint
-- [ ] Create analytics config module
-- [ ] Create analytics logging setup
-- [ ] Add analytics unit test layout
+- [x] Create `services/analytics/pyproject.toml`
+- [x] Create analytics app entrypoint
+- [x] Create analytics config module
+- [x] Create analytics logging setup
+- [x] Add analytics unit test layout
 
 ### 4.2 Postgres setup
+
+**Issue:** [#21](https://github.com/deghosal-2026/agent-exec-trace/issues/21) — **CLOSED**
 
 This task establishes the product read-model database. Because Postgres is the chosen path toward `1.0`, the setup should feel production-shaped even in local development.
 
 **Success looks like:** Postgres runs in the local stack, migrations are wired, and analytics can create and evolve its schema predictably.
 
-- [ ] Add Postgres service to compose stack
-- [ ] Create analytics DB connection module
-- [ ] Add migration tool setup
-- [ ] Create initial schema migration
+- [x] Add Postgres service to compose stack
+- [x] Create analytics DB connection module
+- [x] Add migration tool setup
+- [x] Create initial schema migration
 
 ### 4.3 Read model tables
+
+**Issue:** [#22](https://github.com/deghosal-2026/agent-exec-trace/issues/22) — **CLOSED**
 
 This task defines the first stable product storage layer. These tables should reflect product concepts, not raw tracing internals, so that the API and UI can work with clean entities.
 
 **Success looks like:** the database has explicit tables for summaries and anomalies, indexes support key lookups, and the schema matches the product vocabulary from the PRD.
 
-- [ ] Create `run_summaries` table
-- [ ] Create `anomalies` table
-- [ ] Create `fleet_rollups` table or equivalent summary structure
-- [ ] Create `version_cohort_summaries` table
-- [ ] Add indexes for run lookup and anomaly queries
+- [x] Create `run_summaries` table
+- [x] Create `anomalies` table
+- [x] Create `fleet_rollups` table or equivalent summary structure
+- [x] Create `version_cohort_summaries` table
+- [x] Add indexes for run lookup and anomaly queries
 
 ### 4.4 Trace ingestion path
+
+**Issue:** [#23](https://github.com/deghosal-2026/agent-exec-trace/issues/23) — **CLOSED**
 
 This task is the bridge between tracing infrastructure and product behavior. The goal is to read trace data once, normalize it cleanly, and stop making the rest of the product think in backend-native shapes.
 
 **Success looks like:** traces from the demo workload can be fetched, parsed, normalized into internal models, and persisted as product-facing records.
 
-- [ ] Decide trace read strategy from Jaeger/collector-accessible source
-- [ ] Implement trace fetch/parse job
-- [ ] Normalize root run data into internal models
-- [ ] Normalize child spans into behavior segments
-- [ ] Persist run summaries to Postgres
+- [x] Decide trace read strategy from Jaeger/collector-accessible source
+- [x] Implement trace fetch/parse job
+- [x] Normalize root run data into internal models
+- [x] Normalize child spans into behavior segments
+- [x] Persist run summaries to Postgres
 
 ### 4.5 Background processing loop
+
+**Issue:** [#24](https://github.com/deghosal-2026/agent-exec-trace/issues/24) — **CLOSED**
 
 This task makes analytics asynchronous and repeatable. It should support both live-ish processing for local use and controlled reprocessing for seeded demo runs and tests.
 
 **Success looks like:** analytics can process new traces in the background, skip already-processed runs safely, and report its own health through logs/metrics.
 
-- [ ] Create async worker loop
-- [ ] Add polling or replay strategy for new traces
-- [ ] Add idempotency guard for already-processed runs
-- [ ] Add logging/metrics for processing success/failure
+- [x] Create async worker loop
+- [x] Add polling or replay strategy for new traces
+- [x] Add idempotency guard for already-processed runs
+- [x] Add logging/metrics for processing success/failure
 
 ### 4.6 Reprocessing and rebuild support
+
+**Issue:** [#25](https://github.com/deghosal-2026/agent-exec-trace/issues/25) — **CLOSED**
 
 This task makes the analytics service resilient to detector evolution. An observability product should be able to rebuild its summaries and anomaly records when logic changes, instead of treating the first computation as immutable truth.
 
 **Success looks like:** a contributor can replay or reprocess stored trace inputs and rebuild materialized run summaries and anomaly records without hand-editing the database.
 
-- [ ] Define reprocessing entrypoint or command
-- [ ] Support rerunning summary materialization from trace truth
-- [ ] Support rerunning anomaly detection from trace truth
-- [ ] Document the rebuild workflow for developers
+- [x] Define reprocessing entrypoint or command
+- [x] Support rerunning summary materialization from trace truth
+- [x] Support rerunning anomaly detection from trace truth
+- [x] Document the rebuild workflow for developers
 
 ### 4.7 Analytics self-observability
+
+**Issue:** [#26](https://github.com/deghosal-2026/agent-exec-trace/issues/26) — **CLOSED**
 
 This task makes the analytics service debuggable as a system in its own right. Since analytics is responsible for derived truth, it must emit enough signals that maintainers can tell whether it is healthy or stale.
 
 **Success looks like:** maintainers can inspect worker lag, processing counts, duplicate-skip behavior, replay success, and read-model freshness without guessing.
 
-- [ ] Emit processed-run counters
-- [ ] Emit failed-run counters
-- [ ] Emit duplicate-skip counters
-- [ ] Emit replay/rebuild counters
-- [ ] Record read-model freshness signal
+- [x] Emit processed-run counters
+- [x] Emit failed-run counters
+- [x] Emit duplicate-skip counters
+- [x] Emit replay/rebuild counters
+- [x] Record read-model freshness signal
 
 **Milestone 4 Quality Gates:**
-- [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
-- [ ] Tests pass: all unit/integration tests green (`pytest`)
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+- [x] Code review passed (reviewed via code-reviewer skill across all new files)
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Tests pass: all unit/integration tests green (`pytest`)
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
-## Milestone 5: Summary Materialization
+## Milestone 5: Summary Materialization  ✅
+
+**Issue:** [#27](https://github.com/deghosal-2026/agent-exec-trace/issues/27) — **CLOSED**
 
 ### 5.1 Run summary model
 
@@ -962,70 +978,80 @@ This task creates the first product object users will actually feel. The run sum
 
 **Success looks like:** every processed run has a summary row with duration, cost, retries, tool counts, and other top-level values needed by both UI and anomaly logic.
 
-- [ ] Define run summary fields
-- [ ] Compute total duration
-- [ ] Compute tool call count
-- [ ] Compute retry count
-- [ ] Compute intervention count
-- [ ] Compute estimated cost field
+- [x] Define run summary fields
+- [x] Compute total duration
+- [x] Compute tool call count
+- [x] Compute retry count
+- [x] Compute intervention count
+- [x] Compute estimated cost field
 
 ### 5.2 Fleet rollups
+
+**Issue:** [#28](https://github.com/deghosal-2026/agent-exec-trace/issues/28) — **CLOSED**
 
 This task turns isolated runs into fleet-level operational visibility. The rollups should be stable enough to support the fleet board without heavy per-request recomputation.
 
 **Success looks like:** the analytics service materializes grouped summaries by agent/version/workload and those groups can power the fleet UI directly.
 
-- [ ] Group summaries by agent
-- [ ] Group summaries by version
-- [ ] Group summaries by workload type
-- [ ] Compute success/error counts
-- [ ] Compute average cost per run
-- [ ] Compute anomaly counts per grouping
+- [x] Group summaries by agent
+- [x] Group summaries by version
+- [x] Group summaries by workload type
+- [x] Compute success/error counts
+- [x] Compute average cost per run
+- [x] Compute anomaly counts per grouping
 
 ### 5.3 Version cohort summaries
+
+**Issue:** [#29](https://github.com/deghosal-2026/agent-exec-trace/issues/29) — **CLOSED**
 
 This task enables meaningful version comparison. The key is to define stable cohort semantics so that compare is not just two arbitrary lists of runs.
 
 **Success looks like:** two versions can be compared through precomputed aggregates for cost, retries, outcomes, and tool usage without expensive ad hoc analysis.
 
-- [ ] Define version comparison cohort inputs
-- [ ] Materialize run counts by version
-- [ ] Materialize cost aggregates by version
-- [ ] Materialize retry aggregates by version
-- [ ] Materialize top tool usage counts by version
+- [x] Define version comparison cohort inputs
+- [x] Materialize run counts by version
+- [x] Materialize cost aggregates by version
+- [x] Materialize retry aggregates by version
+- [x] Materialize top tool usage counts by version
 
 ### 5.4 Workload and cohort dimension support
+
+**Issue:** [#30](https://github.com/deghosal-2026/agent-exec-trace/issues/30) — **CLOSED**
 
 This task protects the product from becoming too version-only in its thinking. Even in `v0.1.0`, the data model should leave room for meaningful workload and grouping dimensions.
 
 **Success looks like:** summaries can be grouped by more than just agent name, and the fleet and compare views are not blocked from cohorting by workload type or environment.
 
-- [ ] Define minimum cohort dimensions for `v0.1.0`
-- [ ] Add workload-type grouping to summary materialization
-- [ ] Add environment or deployment grouping if available
-- [ ] Document which cohort dimensions are first-class in the first release
+- [x] Define minimum cohort dimensions for `v0.1.0`
+- [x] Add workload-type grouping to summary materialization
+- [x] Add environment or deployment grouping if available
+- [x] Document which cohort dimensions are first-class in the first release
 
 ### 5.5 Database schema sketch review
+
+**Issue:** [#31](https://github.com/deghosal-2026/agent-exec-trace/issues/31) — **CLOSED**
 
 This task gives the read-model layer enough explicit shape that future issues and migrations are not invented ad hoc. It is not the final migration set, but it should make the intended tables and lookup patterns concrete.
 
 **Success looks like:** maintainers can point to a documented sketch of the core Postgres tables, their purpose, and their main lookup paths before schema work spreads across services.
 
-- [ ] Document main read-model tables and their purpose
-- [ ] Document primary lookup keys per table
-- [ ] Document expected rebuild/recompute ownership for each table
+- [x] Document main read-model tables and their purpose
+- [x] Document primary lookup keys per table
+- [x] Document expected rebuild/recompute ownership for each table
 
 **Milestone 5 Quality Gates:**
-- [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
-- [ ] Tests pass: all unit/integration tests green (`pytest`)
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+- [x] Code review passed
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Tests pass: all unit/integration tests green (`pytest`)
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
-## Milestone 6: Anomaly Engine
+## Milestone 6: Anomaly Engine  ✅
+
+**Issue:** [#32](https://github.com/deghosal-2026/agent-exec-trace/issues/32) — **CLOSED**
 
 ### 6.1 Loop detection rule
 
@@ -1033,87 +1059,99 @@ This is the first detector and the signature anomaly type for the product. It sh
 
 **Success looks like:** seeded loop scenarios are reliably detected, the anomaly is persisted, and the explanation clearly states why the run was considered a loop.
 
-- [ ] Define configurable same-tool repetition threshold
-- [ ] Detect repeated tool sequences inside a run
-- [ ] Mark loop evidence in anomaly record
-- [ ] Attach loop count to run summary
-- [ ] Add tests with seeded loop demo case
+- [x] Define configurable same-tool repetition threshold
+- [x] Detect repeated tool sequences inside a run
+- [x] Mark loop evidence in anomaly record
+- [x] Attach loop count to run summary
+- [x] Add tests with seeded loop demo case
 
 ### 6.2 Retry storm rule
+
+**Issue:** [#33](https://github.com/deghosal-2026/agent-exec-trace/issues/33) — **CLOSED**
 
 This detector catches another common failure shape: agents repeatedly attempting recovery without converging. The rule should remain understandable to operators and not depend on opaque scoring.
 
 **Success looks like:** runs that exceed retry thresholds are flagged with clear evidence and do not require manual counting to verify the detector result.
 
-- [ ] Define retry threshold config
-- [ ] Count retries per run
-- [ ] Emit retry anomaly when threshold exceeded
-- [ ] Add tests with seeded retry case
+- [x] Define retry threshold config
+- [x] Count retries per run
+- [x] Emit retry anomaly when threshold exceeded
+- [x] Add tests with seeded retry case
 
 ### 6.3 Cost spike rule
+
+**Issue:** [#34](https://github.com/deghosal-2026/agent-exec-trace/issues/34) — **CLOSED**
 
 This detector connects observability to business value. It should make expensive runs visible whether they are absolutely expensive or only expensive relative to baseline behavior.
 
 **Success looks like:** a seeded expensive run produces a cost anomaly with enough explanation for a user to understand both the amount and why it was considered unusual.
 
-- [ ] Define absolute threshold config
-- [ ] Define baseline-multiplier config
-- [ ] Compare current run cost against threshold/baseline
-- [ ] Emit cost anomaly record with explanation
-- [ ] Add tests with seeded cost case
+- [x] Define absolute threshold config
+- [x] Define baseline-multiplier config
+- [x] Compare current run cost against threshold/baseline
+- [x] Emit cost anomaly record with explanation
+- [x] Add tests with seeded cost case
 
 ### 6.4 Anomaly persistence and lifecycle
+
+**Issue:** [#35](https://github.com/deghosal-2026/agent-exec-trace/issues/35) — **CLOSED**
 
 This task makes anomalies durable product objects instead of transient log lines. The anomaly inbox, alerts, and future review workflows all depend on these records being well-shaped and linkable.
 
 **Success looks like:** anomalies are stored with stable IDs, severity, explanation, timestamps, and run linkage so they can be queried and rendered consistently.
 
-- [ ] Persist anomaly records to Postgres
-- [ ] Link anomalies to run ID and agent name
-- [ ] Store severity
-- [ ] Store explanation text
-- [ ] Store created timestamp
+- [x] Persist anomaly records to Postgres
+- [x] Link anomalies to run ID and agent name
+- [x] Store severity
+- [x] Store explanation text
+- [x] Store created timestamp
 
 ### 6.5 Alert output path
+
+**Issue:** [#36](https://github.com/deghosal-2026/agent-exec-trace/issues/36) — **CLOSED**
 
 This task gives anomalies an outward operational path. Even if the first release keeps it simple, the alert shape should already look like something a real team could route and consume.
 
 **Success looks like:** anomaly records can optionally emit webhook notifications with useful, trace-linked payloads and documented configuration.
 
-- [ ] Define webhook payload shape
-- [ ] Add optional webhook emitter
-- [ ] Add retry/error handling for webhook delivery
-- [ ] Document alert config
+- [x] Define webhook payload shape
+- [x] Add optional webhook emitter
+- [x] Add retry/error handling for webhook delivery
+- [x] Document alert config
 
 ### 6.6 Define field-test handoff requirement
+
+**Issue:** [#37](https://github.com/deghosal-2026/agent-exec-trace/issues/37) — **CLOSED**
 
 This task does not create the full field-test plan yet. It creates the explicit delivery requirement that `v0.1.0` anomaly work is incomplete until a separate field-testing plan exists and is executed later. The purpose is to prevent the team from treating seeded demo validation as sufficient evidence.
 
 **Success looks like:** the WBS and release path explicitly call out that a separate field-test plan must be written later, and anomaly detection is treated as requiring post-implementation validation against broader workloads.
 
-- [ ] Add a release note in docs that anomaly detection requires a dedicated field-test plan
-- [ ] List minimum future field-test dimensions: multiple workloads, false positives, detector usefulness, operator feedback
-- [ ] Mark field-test planning as a required follow-on artifact before final release confidence claims
+- [x] Add a release note in docs that anomaly detection requires a dedicated field-test plan
+- [x] List minimum future field-test dimensions: multiple workloads, false positives, detector usefulness, operator feedback
+- [x] Mark field-test planning as a required follow-on artifact before final release confidence claims
 
 ### 6.7 Anomaly validation matrix
+
+**Issue:** [#38](https://github.com/deghosal-2026/agent-exec-trace/issues/38) — **CLOSED**
 
 This task turns detector development into something reviewable. Each detector should have named scenarios it is expected to catch and scenarios it should ignore.
 
 **Success looks like:** there is a detector-by-scenario matrix showing expected true positives and known non-goals, making false-positive discussions much easier later.
 
-- [ ] Create detector validation matrix doc
-- [ ] Map loop detector to seeded positive and negative cases
-- [ ] Map retry detector to seeded positive and negative cases
-- [ ] Map cost detector to seeded positive and negative cases
-- [ ] Note known blind spots for each detector in `v0.1.0`
+- [x] Create detector validation matrix doc
+- [x] Map loop detector to seeded positive and negative cases
+- [x] Map retry detector to seeded positive and negative cases
+- [x] Map cost detector to seeded positive and negative cases
+- [x] Note known blind spots for each detector in `v0.1.0`
 
 **Milestone 6 Quality Gates:**
-- [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
-- [ ] Tests pass: all unit/integration tests green (`pytest`)
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+- [x] Code review passed
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Tests pass: all unit/integration tests green (`pytest`)
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 

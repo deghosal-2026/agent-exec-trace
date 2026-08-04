@@ -59,6 +59,11 @@ class _NodeCallbackHandler(BaseCallbackHandler):
 
     @staticmethod
     def _node_name(kwargs: dict[str, Any]) -> str | None:
+        """Extract the LangGraph node name from callback kwargs.
+
+        The node name lives in ``kwargs["metadata"]["langgraph_node"]`` when LangGraph
+        dispatches a callback event for a specific node.
+        """
         md = kwargs.get("metadata")
         if not isinstance(md, dict):
             return None
@@ -66,6 +71,11 @@ class _NodeCallbackHandler(BaseCallbackHandler):
 
     @staticmethod
     def _is_primary_start(kwargs: dict[str, Any]) -> bool:
+        """Return True if the callback event is a primary graph step (not a wrapper).
+
+        LangGraph emits both ``graph:step:N`` and ``seq:step:N`` events. Only the
+        ``graph:step:*`` events represent real node boundaries that should produce spans.
+        """
         tags = kwargs.get("tags")
         if not isinstance(tags, list | tuple):
             return False

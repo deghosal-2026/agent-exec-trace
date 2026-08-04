@@ -21,11 +21,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 from agent_exec_trace.config import SDKConfig
 from agent_exec_trace.langgraph import trace_graph
 from agent_exec_trace.tracer import configure_otlp_tracing
+
 from request_triage.graph import DEFAULT_VERSION, build_graph
 from request_triage.seeds import all_requests
 
 
 def main() -> None:
+    """Parse CLI args, configure tracing, run the seeded scenario, and print results."""
     parser = argparse.ArgumentParser(
         description="Run the request-triage demo agent with OTLP tracing"
     )

@@ -1,4 +1,4 @@
-.PHONY: help setup lint format test typecheck stack-up stack-down clean
+.PHONY: help setup format lint typecheck test stack-up stack-down clean migrate api
 
 PYTHON ?= python3
 PACKAGES := packages/python-sdk services/api services/analytics
@@ -39,6 +39,12 @@ stack-up: ## Boot the local docker compose stack.
 
 stack-down: ## Tear down the local docker compose stack.
 	docker compose down
+
+migrate: ## Run Alembic migrations for the analytics service.
+	cd services/analytics && alembic upgrade head
+
+api: ## Run the API service locally.
+	cd services/api && uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
 clean: ## Remove generated artifacts.
 	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true

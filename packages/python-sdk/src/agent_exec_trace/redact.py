@@ -40,7 +40,7 @@ class PrivacyMode(str, Enum):
 # Marker appended to a truncated payload. Its length is subtracted when slicing so
 # the stored value never exceeds ``truncate_at`` characters. Kept as a named
 # constant because it is referenced in both ``apply()`` and the tests.
-_TRUNCATION_MARKER = "[…]"
+_TRUNCATION_MARKER = "[...]"
 
 
 @dataclass(frozen=True)
@@ -99,7 +99,7 @@ class RedactionConfig:
         Return values, by mode:
           * metadata-only or ``allowed=False``  -> ``None`` (skip the span write)
           * hashed                              -> 64-char salted SHA-256 hex digest
-          * truncated + value too long         -> value[:truncate_at-len(marker)] + "[…]"
+          * truncated + value too long         -> value[:truncate_at-len(marker)] + "[...]"
           * otherwise                          -> the value unchanged
         """
         # Short-circuit: a field that is not opted-in, or a global metadata-only

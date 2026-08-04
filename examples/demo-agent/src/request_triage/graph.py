@@ -10,10 +10,10 @@ reliable target for the SDK tests, the analytics service, and demo replays.
 
 Graph layout (all edges deterministic):
     START -> planner -> run_tool -+-> resolve -> END
-                                 |
-                                 +-> escalate -> END
-                                 |
-                                 +-> planner (retry)
+                                  |
+                                  +-> escalate -> END
+                                  |
+                                  +-> planner (retry)
 
 The agent is instrumented by the SDK later (Milestone 2.6 adapter) by wrapping the
 ``plan_span`` / ``execute_tool_span`` / ``retrieval_span`` helpers around the nodes

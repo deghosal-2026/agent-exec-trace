@@ -13,7 +13,7 @@ src = ["packages", "services", "examples", "tests"]
 select = ["E", "F", "I", "UP", "B", "SIM", "N"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["agent_exec_trace"]
+known-first-party = ["agent_exec_trace", "analytics", "api"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

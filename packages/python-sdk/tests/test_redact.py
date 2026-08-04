@@ -24,11 +24,12 @@ def test_disallowed_field_returns_none_even_when_mode_enabled() -> None:
 
 
 def test_truncated_caps_length() -> None:
-    # Truncation respects truncate_at exactly and the output keeps a prefix.
+    # Truncation respects truncate_at exactly: the marker "[...]" (5 chars) is
+    # reserved for, so value[:5] + "[...]" fits in the 10-char cap.
     cfg = RedactionConfig(mode=PrivacyMode.TRUNCATED, truncate_at=10)
     out = cfg.apply("0123456789abcdef", allowed=True)
     assert out is not None
-    assert out.startswith("0123456")
+    assert out == "01234[...]"
     assert len(out) == 10
 
 
