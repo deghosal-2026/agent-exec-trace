@@ -1,0 +1,31 @@
+# Tempo (Grafana) configuration for the compatibility backend (3.3).
+#
+# Tempo is an alternative OTel-native trace backend.  The same SDK traces
+# exported to Jaeger can be viewed here with only the endpoint changed
+# (--endpoint http://localhost:4319).  This keeps the product OTel-first
+# rather than Jaeger-shaped.
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+ingester:
+  trace_idle_period: 10s
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 24h
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /tmp/tempo/blocks
+    wal:
+      path: /tmp/tempo/wal

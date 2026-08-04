@@ -45,6 +45,25 @@ Traditional observability shows you what your services did — latency, errors, 
 
 ---
 
+## Repository Layout
+
+```
+agent-exec-trace/
+├── packages/python-sdk/     # Instrumentation SDK (OTel spans, adapters)
+├── services/api/            # Product read API (FastAPI)
+├── services/analytics/      # Behavior analytics service (summaries, anomalies)
+├── apps/web/                # Operator UI (React)
+├── deploy/                  # Compose configs, collector configs, local stack
+├── examples/                # Demo agents and seeded scenarios
+├── tests/                   # Cross-cutting / end-to-end tests
+├── docs/                    # PRD, architecture, spec, WBS, planning
+└── Makefile                 # setup / lint / test / stack entrypoints
+```
+
+See [docs/developer-setup.md](docs/developer-setup.md) for the developer onboarding flow.
+
+---
+
 ## Quickstart
 
 > Coming soon. Target flow:

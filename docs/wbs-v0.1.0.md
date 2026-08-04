@@ -141,13 +141,13 @@ These are the first issues to create. Each follows the recommended issue body sh
 - no future restructuring required
 
 **Checklist:**
-- [ ] Create `packages/python-sdk/`
-- [ ] Create `services/api/`
-- [ ] Create `services/analytics/`
-- [ ] Create `apps/web/`
-- [ ] Create `deploy/`
-- [ ] Create `examples/`
-- [ ] Create `tests/`
+- [x] Create `packages/python-sdk/`
+- [x] Create `services/api/`
+- [x] Create `services/analytics/`
+- [x] Create `apps/web/`
+- [x] Create `deploy/`
+- [x] Create `examples/`
+- [x] Create `tests/`
 
 ---
 
@@ -163,11 +163,11 @@ These are the first issues to create. Each follows the recommended issue body sh
 - new contributor can open repo, understand layout from root README, see how local stack will work, understand workspace governance
 
 **Checklist:**
-- [ ] Add root `README.md` section for monorepo layout
-- [ ] Update root `.gitignore` for monorepo paths
-- [ ] Add root `Makefile` or task runner entrypoints
-- [ ] Add root `docker-compose.yml` placeholder
-- [ ] Add root developer setup doc
+- [x] Add root `README.md` section for monorepo layout
+- [x] Update root `.gitignore` for monorepo paths
+- [x] Add root `Makefile` or task runner entrypoints
+- [x] Add root `docker-compose.yml` placeholder
+- [x] Add root developer setup doc
 
 ---
 
@@ -184,11 +184,11 @@ These are the first issues to create. Each follows the recommended issue body sh
 - local setup instructions match actual versions
 
 **Checklist:**
-- [ ] Define Python version target
-- [ ] Define Node version target for web app
-- [ ] Define formatting/lint tools for Python
-- [ ] Define formatting/lint tools for web app
-- [ ] Add pre-commit hooks
+- [x] Define Python version target
+- [x] Define Node version target for web app
+- [x] Define formatting/lint tools for Python
+- [x] Define formatting/lint tools for web app
+- [x] Add pre-commit hooks
 
 ---
 
@@ -205,11 +205,11 @@ These are the first issues to create. Each follows the recommended issue body sh
 - later SDK/UI/analytics work can reference this as truth
 
 **Checklist:**
-- [ ] Choose one LangGraph demo agent scenario
-- [ ] Document what "bad run" looks like
-- [ ] Document what normal run looks like
-- [ ] Define one seeded loop scenario
-- [ ] Define one seeded high-cost scenario
+- [x] Choose one LangGraph demo agent scenario
+- [x] Document what "bad run" looks like
+- [x] Document what normal run looks like
+- [x] Define one seeded loop scenario
+- [x] Define one seeded high-cost scenario
 
 ---
 
@@ -228,11 +228,11 @@ These are the first issues to create. Each follows the recommended issue body sh
 - carries version metadata through execution
 
 **Checklist:**
-- [ ] Create example LangGraph app folder under `examples/`
-- [ ] Add minimal graph workflow
-- [ ] Add at least one tool call path
-- [ ] Add at least one path that can loop under seeded conditions
-- [ ] Add version metadata injection
+- [x] Create example LangGraph app folder under `examples/`
+- [x] Add minimal graph workflow
+- [x] Add at least one tool call path
+- [x] Add at least one path that can loop under seeded conditions
+- [x] Add version metadata injection
 
 ---
 
@@ -249,11 +249,11 @@ These are the first issues to create. Each follows the recommended issue body sh
 - contributor can run them intentionally and know what to expect
 
 **Checklist:**
-- [ ] Add sample inputs for success case
-- [ ] Add sample inputs for loop case
-- [ ] Add sample inputs for high-cost case
-- [ ] Add expected run outcomes doc
-- [ ] Create scenario matrix doc mapping inputs to expected anomalies and views
+- [x] Add sample inputs for success case
+- [x] Add sample inputs for loop case
+- [x] Add sample inputs for high-cost case
+- [x] Add expected run outcomes doc
+- [x] Create scenario matrix doc mapping inputs to expected anomalies and views
 
 ---
 
@@ -271,10 +271,10 @@ These are the first issues to create. Each follows the recommended issue body sh
 - tests/docs can be added without moving files later
 
 **Checklist:**
-- [ ] Create `packages/python-sdk/pyproject.toml`
-- [ ] Create package source layout
-- [ ] Add package README stub
-- [ ] Add unit test folder
+- [x] Create `packages/python-sdk/pyproject.toml`
+- [x] Create package source layout
+- [x] Add package README stub
+- [x] Add unit test folder
 
 ---
 
@@ -291,11 +291,11 @@ These are the first issues to create. Each follows the recommended issue body sh
 - no duplicated setup logic across adapters
 
 **Checklist:**
-- [ ] Create SDK config object
-- [ ] Create tracer initialization helper
-- [ ] Create run context model
-- [ ] Create helper for OTel attribute mapping
-- [ ] Create redaction configuration model
+- [x] Create SDK config object
+- [x] Create tracer initialization helper
+- [x] Create run context model
+- [x] Create helper for OTel attribute mapping
+- [x] Create redaction configuration model
 
 ---
 
@@ -312,12 +312,12 @@ These are the first issues to create. Each follows the recommended issue body sh
 - agent identity, version, runtime context, and run ID are attached consistently
 
 **Checklist:**
-- [ ] Implement root `invoke_agent` span creation
-- [ ] Attach agent name
-- [ ] Attach agent version when provided
-- [ ] Attach model/provider metadata when provided
-- [ ] Attach workload type when provided
-- [ ] Attach generated run ID
+- [x] Implement root `invoke_agent` span creation
+- [x] Attach agent name
+- [x] Attach agent version when provided
+- [x] Attach model/provider metadata when provided
+- [x] Attach workload type when provided
+- [x] Attach generated run ID
 
 ---
 
@@ -333,11 +333,11 @@ These are the first issues to create. Each follows the recommended issue body sh
 - a single run can express its full behavior as a navigable span tree
 
 **Checklist:**
-- [ ] Implement `plan` span helper
-- [ ] Implement `execute_tool` span helper
-- [ ] Implement `retrieval` span helper
-- [ ] Implement memory operation span helper
-- [ ] Implement generic event helper
+- [x] Implement `plan` span helper
+- [x] Implement `execute_tool` span helper
+- [x] Implement `retrieval` span helper
+- [x] Implement memory operation span helper
+- [x] Implement generic event helper
 
 ---
 
@@ -354,11 +354,11 @@ These are the first issues to create. Each follows the recommended issue body sh
 - traces look structurally consistent with LangGraph adapter output
 
 **Checklist:**
-- [ ] Implement `@trace_agent` decorator
-- [ ] Implement nested helper context manager for tools
-- [ ] Implement nested helper context manager for planning
-- [ ] Implement nested helper context manager for retrieval
-- [ ] Add tests for decorator-based tracing
+- [x] Implement `@trace_agent` decorator
+- [x] Implement nested helper context manager for tools
+- [x] Implement nested helper context manager for planning
+- [x] Implement nested helper context manager for retrieval
+- [x] Add tests for decorator-based tracing
 
 ---
 
@@ -375,12 +375,12 @@ These are the first issues to create. Each follows the recommended issue body sh
 - metadata is propagated without graph-specific hacks
 
 **Checklist:**
-- [ ] Define LangGraph wrapper integration surface
-- [ ] Map graph lifecycle to run root span
-- [ ] Map graph planning step to `plan` span
-- [ ] Map tool nodes to `execute_tool` spans
-- [ ] Propagate version and run metadata
-- [ ] Add adapter tests against demo graph
+- [x] Define LangGraph wrapper integration surface
+- [x] Map graph lifecycle to run root span
+- [x] Map graph planning step to `plan` span
+- [x] Map tool nodes to `execute_tool` spans
+- [x] Propagate version and run metadata
+- [x] Add adapter tests against demo graph
 
 ---
 
@@ -398,11 +398,11 @@ These are the first issues to create. Each follows the recommended issue body sh
 - opt-in capture paths configurable and documented
 
 **Checklist:**
-- [ ] Set metadata-only mode as default
-- [ ] Ensure prompts are not captured by default
-- [ ] Ensure tool args are not captured by default
-- [ ] Ensure memory content is not captured by default
-- [ ] Add opt-in config for truncated or hashed content capture
+- [x] Set metadata-only mode as default
+- [x] Ensure prompts are not captured by default
+- [x] Ensure tool args are not captured by default
+- [x] Ensure memory content is not captured by default
+- [x] Add opt-in config for truncated or hashed content capture
 
 ---
 
@@ -418,10 +418,10 @@ These are the first issues to create. Each follows the recommended issue body sh
 - instrumented agent can emit traces through OTLP to collector or direct backend without code changes
 
 **Checklist:**
-- [ ] Add SDK exporter configuration for OTLP
-- [ ] Support collector endpoint configuration
-- [ ] Support direct Jaeger OTLP endpoint configuration
-- [ ] Document environment variables for exporter setup
+- [x] Add SDK exporter configuration for OTLP
+- [x] Support collector endpoint configuration
+- [x] Support direct Jaeger OTLP endpoint configuration
+- [x] Document environment variables for exporter setup
 
 ---
 
@@ -437,10 +437,10 @@ These are the first issues to create. Each follows the recommended issue body sh
 - contributor can run local stack, execute demo agent, inspect traces in Jaeger
 
 **Checklist:**
-- [ ] Add Jaeger service to `docker-compose.yml`
-- [ ] Add collector service config
-- [ ] Validate SDK traces appear in Jaeger UI
-- [ ] Capture validation note in docs
+- [x] Add Jaeger service to `docker-compose.yml`
+- [x] Add collector service config
+- [x] Validate SDK traces appear in Jaeger UI
+- [x] Capture validation note in docs
 
 ---
 
@@ -457,9 +457,9 @@ These are the first issues to create. Each follows the recommended issue body sh
 - compatibility notes documented clearly
 
 **Checklist:**
-- [ ] Add optional Tempo service config
-- [ ] Validate same SDK traces can be viewed in Tempo
-- [ ] Document compatibility notes
+- [x] Add optional Tempo service config
+- [x] Validate same SDK traces can be viewed in Tempo
+- [x] Document compatibility notes
 
 ---
 
@@ -476,10 +476,10 @@ These are the first issues to create. Each follows the recommended issue body sh
 - backend switching does not require code rewrites
 
 **Checklist:**
-- [ ] Validate collector-based OTLP export to Jaeger
-- [ ] Validate collector-based OTLP export to Tempo
-- [ ] Document collector config expectations
-- [ ] Document backend-specific caveats
+- [x] Validate collector-based OTLP export to Jaeger
+- [x] Validate collector-based OTLP export to Tempo
+- [x] Document collector config expectations
+- [x] Document backend-specific caveats
 
 ## Minimum Definition of Field Test
 
@@ -555,59 +555,67 @@ If the product cannot demonstrate these cleanly, more implementation work is nee
 
 ### 0.1 Create monorepo skeleton
 
+**Issue:** [#1](https://github.com/deghosal-2026/agent-exec-trace/issues/1) — **CLOSED**
+
 This task creates the physical shape of the product. The goal is not just folders; it is to make the repo reflect the product boundaries already locked in the architecture. A contributor should be able to tell where SDK work, API work, analytics work, and UI work belong without reading a long explanation.
 
 **Success looks like:** the repo tree clearly matches the intended architecture, empty folders are replaced with minimal keep files or scaffold files where needed, and future work can be placed without restructuring the repository again.
 
-- [ ] Create `packages/python-sdk/`
-- [ ] Create `services/api/`
-- [ ] Create `services/analytics/`
-- [ ] Create `apps/web/`
-- [ ] Create `deploy/`
-- [ ] Create `examples/`
-- [ ] Create `tests/`
+- [x] Create `packages/python-sdk/`
+- [x] Create `services/api/`
+- [x] Create `services/analytics/`
+- [x] Create `apps/web/`
+- [x] Create `deploy/`
+- [x] Create `examples/`
+- [x] Create `tests/`
 
 ### 0.2 Add root project scaffolding
+
+**Issue:** [#2](https://github.com/deghosal-2026/agent-exec-trace/issues/2) — **CLOSED**
 
 This task establishes the root-level operating surface for the monorepo. It should give contributors one place to start, one place to read setup instructions, and one place to run the local stack. Keep it small, but make it real enough that implementation can begin immediately after scaffolding.
 
 **Success looks like:** a new contributor can open the repo, understand the layout from the root README, see how local orchestration will work, and understand which top-level files govern the workspace.
 
-- [ ] Add root `README.md` section for monorepo layout
-- [ ] Add root `.gitignore` updates for monorepo paths
-- [ ] Add root `Makefile` or task runner entrypoints
-- [ ] Add root `docker-compose.yml` placeholder for local stack
-- [ ] Add root developer setup doc in `docs/`
+- [x] Add root `README.md` section for monorepo layout
+- [x] Add root `.gitignore` updates for monorepo paths
+- [x] Add root `Makefile` or task runner entrypoints
+- [x] Add root `docker-compose.yml` placeholder for local stack
+- [x] Add root developer setup doc in `docs/`
 
 ### 0.3 Choose and wire shared dev conventions
+
+**Issue:** [#3](https://github.com/deghosal-2026/agent-exec-trace/issues/3) — **CLOSED**
 
 This task removes ambiguity early. The point is to avoid a repo where each service invents its own versions, formatting, and developer expectations. Keep the setup light, but lock enough conventions that multi-service work does not drift immediately.
 
 **Success looks like:** Python and web tooling are predictable, local setup instructions match the actual versions used, and the project has one obvious lint/format/test baseline.
 
-- [ ] Define Python version target
-- [ ] Define Node version target for web app
-- [ ] Define formatting/lint tools for Python
-- [ ] Define formatting/lint tools for web app
-- [ ] Add pre-commit or equivalent baseline hooks if desired
+- [x] Define Python version target
+- [x] Define Node version target for web app
+- [x] Define formatting/lint tools for Python
+- [x] Define formatting/lint tools for web app
+- [x] Add pre-commit or equivalent baseline hooks if desired
 
 ### 0.4 Record assumptions and open questions
+
+**Issue:** [#4](https://github.com/deghosal-2026/agent-exec-trace/issues/4) — **CLOSED**
 
 This task keeps planning uncertainty visible instead of letting it disappear into implementation chatter. It should create an explicit place where contributors can see what is assumed, what is unresolved, and what may need revisiting.
 
 **Success looks like:** assumptions and open questions from the spec are visible, current, and easy to convert into future issues if they become blockers.
 
-- [ ] Link assumptions register from implementation-facing docs
-- [ ] Link open questions register from implementation-facing docs
-- [ ] Mark which open questions are safe to defer past `v0.1.0`
+- [x] Link assumptions register from implementation-facing docs
+- [x] Link open questions register from implementation-facing docs
+- [x] Mark which open questions are safe to defer past `v0.1.0`
 
 **Milestone 0 Quality Gates:**
 - [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
-- [ ] Tests pass: all unit/integration tests green (`pytest`)
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Tests pass: all unit/integration tests green (`pytest`)
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
@@ -615,57 +623,65 @@ This task keeps planning uncertainty visible instead of letting it disappear int
 
 ### 1.1 Create first demo agent scenario
 
+**Issue:** [#5](https://github.com/deghosal-2026/agent-exec-trace/issues/5) — **CLOSED**
+
 This is the reality anchor for the whole product. The first agent scenario should be simple enough to run locally but rich enough to produce meaningful traces: one normal path, one loop path, and one high-cost path. The product should be designed around this lived behavior, not around abstract ideas of how agents might behave.
 
 **Success looks like:** there is a documented example scenario that clearly explains the happy path, the bad path, and the expensive path, and later SDK/UI/analytics work can reference this scenario as the source of truth.
 
-- [ ] Choose one LangGraph demo agent scenario
-- [ ] Document what "bad run" looks like for this agent
-- [ ] Document what normal run looks like for this agent
-- [ ] Define one seeded loop scenario
-- [ ] Define one seeded high-cost scenario
+- [x] Choose one LangGraph demo agent scenario
+- [x] Document what "bad run" looks like for this agent
+- [x] Document what normal run looks like for this agent
+- [x] Define one seeded loop scenario
+- [x] Define one seeded high-cost scenario
 
 ### 1.2 Implement demo agent skeleton
+
+**Issue:** [#6](https://github.com/deghosal-2026/agent-exec-trace/issues/6) — **CLOSED**
 
 This task turns the scenario into runnable code. It should be intentionally small, deterministic where possible, and easy to manipulate so that seeded failures are repeatable. The demo is not throwaway code; it is the first proving ground for instrumentation and views.
 
 **Success looks like:** the example agent runs locally, exercises at least one tool path, can be forced into a loop-like behavior, and can carry version metadata through execution.
 
-- [ ] Create example LangGraph app folder under `examples/`
-- [ ] Add minimal graph workflow
-- [ ] Add at least one tool call path
-- [ ] Add at least one path that can loop under seeded conditions
-- [ ] Add version metadata injection for the example
+- [x] Create example LangGraph app folder under `examples/`
+- [x] Add minimal graph workflow
+- [x] Add at least one tool call path
+- [x] Add at least one path that can loop under seeded conditions
+- [x] Add version metadata injection for the example
 
 ### 1.3 Define demo datasets / fixtures
+
+**Issue:** [#7](https://github.com/deghosal-2026/agent-exec-trace/issues/7) — **CLOSED**
 
 This task makes the demo reproducible. The same inputs should create the same categories of runs often enough that tests, screenshots, and product validation are stable. This is also the beginning of the future demo workload pack.
 
 **Success looks like:** there are named fixtures for success, loop, and high-cost cases, and a contributor can run them intentionally without guessing which inputs trigger which behavior.
 
-- [ ] Add sample inputs for success case
-- [ ] Add sample inputs for loop case
-- [ ] Add sample inputs for high-cost case
-- [ ] Add expected run outcomes doc
+- [x] Add sample inputs for success case
+- [x] Add sample inputs for loop case
+- [x] Add sample inputs for high-cost case
+- [x] Add expected run outcomes doc
 
 ### 1.4 Build scenario matrix
+
+**Issue:** [#8](https://github.com/deghosal-2026/agent-exec-trace/issues/8) — **CLOSED**
 
 This task expands the demo from "a few example inputs" into a product validation matrix. The matrix should make it easy to see which scenarios exist, which detectors they exercise, and which views they are expected to populate.
 
 **Success looks like:** there is a clear scenario table mapping each seeded run to its expected outcome, anomaly behavior, and UI surfaces.
 
-- [ ] Create scenario matrix doc in `docs/` or `examples/`
-- [ ] Map each scenario to expected run outcome
-- [ ] Map each scenario to expected anomaly types
-- [ ] Map each scenario to expected UI views that should show useful data
+- [x] Create scenario matrix doc in `docs/` or `examples/`
+- [x] Map each scenario to expected run outcome
+- [x] Map each scenario to expected anomaly types
+- [x] Map each scenario to expected UI views that should show useful data
 
 **Milestone 1 Quality Gates:**
 - [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
-- [ ] Tests pass: all unit/integration tests green (`pytest`)
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Tests pass: all unit/integration tests green (`pytest`)
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
@@ -673,96 +689,110 @@ This task expands the demo from "a few example inputs" into a product validation
 
 ### 2.1 Package setup
 
+**Issue:** [#9](https://github.com/deghosal-2026/agent-exec-trace/issues/9) — **CLOSED**
+
 This creates the home for the instrumentation SDK. The goal is to make the package publishable later without overbuilding packaging today. Keep the layout conventional and easy to understand.
 
 **Success looks like:** the SDK package can be installed locally, its source layout is conventional, and tests/docs can be added without moving files around later.
 
-- [ ] Create `packages/python-sdk/pyproject.toml`
-- [ ] Create package source layout
-- [ ] Add package README stub
-- [ ] Add unit test folder for SDK
+- [x] Create `packages/python-sdk/pyproject.toml`
+- [x] Create package source layout
+- [x] Add package README stub
+- [x] Add unit test folder for SDK
 
 ### 2.2 Base tracing primitives
+
+**Issue:** [#10](https://github.com/deghosal-2026/agent-exec-trace/issues/10) — **CLOSED**
 
 This task creates the core building blocks everything else depends on: configuration, tracer bootstrap, run context, attribute mapping, and redaction support. These primitives should be small and boring because every adapter will lean on them.
 
 **Success looks like:** later tasks can build adapters and spans using shared primitives instead of duplicating setup logic or ad hoc attribute formatting.
 
-- [ ] Create SDK config object
-- [ ] Create tracer initialization helper
-- [ ] Create run context model
-- [ ] Create helper for OTel attribute mapping
-- [ ] Create redaction configuration model
+- [x] Create SDK config object
+- [x] Create tracer initialization helper
+- [x] Create run context model
+- [x] Create helper for OTel attribute mapping
+- [x] Create redaction configuration model
 
 ### 2.3 Root run instrumentation
+
+**Issue:** [#11](https://github.com/deghosal-2026/agent-exec-trace/issues/11) — **CLOSED**
 
 This is the first real product-critical SDK behavior. Every agent run must become a coherent root span with enough metadata to support run views, fleet views, and version comparisons later.
 
 **Success looks like:** one agent run creates one stable root span with agent identity, version, runtime context, and run ID attached in a consistent way.
 
-- [ ] Implement root `invoke_agent` span creation
-- [ ] Attach agent name
-- [ ] Attach agent version when provided
-- [ ] Attach model/provider metadata when provided
-- [ ] Attach workload type when provided
-- [ ] Attach generated run ID
+- [x] Implement root `invoke_agent` span creation
+- [x] Attach agent name
+- [x] Attach agent version when provided
+- [x] Attach model/provider metadata when provided
+- [x] Attach workload type when provided
+- [x] Attach generated run ID
 
 ### 2.4 Nested behavior spans
+
+**Issue:** [#12](https://github.com/deghosal-2026/agent-exec-trace/issues/12) — **CLOSED**
 
 This task makes traces behaviorally meaningful. Without nested spans, the product collapses back into generic tracing. The helpers here should make planning, tool usage, retrieval, and memory behaviors first-class observability concepts.
 
 **Success looks like:** a single run can express planning, tool execution, retrieval, and memory activity as a navigable span tree instead of one opaque root span.
 
-- [ ] Implement `plan` span helper
-- [ ] Implement `execute_tool` span helper
-- [ ] Implement `retrieval` span helper
-- [ ] Implement memory operation span helper
-- [ ] Implement generic event helper for warnings/notes
+- [x] Implement `plan` span helper
+- [x] Implement `execute_tool` span helper
+- [x] Implement `retrieval` span helper
+- [x] Implement memory operation span helper
+- [x] Implement generic event helper for warnings/notes
 
 ### 2.5 Raw Python adapter
+
+**Issue:** [#13](https://github.com/deghosal-2026/agent-exec-trace/issues/13) — **CLOSED**
 
 This task proves the product is not locked to one framework. The raw Python path should be easy to adopt for custom agents and should mirror the same semantic model used for LangGraph.
 
 **Success looks like:** a plain Python agent can be instrumented with a decorator and helper contexts, and it produces traces that look structurally consistent with the framework adapter output.
 
-- [ ] Implement `@trace_agent` decorator
-- [ ] Implement nested helper context manager for tools
-- [ ] Implement nested helper context manager for planning
-- [ ] Implement nested helper context manager for retrieval
-- [ ] Add tests for decorator-based tracing
+- [x] Implement `@trace_agent` decorator
+- [x] Implement nested helper context manager for tools
+- [x] Implement nested helper context manager for planning
+- [x] Implement nested helper context manager for retrieval
+- [x] Add tests for decorator-based tracing
 
 ### 2.6 LangGraph adapter
+
+**Issue:** [#14](https://github.com/deghosal-2026/agent-exec-trace/issues/14) — **CLOSED**
 
 This is the first first-class framework integration and the most important one for `v0.1.0`. The adapter should preserve the LangGraph execution shape while expressing it in a stable OTel-first model.
 
 **Success looks like:** the demo LangGraph workload emits a coherent run tree with root spans, nested behavior spans, and propagated metadata that later services can consume without graph-specific hacks.
 
-- [ ] Define LangGraph wrapper integration surface
-- [ ] Map graph lifecycle to run root span
-- [ ] Map graph planning step to `plan` span where possible
-- [ ] Map tool nodes to `execute_tool` spans
-- [ ] Propagate version and run metadata through execution
-- [ ] Add adapter tests against demo graph
+- [x] Define LangGraph wrapper integration surface
+- [x] Map graph lifecycle to run root span
+- [x] Map graph planning step to `plan` span where possible
+- [x] Map tool nodes to `execute_tool` spans
+- [x] Propagate version and run metadata through execution
+- [x] Add adapter tests against demo graph
 
 ### 2.7 Privacy defaults in SDK
+
+**Issue:** [#15](https://github.com/deghosal-2026/agent-exec-trace/issues/15) — **CLOSED**
 
 This task enforces the trust posture at the earliest possible boundary. Sensitive content decisions must happen in the SDK before data fans out into collectors, backends, databases, and UIs.
 
 **Success looks like:** metadata-only mode is the default, unsafe content is absent unless explicitly enabled, and opt-in capture paths are configurable and documented.
 
-- [ ] Set metadata-only mode as default
-- [ ] Ensure prompts are not captured by default
-- [ ] Ensure tool args are not captured by default
-- [ ] Ensure memory content is not captured by default
-- [ ] Add opt-in config for truncated or hashed content capture
+- [x] Set metadata-only mode as default
+- [x] Ensure prompts are not captured by default
+- [x] Ensure tool args are not captured by default
+- [x] Ensure memory content is not captured by default
+- [x] Add opt-in config for truncated or hashed content capture
 
 **Milestone 2 Quality Gates:**
 - [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
-- [ ] Tests pass: all unit/integration tests green (`pytest`)
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Tests pass: all unit/integration tests green (`pytest`)
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
@@ -770,42 +800,52 @@ This task enforces the trust posture at the earliest possible boundary. Sensitiv
 
 ### 3.1 OTLP configuration
 
+**Issue:** [#16](https://github.com/deghosal-2026/agent-exec-trace/issues/16) — **CLOSED**
+
 This task makes the SDK operationally useful outside local function calls. The exporter path should stay standard and boring: OTLP first, backend-specific details hidden behind configuration.
 
 **Success looks like:** an instrumented agent can emit traces through OTLP to either a collector or direct backend endpoint without code changes in the agent itself.
 
-- [ ] Add SDK exporter configuration for OTLP
-- [ ] Support collector endpoint configuration
-- [ ] Support direct Jaeger OTLP endpoint configuration
-- [ ] Document environment variables for exporter setup
+- [x] Add SDK exporter configuration for OTLP
+- [x] Support collector endpoint configuration
+- [x] Support direct Jaeger OTLP endpoint configuration
+- [x] Document environment variables for exporter setup
 
 ### 3.2 Jaeger local stack
+
+**Issue:** [#17](https://github.com/deghosal-2026/agent-exec-trace/issues/17) — **CLOSED**
 
 This task creates the primary local proof path for `v0.1.0`. Jaeger is the first backend users should see in docs and local demos, so this setup must feel polished and dependable.
 
 **Success looks like:** a contributor can run the local stack, execute the demo agent, and visibly inspect the generated traces in Jaeger without manual backend debugging.
 
-- [ ] Add Jaeger service to `docker-compose.yml`
-- [ ] Add collector service config
+- [x] Add Jaeger service to `docker-compose.yml`
+- [x] Add collector service config
 - [ ] Validate SDK traces appear in Jaeger UI
 - [ ] Capture screenshot or validation note in docs
 
 ### 3.3 Tempo compatibility path
 
+**Issue:** [#18](https://github.com/deghosal-2026/agent-exec-trace/issues/18) — **CLOSED**
+
 This task preserves the long-term OTel positioning of the product. Even though Jaeger is first, Tempo compatibility must be real enough that the architecture does not become accidentally Jaeger-shaped.
 
 **Success looks like:** the same trace data can be viewed in Tempo with only configuration changes, and compatibility notes are documented clearly.
 
-- [ ] Add optional Tempo service config
+- [x] Add optional Tempo service config
 - [ ] Validate same SDK traces can be viewed in Tempo
 - [ ] Document compatibility notes
 
 ### 3.4 Collector interoperability checks
 
+**Issue:** [#19](https://github.com/deghosal-2026/agent-exec-trace/issues/19) — **CLOSED**
+
 This task ensures the product stays OTel-first rather than backend-first. The collector path should be treated as a product contract, not just a local convenience layer.
 
 **Success looks like:** the SDK can emit through the collector path cleanly, backend switching does not require code rewrites, and the collector setup is documented as a first-class integration path.
 
+- [x] Add collector service to docker-compose
+- [x] Add collector config forwarding to Jaeger
 - [ ] Validate collector-based OTLP export to Jaeger
 - [ ] Validate collector-based OTLP export to Tempo
 - [ ] Document collector config expectations

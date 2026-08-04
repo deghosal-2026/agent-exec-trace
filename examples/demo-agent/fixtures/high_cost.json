@@ -1,0 +1,6 @@
+{
+  "scenario": "high_cost",
+  "intent": "open_ended",
+  "account_id": "acc_200",
+  "agent_version": "v0.1.0"
+}

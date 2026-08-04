@@ -1,0 +1,28 @@
+# OpenTelemetry Collector configuration for the local stack.
+#
+# This collector sits between the SDK and the trace backend (Jaeger).
+# It receives OTLP traces from the SDK and forwards them to Jaeger.
+# Using a collector is optional — the SDK can export directly to Jaeger
+# via its OTLP gRPC endpoint.  The collector path is useful for:
+#   - testing the collector-mediated export path (3.4)
+#   - adding future processors (batch, attributes, sampling) without
+#     changing the SDK or the backend
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlp/jaeger]

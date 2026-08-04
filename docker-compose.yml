@@ -1,0 +1,39 @@
+services:
+  # Jaeger all-in-one: primary trace backend for local development.
+  # Receives traces via OTLP gRPC on port 4317, UI on port 16686.
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC ingestion
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - METRICS_STORAGE_TYPE=none  # disable metrics (traces-only)
+
+  # OpenTelemetry Collector: optional intermediary for the collector-mediated
+  # export path (3.4).  Configured to forward OTLP traces to Jaeger.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.107.0
+    ports:
+      - "4318:4318"     # OTLP HTTP (alternative to gRPC)
+    volumes:
+      - ./deploy/otel-collector-config.yml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      - jaeger
+
+  # Tempo (Grafana) is an alternative OTel backend.  It is enabled via the
+  # `tempo` profile so the default local stack stays Jaeger-first:
+  #   docker compose --profile tempo up -d
+  # This preserves the OTel-first positioning (3.3) without changing the default.
+  # Note: Tempo maps host port 4319 → container 4317 to avoid conflicting with
+  # Jaeger's OTLP port.  Use ``--endpoint http://localhost:4319`` when running
+  # the demo against Tempo.
+  tempo:
+    image: grafana/tempo:2.4.1
+    profiles: ["tempo"]
+    ports:
+      - "3200:3200"     # Tempo UI
+      - "4319:4317"     # OTLP gRPC (host: 4319, container: 4317)
+    command: [ "-config.file=/etc/tempo-config.yml" ]
+    volumes:
+      - ./deploy/tempo-config.yml:/etc/tempo-config.yml:ro

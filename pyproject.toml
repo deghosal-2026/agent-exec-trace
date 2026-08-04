@@ -1,0 +1,26 @@
+# Root project file for shared developer conventions across the monorepo.
+#
+# Shared tool configuration for ruff, pytest, and mypy. Individual packages
+# (packages/python-sdk, services/...) declare their own package metadata and
+# dependencies in their own pyproject.toml and inherit these conventions.
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["packages", "services", "examples", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "N"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_exec_trace"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+pythonpath = ["."]
+
+# Shared mypy conventions. Each package overrides to strict in its own config.
+[tool.mypy]
+python_version = "3.10"
+warn_unused_configs = true

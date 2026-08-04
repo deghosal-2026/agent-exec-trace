@@ -42,3 +42,15 @@ htmlcov/
 
 # Local dev data
 data/
+
+# Node / Web
+node_modules/
+apps/web/dist/
+apps/web/.next/
+
+# Docker / local infra
+deploy/.env
+
+# Tooling
+.virtual_documents/
+.cache/

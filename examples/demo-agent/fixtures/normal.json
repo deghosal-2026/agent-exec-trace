@@ -1,0 +1,6 @@
+{
+  "scenario": "normal",
+  "intent": "reset password",
+  "account_id": "acc_100",
+  "agent_version": "v0.1.0"
+}
