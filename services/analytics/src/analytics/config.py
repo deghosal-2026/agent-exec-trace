@@ -52,6 +52,49 @@ class Settings(BaseSettings):
 
     webhook_url: str = ""
 
+    # --- Tool execution detector thresholds ---
+    detector_pattern_loop_window: int = 4
+    detector_argument_loop_threshold: int = 3
+    detector_tool_error_rate_pct: float = 30.0
+    detector_specific_tool_error_pct: float = 30.0
+    detector_tool_latency_multiplier: float = 3.0
+    detector_tool_timeout_seconds: float = 60.0
+    detector_redundant_tool_threshold: int = 3
+
+    # --- Cost & resource detector thresholds ---
+    detector_cost_baseline_multiplier: float = 2.0
+    detector_cost_min_baseline_runs: int = 5
+    detector_cost_vs_baseline_multiplier: float = 2.0
+    detector_cost_per_tool_high: float = 0.50
+    detector_cost_efficiency_max_calls: int = 20
+    detector_token_explosion_multiplier: float = 3.0
+    detector_per_tool_cost_multiplier: float = 2.0
+    detector_wasted_tool_threshold: int = 3
+
+    # --- Runtime & completion detector thresholds ---
+    detector_run_duration_multiplier: float = 5.0
+    detector_step_efficiency_max_calls: int = 20
+    detector_inactivity_gap_seconds: float = 30.0
+
+    # --- Retry & recovery detector thresholds ---
+    detector_transient_retry_threshold: int = 3
+    detector_recovery_path_threshold: int = 5
+
+    # --- Interaction & control detector thresholds ---
+    detector_intervention_frequency_threshold: int = 3
+    detector_escalation_rate_multiplier: float = 2.0
+    detector_approval_latency_seconds: float = 60.0
+    detector_intervention_rejection_threshold: int = 2
+
+    # --- Output quality detector thresholds ---
+    detector_low_output_min_chars: int = 50
+    detector_output_drift_multiplier: float = 3.0
+
+    # --- Cross-run pattern detector thresholds ---
+    detector_anomaly_cluster_min_types: int = 3
+    detector_run_frequency_min_runs: int = 5
+    detector_run_frequency_max_multiplier: float = 3.0
+
     model_config = {"env_prefix": "ANALYTICS_", "env_file": ".env", "extra": "ignore"}
 
 

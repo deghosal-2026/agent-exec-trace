@@ -34,6 +34,22 @@ Traditional observability shows you what your services did — latency, errors, 
 
 ---
 
+## Features
+
+`agent-exec-trace` ships a deterministic anomaly detection engine with **35 detectors** organized across **7 behavioral categories**:
+
+| Category | Count | Detects |
+|---|---|---|
+| **Tool Execution** | 8 | Loops, error rates, latency spikes, redundant calls |
+| **Cost & Resource** | 6 | Cost spikes, token explosion, per-tool cost, wasted calls |
+| **Runtime & Completion** | 5 | Duration anomalies, step exhaustion, inactivity, early stops |
+| **Retry & Recovery** | 5 | Retry storms, cascading retries, recovery path complexity |
+| **Interaction & Control** | 4 | Intervention frequency, escalation rate, approval latency |
+| **Output Quality** | 4 | Empty/low output, indeterminate status, output drift |
+| **Cross-Run Patterns** | 3 | Anomaly clusters, run frequency, first-run heuristics |
+
+All detectors are deterministic (rule-based, zero LLM dependency) and produce structured anomaly records with severity, explanation, and evidence payloads. Configurable thresholds per detector per workload with graceful degradation for missing data and edge cases.
+
 ## What It Is Not
 
 | Not | Why |
@@ -61,6 +77,8 @@ agent-exec-trace/
 ```
 
 See [docs/developer-setup.md](docs/developer-setup.md) for the developer onboarding flow.
+
+Traces are stored at `data/traces/processed/` with a `manifest.json` index.
 
 ---
 
@@ -98,7 +116,10 @@ Agent Runtime (LangGraph / Python)
   Run Explorer UI (FastAPI + React)
         │
         ▼
-  Behavior Analytics (loop detection, cost anomaly, drift)
+  Behavior Analytics
+  • 35 deterministic detectors (7 categories)
+  • loop detection, cost anomaly, retry storm, drift
+  • structured anomaly records with evidence payloads
 ```
 
 ---

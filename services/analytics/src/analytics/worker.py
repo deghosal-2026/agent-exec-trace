@@ -23,7 +23,11 @@ from datetime import datetime, timezone
 from analytics.alerts import WebhookAlerter
 from analytics.config import settings
 from analytics.db import get_pool
-from analytics.detectors import CostSpikeDetector, LoopDetector, RetryStormDetector
+from analytics.detectors import create_all_detectors
+from analytics.detectors.base import BaseDetector
+from analytics.detectors.cost import CostSpikeDetector
+from analytics.detectors.retry import RetryStormDetector
+from analytics.detectors.tool import LoopDetector
 from analytics.ingest import (
     RunSummaryBuilder,
     TraceFetcher,
@@ -34,7 +38,7 @@ from analytics.ingest import (
 )
 from analytics.materializer import FleetRollupMaterializer, VersionCohortMaterializer
 from analytics.metrics import AnalyticsMetrics
-from analytics.models import RunSummary, SpanNode
+from analytics.models import Anomaly, RunSummary, SpanNode
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +62,7 @@ class AnalyticsWorker:
         self.loop_detector = LoopDetector()
         self.retry_detector = RetryStormDetector()
         self.cost_detector = CostSpikeDetector()
+        self.detectors: list[BaseDetector] = create_all_detectors()
         self.fleet_materializer = FleetRollupMaterializer()
         self.cohort_materializer = VersionCohortMaterializer()
         self.alerter = WebhookAlerter(webhook_url=settings.webhook_url)
@@ -133,29 +138,92 @@ class AnalyticsWorker:
     ) -> None:
         """Run all anomaly detectors against a summary and persist/alert on hits.
 
-        Three detectors run in sequence (loop, retry, cost).  Each anomaly found
-        is persisted to the database and dispatched via the webhook alerter.
+        Runs the original three detectors (loop, retry, cost) first for backward
+        compatibility, then runs the full set of 35 detectors.  Anomalies found
+        are persisted to the database and dispatched via the webhook alerter.
         """
-        pool_any = pool
-        spans_list = spans
+        anomalies: list[Anomaly] = []
 
-        loop_anomaly = self.loop_detector.detect(summary, spans_list)
-        if loop_anomaly:
-            await persist_anomaly(pool_any, loop_anomaly)
-            await self.alerter.send_alert(loop_anomaly)
-            self.metrics.inc_anomaly_detected()
+        # Original three detectors (backward compatible)
+        try:
+            loop_anomaly = self.loop_detector.detect(summary, spans)
+            if loop_anomaly:
+                anomalies.append(loop_anomaly)
+        except Exception:
+            logger.exception("LoopDetector failed for run %s", summary.run_id)
 
-        retry_anomaly = self.retry_detector.detect(summary, spans_list)
-        if retry_anomaly:
-            await persist_anomaly(pool_any, retry_anomaly)
-            await self.alerter.send_alert(retry_anomaly)
-            self.metrics.inc_anomaly_detected()
+        try:
+            retry_anomaly = self.retry_detector.detect(summary, spans)
+            if retry_anomaly:
+                anomalies.append(retry_anomaly)
+        except Exception:
+            logger.exception("RetryStormDetector failed for run %s", summary.run_id)
 
-        cost_anomaly = await self.cost_detector.detect(summary, spans_list, pool=pool_any)
-        if cost_anomaly:
-            await persist_anomaly(pool_any, cost_anomaly)
-            await self.alerter.send_alert(cost_anomaly)
-            self.metrics.inc_anomaly_detected()
+        try:
+            cost_anomaly = await self.cost_detector.detect(summary, spans, pool=pool)
+            if cost_anomaly:
+                anomalies.append(cost_anomaly)
+        except Exception:
+            logger.exception("CostSpikeDetector failed for run %s", summary.run_id)
+
+        # All 35 detectors (deduplicating the original three by type)
+        async_tasks = []
+        for detector in self.detectors:
+            if isinstance(detector, (LoopDetector, RetryStormDetector, CostSpikeDetector)):
+                continue
+            if (
+                hasattr(type(detector), "detect_async")
+                and type(detector).detect_async is not BaseDetector.detect_async
+            ):
+                async_tasks.append(
+                    self._run_async_detector(detector, summary, spans, pool, anomalies)
+                )
+            else:
+                try:
+                    result = detector.detect(summary, spans)
+                    if result is not None:
+                        anomalies.append(result)
+                except Exception:
+                    logger.exception(
+                        "Detector %s failed for run %s",
+                        detector.anomaly_type or type(detector).__name__,
+                        summary.run_id,
+                    )
+
+        if async_tasks:
+            await asyncio.gather(*async_tasks)
+
+        for anomaly in anomalies:
+            try:
+                await persist_anomaly(pool, anomaly)
+                await self.alerter.send_alert(anomaly)
+                self.metrics.inc_anomaly_detected()
+            except Exception:
+                logger.exception(
+                    "Failed to persist/alert anomaly %s for run %s",
+                    anomaly.anomaly_type,
+                    summary.run_id,
+                )
+
+    async def _run_async_detector(
+        self,
+        detector: BaseDetector,
+        summary: RunSummary,
+        spans: list[SpanNode],
+        pool: object,
+        anomalies: list[Anomaly],
+    ) -> None:
+        """Run a single async detector and collect results."""
+        try:
+            result = await detector.detect_async(summary, spans, pool=pool)
+            if result is not None:
+                anomalies.append(result)
+        except Exception:
+            logger.exception(
+                "Async detector %s failed for run %s",
+                detector.anomaly_type or type(detector).__name__,
+                summary.run_id,
+            )
 
     async def process_trace(self, trace_id: str) -> bool:
         """Reprocess a single trace by ID: fetch, parse, persist, detect.

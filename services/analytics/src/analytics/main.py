@@ -7,6 +7,7 @@ Provides a ``click``-based CLI with commands for:
   * ``rebuild``: re-process all known traces.
   * ``health``: database connectivity check.
   * ``materialize``: run fleet rollup and version cohort materialization.
+  * ``download-traces``: download and convert agent traces from Hugging Face.
 
 Usage: ``python -m analytics.main run-worker``
 """
@@ -72,6 +73,27 @@ def materialize(
     period_hours: int,
 ) -> None:
     _run_async(_materialize_async(agent_name, workload_type, period_hours))
+
+
+@cli.command()
+@click.option("--target", default=150000, type=int, help="Target trace count")
+@click.option("--ingest", is_flag=True, default=False, help="Feed traces into analytics pipeline")
+@click.option("--output-dir", default="data/traces/processed", help="Output directory for parquet")
+def download_traces(target: int, ingest: bool, output_dir: str) -> None:
+    """Download and convert agent traces from Hugging Face datasets."""
+    _run_async(_download_traces_async(target, ingest, output_dir))
+
+
+async def _download_traces_async(target: int, ingest: bool, output_dir: str) -> None:
+    from analytics.trace_pipeline.pipeline import TracePipeline
+
+    pipeline = TracePipeline(output_dir=output_dir)
+    summary = await pipeline.run(target_count=target, ingest=ingest)
+    click.echo("Download complete:")
+    click.echo(f"  Datasets attempted: {summary.get('datasets_downloaded', 0)}")
+    click.echo(f"  Total rows downloaded: {summary.get('total_rows_downloaded', 0)}")
+    click.echo(f"  Total valid traces: {summary.get('total_traces_valid', 0)}")
+    click.echo("  Manifest: data/traces/manifest.json")
 
 
 def _run_async(coro: object) -> object:

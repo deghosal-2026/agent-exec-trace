@@ -187,6 +187,91 @@ The product should never require users to replace their tracing backend to adopt
 
 This matrix matters because mature observability tools are judged not only by their own features, but by how cleanly they fit into existing workflows.
 
+## Anomaly Detection Engine
+
+### 35 Deterministic Detectors (7 Categories)
+
+#### Tool Execution (8)
+
+1. **LoopDetector** — consecutive same-tool calls
+2. **PatternLoopDetector** — A→B→A→B repeating cycles
+3. **ArgumentLoopDetector** — same tool + same args repeats
+4. **ToolErrorRateDetector** — tool error rate threshold
+5. **SpecificToolErrorDetector** — per-tool error rate
+6. **ToolLatencyDetector** — tool latency spike vs average
+7. **ToolTimeoutDetector** — tool exceeding max duration
+8. **RedundantToolCallDetector** — identical calls with no effect
+
+#### Cost & Resource (6)
+
+9. **CostSpikeDetector** — absolute cost threshold
+10. **CostVsBaselineDetector** — cost vs version cohort
+11. **CostEfficiencyDetector** — cost per resolved outcome
+12. **TokenExplosionDetector** — growing token usage
+13. **PerToolCostSpikeDetector** — single tool driving cost
+14. **WastedToolCallsDetector** — calls producing no state change
+
+#### Runtime & Completion (5)
+
+15. **RunDurationDetector** — total duration vs baseline
+16. **MaxStepHitDetector** — step budget exhausted
+17. **StepEfficiencyDetector** — steps vs task simplicity
+18. **InactivityDetector** — idle gaps between spans
+19. **PrematureCompletionDetector** — stopped before resolution
+
+#### Retry & Recovery (5)
+
+20. **RetryStormDetector** — retry count threshold
+21. **SystemicRetryDetector** — all retries failed (0%)
+22. **TransientRetryDetector** — many retries, all succeeded
+23. **CascadingRetryDetector** — retry chain across tools
+24. **RecoveryPathDetector** — unusually complex recovery
+
+#### Interaction & Control (4)
+
+25. **InterventionFrequencyDetector** — human interventions count
+26. **EscalationRateDetector** — escalations vs baseline
+27. **ApprovalLatencyDetector** — human approval wait time
+28. **InterventionRejectionDetector** — repeated human override
+
+#### Output Quality (4)
+
+29. **EmptyResponseDetector** — no output
+30. **LowOutputDetector** — below minimum content
+31. **IndeterminateDetector** — ambiguous status
+32. **OutputDriftDetector** — output characteristics changed
+
+#### Cross-Run Patterns (3)
+
+33. **AnomalyClusterDetector** — multiple anomaly types in one run
+34. **RunFrequencyAnomaly** — too many/few runs
+35. **FirstRunHeuristic** — first run of new version
+
+### Hardening Features
+
+- Polling tool allowlist (LoopDetector)
+- Retry success rate gating (RetryStormDetector)
+- Sparse baseline protection (CostSpikeDetector)
+- Per-workload threshold calibration
+- Structured evidence payloads with every alert
+
+### LLM-Augmented Detection (Planned)
+
+- **SemanticLoopDetector** — semantic output duplication
+- **HallucinationDetector** — fabricated claims detection
+- **GoalDriftDetector** — intent evolution tracking
+- **QualityDegradationDetector** — output quality vs baseline
+- **ConfusionPatternDetector** — contradictory reasoning
+- Local LLM via Ollama (llama3.2/qwen2.5, 3B params)
+
+### Key Design Properties
+
+- All detectors are deterministic (rule-based, no randomness)
+- Zero LLM dependency for core detection
+- All detectors produce structured Anomaly records with severity, explanation, and evidence
+- Configurable thresholds per detector per workload
+- Graceful degradation: handle missing data, empty spans, edge cases
+
 ### 2.2 Deferred to v0.2+
 
 | # | Feature | v0.2+ |
