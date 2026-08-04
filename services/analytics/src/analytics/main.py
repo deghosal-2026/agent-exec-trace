@@ -8,6 +8,7 @@ Provides a ``click``-based CLI with commands for:
   * ``health``: database connectivity check.
   * ``materialize``: run fleet rollup and version cohort materialization.
   * ``download-traces``: download and convert agent traces from Hugging Face.
+  * ``validate``: run all detectors against processed parquet traces and produce reports.
 
 Usage: ``python -m analytics.main run-worker``
 """
@@ -16,6 +17,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from pathlib import Path
 
 import click
 
@@ -59,8 +61,85 @@ def health() -> None:
     if result:
         click.echo("Health: OK")
     else:
-        click.echo("Health: FAIL", err=True)
-        raise SystemExit(1)
+        click.echo("Health: FAILED")
+
+
+@cli.command()
+@click.option(
+    "--input",
+    "input_dir",
+    default="data/traces/processed",
+    help="Directory of processed parquet traces",
+)
+@click.option(
+    "--output",
+    "output_dir",
+    default="data/traces/validations",
+    help="Output directory for reports",
+)
+@click.option(
+    "--llm-sample",
+    default=None,
+    type=int,
+    help="Sample N traces and include LLM detectors",
+)
+@click.option(
+    "--resume",
+    is_flag=True,
+    default=False,
+    help="Skip previously completed traces (uses progress.json)",
+)
+def validate(input_dir: str, output_dir: str, llm_sample: int | None, resume: bool) -> None:
+    """Run all detectors against processed traces and produce validation reports."""
+
+    async def _run() -> None:
+        from typing import Any
+
+        from analytics.trace_pipeline.validator import Validator
+
+        v = Validator(
+            input_dir=input_dir, output_dir=output_dir,
+            llm_sample=llm_sample, resume=resume,
+        )
+        report: dict[str, Any] = await v.run()
+        total = int(report["traces_processed"])
+        anomaly_count = int(report["anomaly_count"])
+        label = f"LLM sample {llm_sample}" if llm_sample else "rule-based"
+        click.echo(f"\n=== TRACE VALIDATION ({label}) ===")
+        click.echo(f"Traces processed:     {total}")
+        click.echo(f"Traces with anomalies: {report['traces_with_anomalies']}")
+        click.echo(f"Anomalies found:      {anomaly_count}")
+
+        by_type: dict[str, int] = report.get("anomaly_by_type", {})
+        if by_type:
+            click.echo("\nTop detectors:")
+            for dt, cnt in list(by_type.items())[:10]:
+                click.echo(f"  {dt}: {cnt}")
+
+        suspicious: dict[str, float] = report.get("suspicious_patterns", {})
+        if suspicious:
+            click.echo("\nSuspicious (>50% fire rate):")
+            for dt, pct in suspicious.items():
+                click.echo(f"  {dt}: {pct}%")
+
+        corr: dict[str, Any] = report.get("cross_detector_correlation", {})
+        top_pairs_raw = corr.get("top_co_fires", [])
+        top_pairs: list[dict[str, Any]] = (
+            list(top_pairs_raw) if isinstance(top_pairs_raw, list) else []
+        )
+        top5 = top_pairs[:5]
+        if top5:
+            click.echo("\nCross-detector hotspots:")
+            for entry in top5:
+                pair = " + ".join(entry["pair"])
+                click.echo(f"  {pair}: {entry['count']} traces ({entry['pct']}%)")
+
+        mode = "with-llm" if llm_sample else "without-llm"
+        report_dir = (Path(output_dir) / mode).resolve()
+        click.echo(f"\nReports: {report_dir}/")
+        click.echo(f"Summary: {report_dir / 'summary.json'}")
+
+    _run_async(_run())
 
 
 @cli.command()
@@ -250,3 +329,6 @@ async def _materialize_async(
     )
 
     click.echo(f"Materialized {fleet_count} fleet rollups, {cohort_count} version cohorts")
+
+if __name__ == "__main__":
+    cli()

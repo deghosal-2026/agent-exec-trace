@@ -1458,10 +1458,10 @@ scenarios across 4 agent workloads.
 70 negative), 4 agent workloads, per-detector expected outcomes, and the review sheet
 expanded to cover all detectors.
 
-- [ ] Expand field-test-plan.md: 70+ positive scenarios across 35 detectors
-- [ ] Expand field-test-plan.md: 70+ negative scenarios across 35 detectors
-- [ ] Update anomaly review sheet to cover all 35 detectors
-- [ ] Per-detector expected TP/FP/FN tracking columns
+- [x] Expand field-test-plan.md: 70+ positive scenarios across 35 detectors
+- [x] Expand field-test-plan.md: 70+ negative scenarios across 35 detectors
+- [x] Update anomaly review sheet to cover all 35 detectors
+- [x] Per-detector expected TP/FP/FN tracking columns
 
 **Milestone 8.6 Quality Gates:**
 - [x] Code review passed
@@ -1670,10 +1670,10 @@ with anomaly counts, distribution analysis, and flagged suspicious patterns.
 
 - [x] Build `DetectorPipeline` class: batch-run all 35 detectors against N traces
 - [x] Build result collector: store detector outputs per trace in SQLite or Parquet
-- [ ] Build anomaly distribution analyzer: how many anomalies per detector? per workload? per framework?
-- [ ] Build suspicious pattern flagger: detector fires on >50% of traces → probably a threshold bug
-- [ ] Build cross-detector correlation: which detectors co-fire? (e.g., run_duration + loop_detected)
-- [ ] Generate pipeline run report: anomalies found, distribution, flagged issues
+- [x] Build anomaly distribution analyzer: how many anomalies per detector? per workload? per framework?
+- [x] Build suspicious pattern flagger: detector fires on >50% of traces → probably a threshold bug
+- [x] Build cross-detector correlation: which detectors co-fire? (e.g., run_duration + loop_detected)
+- [x] Generate pipeline run report: anomalies found, distribution, flagged issues
 
 ### 8.8.4 Ground truth labeling and validation framework
 

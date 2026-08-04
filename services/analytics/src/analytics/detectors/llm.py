@@ -209,8 +209,14 @@ class SemanticLoopDetector(BaseDetector):
         outputs = self._extract_outputs(spans)
         if len(outputs) < 2:
             return None
-        for i in range(len(outputs) - 1):
-            result = await self._check(outputs[i], outputs[i + 1])
+        max_comparisons = 3
+        step = max(1, len(outputs) // max_comparisons)
+        pairs = [
+            (outputs[i], outputs[min(i + 1, len(outputs) - 1)])
+            for i in range(0, len(outputs) - 1, step)
+        ]
+        for prev, curr in pairs[:max_comparisons]:
+            result = await self._check(prev, curr)
             if result:
                 return result
         return None
