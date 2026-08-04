@@ -229,4 +229,5 @@ This field test maps to:
 
 - **WBS 6.6**: Field-test handoff requirement — this document IS the handoff
 - **WBS 6.7**: Anomaly validation matrix — the scenario table above IS the expanded matrix
+- **WBS 8.9**: Field-Test Execution milestone — this plan drives 8.9.2 (run scenarios), 8.9.4 (run detectors), and 8.9.5 (produce report)
 - **Milestone 12**: Release validation — the field test report IS the release gate evidence

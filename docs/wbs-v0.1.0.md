@@ -87,6 +87,10 @@ Suggested issue types for later GitHub conversion:
 | Milestone 6 | anomaly engine issues |
 | Milestone 7 | API issues |
 | Milestone 8 | web UI issues |
+| Milestone 8.6 | robust detector engine issues |
+| Milestone 8.7 | LLM-augmented anomaly detection issues |
+| Milestone 8.8 | trace dataset ingestion/validation issues |
+| Milestone 8.9 | field-test execution issues |
 | Milestone 9 | local stack/demo issues |
 | Milestone 10 | testing/hardening issues |
 | Milestone 11 | docs/OSS readiness issues |
@@ -1155,19 +1159,20 @@ This task turns detector development into something reviewable. Each detector sh
 
 ---
 
-## Milestone 7: API Service
+## Milestone 7: API Service  ✅
 
+**Issue:** [#39](https://github.com/deghosal-2026/agent-exec-trace/issues/39) — **CLOSED**
 ### 7.1 Service setup
 
 This creates the stable read surface for the product. The service should be intentionally product-shaped rather than just proxying databases or trace backends.
 
 **Success looks like:** the API service runs independently, connects to Postgres cleanly, and has a clear place for product endpoints and tests.
 
-- [ ] Create `services/api/pyproject.toml`
-- [ ] Create FastAPI app entrypoint
-- [ ] Create DB access layer
-- [ ] Create API config module
-- [ ] Add API unit/integration test layout
+- [x] Create `services/api/pyproject.toml`
+- [x] Create FastAPI app entrypoint
+- [x] Create DB access layer
+- [x] Create API config module
+- [x] Add API unit/integration test layout
 
 ### 7.2 Run timeline endpoint
 
@@ -1175,11 +1180,11 @@ This is the most important read endpoint in `v0.1.0`. It powers the first proof 
 
 **Success looks like:** the UI can request a run by ID and receive everything needed for the timeline, summary header, and anomaly markers in one coherent response model.
 
-- [ ] Define endpoint path and response model
-- [ ] Load run summary from Postgres
-- [ ] Load trace-linked detail payload
-- [ ] Return normalized span tree shape for UI
-- [ ] Return anomaly markers for the run
+- [x] Define endpoint path and response model
+- [x] Load run summary from Postgres
+- [x] Load trace-linked detail payload
+- [x] Return normalized span tree shape for UI
+- [x] Return anomaly markers for the run
 
 ### 7.3 Fleet health endpoint
 
@@ -1187,10 +1192,10 @@ This endpoint turns materialized summaries into an operator view of many agents 
 
 **Success looks like:** the fleet view can load grouped rows with cost, outcome, and anomaly information directly from the API without custom client-side aggregation.
 
-- [ ] Define endpoint path and response model
-- [ ] Add agent/version/workload grouping filters
-- [ ] Return aggregated fleet rows
-- [ ] Add paging/sorting strategy if needed
+- [x] Define endpoint path and response model
+- [x] Add agent/version/workload grouping filters
+- [x] Return aggregated fleet rows
+- [x] Add paging/sorting strategy if needed
 
 ### 7.4 Version compare endpoint
 
@@ -1198,12 +1203,12 @@ This endpoint should make version review feel like a first-class product capabil
 
 **Success looks like:** two version cohorts can be requested and the API returns a stable, digestible set of deltas for cost, retries, tool usage, and outcomes.
 
-- [ ] Define endpoint path and response model
-- [ ] Accept version A / version B or cohort filters
-- [ ] Return cost delta
-- [ ] Return retry delta
-- [ ] Return tool usage delta
-- [ ] Return outcome counts
+- [x] Define endpoint path and response model
+- [x] Accept version A / version B or cohort filters
+- [x] Return cost delta
+- [x] Return retry delta
+- [x] Return tool usage delta
+- [x] Return outcome counts
 
 ### 7.5 Anomaly inbox endpoint
 
@@ -1211,10 +1216,10 @@ This endpoint powers the triage surface. It should be simple to query, filter, a
 
 **Success looks like:** the UI can list anomalies with filters and every anomaly contains enough context to jump straight into investigation.
 
-- [ ] Define endpoint path and response model
-- [ ] Return anomaly list
-- [ ] Support severity/type/agent filtering
-- [ ] Include run link fields
+- [x] Define endpoint path and response model
+- [x] Return anomaly list
+- [x] Support severity/type/agent filtering
+- [x] Include run link fields
 
 ### 7.6 API issue templates for future integrations
 
@@ -1222,9 +1227,9 @@ This task prepares the API layer to be used beyond the first web app. Even if no
 
 **Success looks like:** endpoint contracts are consistent enough that future CLI, automation, or external UI integrations would not require redesigning the response model.
 
-- [ ] Document response contract conventions
-- [ ] Document error payload conventions
-- [ ] Document filtering and sorting conventions across endpoints
+- [x] Document response contract conventions
+- [x] Document error payload conventions
+- [x] Document filtering and sorting conventions across endpoints
 
 ### 7.7 Endpoint example payload alignment
 
@@ -1232,34 +1237,35 @@ This task keeps the spec and implementation synchronized. Since the spec now inc
 
 **Success looks like:** implemented endpoint models match or intentionally evolve the documented payload examples, and differences are captured explicitly rather than drifting silently.
 
-- [ ] Cross-check run timeline response against spec example
-- [ ] Cross-check fleet health response against spec example
-- [ ] Cross-check version compare response against spec example
-- [ ] Cross-check anomaly inbox response against spec example
+- [x] Cross-check run timeline response against spec example
+- [x] Cross-check fleet health response against spec example
+- [x] Cross-check version compare response against spec example
+- [x] Cross-check anomaly inbox response against spec example
 
 **Milestone 7 Quality Gates:**
-- [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
-- [ ] Tests pass: all unit/integration tests green (`pytest`)
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+- [x] Code review passed
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Tests pass: all unit/integration tests green (`pytest`)
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
-## Milestone 8: React Web App
+## Milestone 8: React Web App  ✅
 
+**Issue:** [#46](https://github.com/deghosal-2026/agent-exec-trace/issues/46) — **CLOSED**
 ### 8.1 App setup
 
 This task establishes the UI foundation for the product views. Keep the setup pragmatic, but make routing, API access, and layout strong enough that later views do not feel bolted on.
 
 **Success looks like:** the web app runs locally, has navigable routes, can call the API, and has a stable foundation for all `v0.1.0` views.
 
-- [ ] Create `apps/web/` app scaffold
-- [ ] Add routing
-- [ ] Add API client layer
-- [ ] Add base layout/navigation
-- [ ] Add lint/test baseline
+- [x] Create `apps/web/` app scaffold
+- [x] Add routing
+- [x] Add API client layer
+- [x] Add base layout/navigation
+- [x] Add lint/test baseline
 
 ### 8.2 Run timeline view
 
@@ -1267,11 +1273,11 @@ This is the flagship UI surface. It should make one run explainable quickly and 
 
 **Success looks like:** a user can enter or open a run, see the summary, inspect the span tree, and identify the problematic section with anomaly markers and detail panels.
 
-- [ ] Create run search/input entry
-- [ ] Render run summary header
-- [ ] Render span tree / timeline
-- [ ] Render per-span detail panel
-- [ ] Render anomaly markers in the timeline
+- [x] Create run search/input entry
+- [x] Render run summary header
+- [x] Render span tree / timeline
+- [x] Render per-span detail panel
+- [x] Render anomaly markers in the timeline
 
 ### 8.2.1 Run timeline interaction details
 
@@ -1279,10 +1285,10 @@ This task makes the timeline truly operational rather than just visually interes
 
 **Success looks like:** a user can expand/collapse spans, select a span, inspect summary details, and quickly identify where the run changed course.
 
-- [ ] Add span expand/collapse behavior
-- [ ] Add selected-span detail state
-- [ ] Add clear display of timing and cost context per span
-- [ ] Add visual emphasis for anomaly-linked spans
+- [x] Add span expand/collapse behavior
+- [x] Add selected-span detail state
+- [x] Add clear display of timing and cost context per span
+- [x] Add visual emphasis for anomaly-linked spans
 
 ### 8.3 Fleet health view
 
@@ -1290,10 +1296,10 @@ This view proves the product is more than a single-trace debugger. It should mak
 
 **Success looks like:** the page loads grouped fleet data, supports useful filters, and makes drill-down into related runs natural.
 
-- [ ] Create fleet table/cards layout
-- [ ] Add grouping/filter controls
-- [ ] Display cost, success, anomaly counts
-- [ ] Add drill-down action into related runs
+- [x] Create fleet table/cards layout
+- [x] Add grouping/filter controls
+- [x] Display cost, success, anomaly counts
+- [x] Add drill-down action into related runs
 
 ### 8.3.1 Fleet dashboard detail design
 
@@ -1301,10 +1307,10 @@ This task specifies the information architecture of the fleet page. Since this i
 
 **Success looks like:** the fleet page has a clearly defined set of top-level cards, grouping controls, table columns, and drill-down actions that reflect the PRD's standard view model.
 
-- [ ] Define top summary cards
-- [ ] Define primary grouping controls
-- [ ] Define required table columns
-- [ ] Define default sort behavior
+- [x] Define top summary cards
+- [x] Define primary grouping controls
+- [x] Define required table columns
+- [x] Define default sort behavior
 
 ### 8.4 Version compare view
 
@@ -1312,10 +1318,10 @@ This view is where observability meets release review. It should help a team ans
 
 **Success looks like:** two versions can be selected and the UI presents a clear delta story for cost, retries, tool usage, and outcomes.
 
-- [ ] Create compare selection form
-- [ ] Render version A vs B summary cards
-- [ ] Render cost/retry/tool delta sections
-- [ ] Add drill-down links into exemplar runs
+- [x] Create compare selection form
+- [x] Render version A vs B summary cards
+- [x] Render cost/retry/tool delta sections
+- [x] Add drill-down links into exemplar runs
 
 ### 8.4.1 Compare view interpretation aids
 
@@ -1323,10 +1329,10 @@ This task makes compare usable by normal engineers and managers, not only by peo
 
 **Success looks like:** compare output includes enough labeling, context, and interpretation hints that a reviewer can make a release decision without writing custom analysis.
 
-- [ ] Add explicit "version A vs version B" framing
-- [ ] Add positive/negative/neutral visual signals for deltas
-- [ ] Add inline explanation labels for each metric block
-- [ ] Add quick links to representative runs for both cohorts
+- [x] Add explicit "version A vs version B" framing
+- [x] Add positive/negative/neutral visual signals for deltas
+- [x] Add inline explanation labels for each metric block
+- [x] Add quick links to representative runs for both cohorts
 
 ### 8.5 Anomaly inbox view
 
@@ -1334,10 +1340,10 @@ This view should feel like an actionable inbox, not a generic error list. It mus
 
 **Success looks like:** users can filter anomalies, understand why each one fired, and open the exact run that needs investigation.
 
-- [ ] Render anomaly list
-- [ ] Add severity/type filters
-- [ ] Show explanation text
-- [ ] Link anomaly to run timeline page
+- [x] Render anomaly list
+- [x] Add severity/type filters
+- [x] Show explanation text
+- [x] Link anomaly to run timeline page
 
 ### 8.5.1 Inbox triage ergonomics
 
@@ -1345,18 +1351,18 @@ This task keeps the anomaly inbox from becoming a generic list page. It should s
 
 **Success looks like:** a user can move from a broad list of anomalies to the one they should investigate next without confusion or extra navigation.
 
-- [ ] Define default sort order for anomalies
-- [ ] Add visible severity styling
-- [ ] Add anomaly type badges
-- [ ] Add one-click drill-down action
+- [x] Define default sort order for anomalies
+- [x] Add visible severity styling
+- [x] Add anomaly type badges
+- [x] Add one-click drill-down action
 
 **Milestone 8 Quality Gates:**
-- [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
-- [ ] Tests pass: all unit/integration tests green (`pytest`)
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+- [x] Code review passed
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Tests pass: all unit/integration tests green (`pytest`)
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
@@ -1369,6 +1375,8 @@ This task keeps the anomaly inbox from becoming a generic list page. It should s
 
 ### 8.6.1 Expand detectors to 35 across 7 categories
 
+**Issue:** [#91](https://github.com/deghosal-2026/agent-exec-trace/issues/91) — **CLOSED**
+
 **Context:** The v0.1.0 anomaly engine ships with 3 detectors (loop, retry, cost). For
 production-grade observability, we need comprehensive coverage of agent failure patterns
 across tool execution, cost, runtime, retry behavior, human interaction, output quality,
@@ -1379,15 +1387,17 @@ configurable thresholds, and produce structured evidence payloads.
 analytics worker pipeline. Each detector's positive/negative cases are verified through
 seeded scenarios.
 
-- [ ] **Tool Execution (8 detectors):** LoopDetector, PatternLoopDetector, ArgumentLoopDetector, ToolErrorRateDetector, SpecificToolErrorDetector, ToolLatencyDetector, ToolTimeoutDetector, RedundantToolCallDetector
-- [ ] **Cost & Resource (6 detectors):** CostSpikeDetector, CostVsBaselineDetector, CostEfficiencyDetector, TokenExplosionDetector, PerToolCostSpikeDetector, WastedToolCallsDetector
-- [ ] **Runtime & Completion (5 detectors):** RunDurationDetector, MaxStepHitDetector, StepEfficiencyDetector, InactivityDetector, PrematureCompletionDetector
-- [ ] **Retry & Recovery (5 detectors):** RetryStormDetector, SystemicRetryDetector, TransientRetryDetector, CascadingRetryDetector, RecoveryPathDetector
-- [ ] **Interaction & Control (4 detectors):** InterventionFrequencyDetector, EscalationRateDetector, ApprovalLatencyDetector, InterventionRejectionDetector
-- [ ] **Output Quality (4 detectors):** EmptyResponseDetector, LowOutputDetector, IndeterminateDetector, OutputDriftDetector
-- [ ] **Cross-Run Patterns (3 detectors):** AnomalyClusterDetector, RunFrequencyAnomaly, FirstRunHeuristic
+- [x] **Tool Execution (8 detectors):** LoopDetector, PatternLoopDetector, ArgumentLoopDetector, ToolErrorRateDetector, SpecificToolErrorDetector, ToolLatencyDetector, ToolTimeoutDetector, RedundantToolCallDetector
+- [x] **Cost & Resource (6 detectors):** CostSpikeDetector, CostVsBaselineDetector, CostEfficiencyDetector, TokenExplosionDetector, PerToolCostSpikeDetector, WastedToolCallsDetector
+- [x] **Runtime & Completion (5 detectors):** RunDurationDetector, MaxStepHitDetector, StepEfficiencyDetector, InactivityDetector, PrematureCompletionDetector
+- [x] **Retry & Recovery (5 detectors):** RetryStormDetector, SystemicRetryDetector, TransientRetryDetector, CascadingRetryDetector, RecoveryPathDetector
+- [x] **Interaction & Control (4 detectors):** InterventionFrequencyDetector, EscalationRateDetector, ApprovalLatencyDetector, InterventionRejectionDetector
+- [x] **Output Quality (4 detectors):** EmptyResponseDetector, LowOutputDetector, IndeterminateDetector, OutputDriftDetector
+- [x] **Cross-Run Patterns (3 detectors):** AnomalyClusterDetector, RunFrequencyAnomaly, FirstRunHeuristic
 
 ### 8.6.2 Harden detectors against known blind spots
+
+**Issue:** [#92](https://github.com/deghosal-2026/agent-exec-trace/issues/92) — **CLOSED**
 
 **Context:** The 3 existing detectors have documented blind spots: polling false positives,
 transient vs systemic retry confusion, sparse baseline skew, no argument-awareness, and no
@@ -1396,13 +1406,15 @@ cross-run context. Every detector (old and new) must address its known blind spo
 **Success looks like:** Each detector has explicit hardening: allowlists, success-rate
 gating, baseline confidence checks, multi-signal correlation, and severity calibration.
 
-- [ ] Loop detectors (1-3): add `polling_tool_allowlist`, argument-aware repetition weighting, A→B→A→B pattern detection with configurable window size
-- [ ] Retry detectors (20-24): add `retry_success_rate` gating (≥50% success → suppress), error-type clustering, cascading retry chain detection
-- [ ] Cost detectors (9-14): add `min_baseline_run_count=5` sparse protection, token-vs-tool cost breakdown, period-over-period trend check
-- [ ] Runtime detectors (15-19): add per-workload baseline calibration, step-vs-complexity correlation
-- [ ] All detectors: severity scaling (warning at threshold, critical at 2x threshold), structured evidence payload, human-readable explanations
+- [x] Loop detectors (1-3): add `polling_tool_allowlist`, argument-aware repetition weighting, A→B→A→B pattern detection with configurable window size
+- [x] Retry detectors (20-24): add `retry_success_rate` gating (≥50% success → suppress), error-type clustering, cascading retry chain detection
+- [x] Cost detectors (9-14): add `min_baseline_run_count=5` sparse protection, token-vs-tool cost breakdown, period-over-period trend check
+- [x] Runtime detectors (15-19): add per-workload baseline calibration, step-vs-complexity correlation
+- [x] All detectors: severity scaling (warning at threshold, critical at 2x threshold), structured evidence payload, human-readable explanations
 
 ### 8.6.3 Ensure deterministic and testable behavior
+
+**Issue:** [#93](https://github.com/deghosal-2026/agent-exec-trace/issues/93) — **OPEN**
 
 **Context:** Detectors must never depend on randomness, LLM calls, or external state beyond
 trace data and cohort baselines. Every detector's logic must be unit-testable with
@@ -1420,6 +1432,8 @@ has a corresponding test.
 
 ### 8.6.4 Integrate into analytics worker and API
 
+**Issue:** [#94](https://github.com/deghosal-2026/agent-exec-trace/issues/94) — **OPEN**
+
 **Context:** New detectors must plug into the existing worker pipeline seamlessly. The API
 must expose anomaly type filters for all 35 anomaly types. The web UI anomaly inbox must
 display all types with appropriate badges.
@@ -1427,13 +1441,15 @@ display all types with appropriate badges.
 **Success looks like:** Worker `_process_cycle` runs all 35 detectors, persists anomalies,
 triggers webhook alerts. API `/anomalies` filters by all types. UI shows badges for all.
 
-- [ ] Register all 35 detectors in the worker pipeline (`_process_cycle`, `process_trace`)
+- [x] Register all 35 detectors in the worker pipeline (`_process_cycle`, `process_trace`)
 - [ ] Add 35 anomaly types to API response model enum
-- [ ] Add color badges for all 35 types in web UI anomaly inbox
+- [x] Add color badges for all 35 types in web UI anomaly inbox
 - [ ] Configurable per-detector on/off toggle via settings (default: all on)
 - [ ] Per-detector metrics counter in AnalyticsMetrics
 
 ### 8.6.5 Update field-test plan with 35-detector scenarios
+
+**Issue:** [#95](https://github.com/deghosal-2026/agent-exec-trace/issues/95) — **OPEN**
 
 **Context:** The field-test plan must cover all 35 detectors with explicit positive/negative
 scenarios across 4 agent workloads.
@@ -1448,139 +1464,46 @@ expanded to cover all detectors.
 - [ ] Per-detector expected TP/FP/FN tracking columns
 
 **Milestone 8.6 Quality Gates:**
-- [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Code review passed
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
 - [ ] Tests pass: all unit/integration tests green (`pytest`)
 - [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 
-## Milestone 8.7: Real Trace Dataset Ingestion ⬜
 
-> **Priority:** Critical-path. 3 seeded scenarios are insufficient to validate anomaly
-> detectors. This milestone downloads 100-150K real agent traces from Hugging Face and
-> OSS GitHub agents, converts them to OTel-compatible spans, and runs all detectors
-> against them as functional validation tests.
-
-### 8.7.1 Download 150K agent traces from Hugging Face and GitHub
-
-**Issue:** [#86](https://github.com/deghosal-2026/agent-exec-trace/issues/86) — **OPEN**
-
-**Context:** The Hugging Face datasets ecosystem has multiple large agent trace
-collections: `agent-data/misc-merged-claude-code-traces-v1` (32.1K), `juliensimon/open-agent-traces`
-(17K), `lambda/hermes-agent-reasoning-traces` (14.7K), SWE agent sandbox traces (22K total),
-domain-specific agent datasets (code review, market research, legal docs, customer support),
-and the 15 OSS GitHub agents we previously identified.
-
-**Success looks like:** A corpus of ≥ 150K agent traces spanning 6+ frameworks and
-10+ task domains, stored in a unified format alongside metadata about trace source,
-framework, and expected behavior.
-
-- [ ] Download primary HF datasets: 32.1K + 17K + 14.7K + 22K + 8.5K + 4K + 3.9K + 3.2K + 2.8K + 2K + 2K + 1.7K + 1.5K + 1.5K = ~117K traces
-- [ ] Self-instrument 15 OSS GitHub agents, generate ~10K traces
-- [ ] Generate seeded demo traces: 5K parameterized runs
-- [ ] Download additional HF agent datasets to fill gap to 150K
-- [ ] Store traces in `data/traces/` with manifest file cataloging source, framework, task domain, trace count
-
-### 8.7.2 Build trace conversion pipeline
-
-**Issue:** [#87](https://github.com/deghosal-2026/agent-exec-trace/issues/87) — **OPEN**
-
-**Context:** Hugging Face datasets use varying formats (LangChain traces, JSON dumps,
-Parquet files, custom schemas). They must be converted to OTel-compatible SpanNode
-format that the analytics pipeline consumes.
-
-**Success looks like:** A `TraceConverter` class that accepts a raw trace in any
-supported source format and produces a list of `SpanNode` objects with proper
-parent-child relationships, operation names, attributes, and timing data.
-
-- [ ] Build `TraceConverter` base class with source-format adapters
-- [ ] LangChain/LangSmith trace adapter (converts run tree to SpanNode)
-- [ ] Generic JSON adapter (key mapping from arbitrary JSON to SpanNode)
-- [ ] Parquet/Arrow adapter for HF datasets in tabular format
-- [ ] OTLP adapter (pass-through for already-OTel traces)
-- [ ] Validation step: verify converted spans have valid trace IDs, span IDs, parent-child relationships
-- [ ] Batch processing: handle 150K traces efficiently with progress reporting
-
-### 8.7.3 Run 35 detectors against 150K traces
-
-**Issue:** [#88](https://github.com/deghosal-2026/agent-exec-trace/issues/88) — **OPEN**
-
-**Context:** This is the functional validation gate. Every detector must be run against
-a statistically significant sample to catch false positives, false negatives, and edge
-cases that seeded tests miss.
-
-**Success looks like:** A `DetectorPipeline` that ingests 150K traces, runs all 35
-detectors against each trace, collects results, and produces a per-detector report
-with anomaly counts, distribution analysis, and flagged suspicious patterns.
-
-- [ ] Build `DetectorPipeline` class: batch-run all 35 detectors against N traces
-- [ ] Build result collector: store detector outputs per trace in SQLite or Parquet
-- [ ] Build anomaly distribution analyzer: how many anomalies per detector? per workload? per framework?
-- [ ] Build suspicious pattern flagger: detector fires on >50% of traces → probably a threshold bug
-- [ ] Build cross-detector correlation: which detectors co-fire? (e.g., run_duration + loop_detected)
-- [ ] Generate pipeline run report: anomalies found, distribution, flagged issues
-
-### 8.7.4 Ground truth labeling and validation framework
-
-**Issue:** [#89](https://github.com/deghosal-2026/agent-exec-trace/issues/89) — **OPEN**
-
-**Context:** Without ground truth, we cannot compute TPR/FPR. Seeded traces have known
-labels (this trace is a loop, this trace is normal). Real traces need manual or
-heuristic labeling.
-
-**Success looks like:** A `GroundTruthLabeler` that applies known labels to seeded
-traces and heuristic labels to real traces, enabling TPR/FPR computation across
-the full corpus.
-
-- [ ] Build `GroundTruthLabeler`: tag seeded traces with expected anomaly types
-- [ ] Heuristic labeling for real traces: flag known patterns (high retry count, long duration, etc.) as likely positives
-- [ ] Build `ValidationReport` generator: per-detector TPR, FPR, precision, recall
-- [ ] Flag ambiguous traces for manual review
-- [ ] Generate confusion matrix per detector
-- [ ] Threshold tuning recommendations based on validation results
-
-**Milestone 8.7 Quality Gates:**
-- [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
-- [ ] Tests pass: all unit/integration tests green (`pytest`)
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
-
----
-
-## Milestone 8.8: LLM-Augmented Anomaly Detection ⬜
+## Milestone 8.7: LLM-Augmented Anomaly Detection ⬜
 
 > **Priority:** Differentiator. Rule-based detectors are fast and deterministic but blind
-> to semantics. This milestone adds a local LLM layer (Ollama with llama3.2 or qwen2.5, ~3B params)
+> to semantics. This milestone adds a local LLM layer (MLX with llama3.2 or qwen2.5, ~3B params)
 > for semantic anomaly detection, explanation quality scoring, FP triage, output drift
 > tracking, and severity calibration. All LLM features are optional — detectors function
-> fully without LLM when Ollama is unavailable.
+> fully without LLM when the MLX model server is unavailable.
 
-### 8.8.1 Integrate local LLM via Ollama
+### 8.7.1 Integrate local LLM via MLX
 
-**Issue:** [#90](https://github.com/deghosal-2026/agent-exec-trace/issues/90) — **OPEN**
+**Issue:** [#85](https://github.com/deghosal-2026/agent-exec-trace/issues/85) — **OPEN**
 
-**Context:** Adds `LLMClient` abstraction that wraps Ollama API calls. Supports
-llama3.2 (3B) and qwen2.5 (3B) models that run on developer laptops. All calls are
-async, have configurable timeouts, and degrade gracefully when Ollama is not running.
+**Context:** Adds `LLMClient` abstraction that wraps MLX-based LLM serving (mlx-lm)
+calls. Supports llama3.2 (3B) and qwen2.5 (3B) models that run on developer laptops
+via Apple Silicon. All calls are async, have configurable timeouts, and degrade
+gracefully when the MLX model server is not running.
 
 **Success looks like:** `LLMClient` provides a clean interface for text generation,
 classification, scoring, and embedding extraction. Used by all LLM-augmented detectors.
 
-- [ ] Build `LLMClient` class: ollama.chat, ollama.embed, ollama.generate wrappers
-- [ ] Build availability check: detect if Ollama is running, fallback gracefully
-- [ ] Build model management: pull model if missing, configure model via settings
+- [ ] Build `LLMClient` class: mlx-lm chat, embed, generate wrappers
+- [ ] Build availability check: detect if MLX model server is running, fallback gracefully
+- [ ] Build model management: load model if missing, configure model via settings
 - [ ] Build caching layer: cache LLM responses for deterministic replay
 - [ ] Build prompt template system: structured prompts for each LLM detector task
 - [ ] Build latency tracking: log LLM call durations for cost awareness
 
-### 8.8.2 LLM explanation quality scoring
+### 8.7.2 LLM explanation quality scoring
 
-**Issue:** [#91](https://github.com/deghosal-2026/agent-exec-trace/issues/91) — **OPEN**
+**Issue:** [#86](https://github.com/deghosal-2026/agent-exec-trace/issues/86) — **OPEN**
 
 **Context:** Rule-based detectors produce formulaic explanations ("Tool X called 12 times").
 An LLM can assess whether these explanations are clear, actionable, and informative
@@ -1595,9 +1518,9 @@ clarity and actionability. Scores below 3 trigger a rewrite suggestion.
 - [ ] Generate aggregate explanation quality report per detector
 - [ ] Track explanation scores over time for detector quality monitoring
 
-### 8.8.3 LLM false positive/negative triage
+### 8.7.3 LLM false positive/negative triage
 
-**Issue:** [#92](https://github.com/deghosal-2026/agent-exec-trace/issues/92) — **OPEN**
+**Issue:** [#87](https://github.com/deghosal-2026/agent-exec-trace/issues/87) — **OPEN**
 
 **Context:** Rule-based detectors fire on threshold violations — they can't distinguish
 between a legitimate spike and a real problem. An LLM can review the full trace context
@@ -1613,9 +1536,9 @@ downgraded to info severity.
 - [ ] Uncertainty flagging: anomalies classified as uncertain go to human review
 - [ ] Track triage accuracy against ground truth labels from seeded traces
 
-### 8.8.4 Embedding-based output drift detection
+### 8.7.4 Embedding-based output drift detection
 
-**Issue:** [#93](https://github.com/deghosal-2026/agent-exec-trace/issues/93) — **OPEN**
+**Issue:** [#88](https://github.com/deghosal-2026/agent-exec-trace/issues/88) — **OPEN**
 
 **Context:** Agent output quality changes can be subtle — shorter answers, higher toxicity,
 different writing style. Rule-based detectors can't catch semantic drift. LLM embeddings
@@ -1626,15 +1549,15 @@ semantically different outputs.
 outputs across versions. A significant cosine distance from baseline triggers a
 drift anomaly.
 
-- [ ] Build `OutputDriftDetector`: extract output text, compute embedding via Ollama, compare to baseline
+- [ ] Build `OutputDriftDetector`: extract output text, compute embedding via MLX, compare to baseline
 - [ ] Build baseline embedding store: per-version, per-workload output embedding centroids
 - [ ] Configurable drift threshold: cosine distance > 0.3 → anomaly
 - [ ] Per-output-type drift tracking: final answer, intermediate reasoning, tool outputs
 - [ ] Version comparison integration: show drift alongside cost/retry deltas
 
-### 8.8.5 LLM severity calibration and threshold suggestion
+### 8.7.5 LLM severity calibration and threshold suggestion
 
-**Issue:** [#94](https://github.com/deghosal-2026/agent-exec-trace/issues/94) — **OPEN**
+**Issue:** [#89](https://github.com/deghosal-2026/agent-exec-trace/issues/89) — **OPEN**
 
 **Context:** Detector thresholds and severity levels are currently hard-coded (warning at
 5, critical at 10). These should be data-driven. An LLM can analyze anomaly distributions
@@ -1649,9 +1572,9 @@ anomaly distributions, and produces threshold tuning recommendations with explan
 - [ ] Generate tuning report: current threshold → suggested threshold → rationale
 - [ ] Configurable auto-apply: optionally update thresholds based on LLM suggestions
 
-### 8.8.6 Five new LLM-powered semantic detectors
+### 8.7.6 Five new LLM-powered semantic detectors
 
-**Issue:** [#95](https://github.com/deghosal-2026/agent-exec-trace/issues/95) — **OPEN**
+**Issue:** [#90](https://github.com/deghosal-2026/agent-exec-trace/issues/90) — **OPEN**
 
 **Context:** Current detectors (1-35) are purely rule-based on numeric metrics. Five
 new detectors use LLM reasoning for semantic-level anomalies that rules can't catch.
@@ -1676,7 +1599,205 @@ when LLM is unavailable (return None, no false positive).
 - [ ] All 5 detectors: graceful degradation when LLM unavailable (return None)
 - [ ] All 5 detectors: configurable on/off, timeout controls
 
+**Milestone 8.7 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+
+---
+
+## Milestone 8.8: Real Trace Dataset Ingestion & Validation ⬜
+
+> **Priority:** Critical-path. 3 seeded scenarios are insufficient to validate anomaly
+> detectors. This milestone downloads 100-150K real agent traces from Hugging Face and
+> OSS GitHub agents, converts them to OTel-compatible spans, and runs all detectors
+> against them as functional validation tests.
+
+### 8.8.1 Download 150K agent traces from Hugging Face and GitHub
+
+**Issue:** [#81](https://github.com/deghosal-2026/agent-exec-trace/issues/81) — **OPEN**
+
+**Context:** The Hugging Face datasets ecosystem has multiple large agent trace
+collections: `agent-data/misc-merged-claude-code-traces-v1` (32.1K), `juliensimon/open-agent-traces`
+(17K), `lambda/hermes-agent-reasoning-traces` (14.7K), SWE agent sandbox traces (22K total),
+domain-specific agent datasets (code review, market research, legal docs, customer support),
+and the 15 OSS GitHub agents we previously identified.
+
+**Success looks like:** A corpus of ≥ 150K agent traces spanning 6+ frameworks and
+10+ task domains, stored in a unified format alongside metadata about trace source,
+framework, and expected behavior.
+
+- [ ] Download primary HF datasets: 32.1K + 17K + 14.7K + 22K + 8.5K + 4K + 3.9K + 3.2K + 2.8K + 2K + 2K + 1.7K + 1.5K + 1.5K = ~117K traces
+- [ ] Self-instrument 15 OSS GitHub agents, generate ~10K traces
+- [ ] Generate seeded demo traces: 5K parameterized runs
+- [ ] Download additional HF agent datasets to fill gap to 150K
+- [ ] Store traces in `data/traces/` with manifest file cataloging source, framework, task domain, trace count
+
+### 8.8.2 Build trace conversion pipeline
+
+**Issue:** [#82](https://github.com/deghosal-2026/agent-exec-trace/issues/82) — **OPEN**
+
+**Context:** Hugging Face datasets use varying formats (LangChain traces, JSON dumps,
+Parquet files, custom schemas). They must be converted to OTel-compatible SpanNode
+format that the analytics pipeline consumes.
+
+**Success looks like:** A `TraceConverter` class that accepts a raw trace in any
+supported source format and produces a list of `SpanNode` objects with proper
+parent-child relationships, operation names, attributes, and timing data.
+
+- [ ] Build `TraceConverter` base class with source-format adapters
+- [ ] LangChain/LangSmith trace adapter (converts run tree to SpanNode)
+- [ ] Generic JSON adapter (key mapping from arbitrary JSON to SpanNode)
+- [ ] Parquet/Arrow adapter for HF datasets in tabular format
+- [ ] OTLP adapter (pass-through for already-OTel traces)
+- [ ] Validation step: verify converted spans have valid trace IDs, span IDs, parent-child relationships
+- [ ] Batch processing: handle 150K traces efficiently with progress reporting
+
+### 8.8.3 Run 35 detectors against 150K traces
+
+**Issue:** [#83](https://github.com/deghosal-2026/agent-exec-trace/issues/83) — **OPEN**
+
+**Context:** This is the functional validation gate. Every detector must be run against
+a statistically significant sample to catch false positives, false negatives, and edge
+cases that seeded tests miss.
+
+**Success looks like:** A `DetectorPipeline` that ingests 150K traces, runs all 35
+detectors against each trace, collects results, and produces a per-detector report
+with anomaly counts, distribution analysis, and flagged suspicious patterns.
+
+- [ ] Build `DetectorPipeline` class: batch-run all 35 detectors against N traces
+- [ ] Build result collector: store detector outputs per trace in SQLite or Parquet
+- [ ] Build anomaly distribution analyzer: how many anomalies per detector? per workload? per framework?
+- [ ] Build suspicious pattern flagger: detector fires on >50% of traces → probably a threshold bug
+- [ ] Build cross-detector correlation: which detectors co-fire? (e.g., run_duration + loop_detected)
+- [ ] Generate pipeline run report: anomalies found, distribution, flagged issues
+
+### 8.8.4 Ground truth labeling and validation framework
+
+**Issue:** [#84](https://github.com/deghosal-2026/agent-exec-trace/issues/84) — **OPEN**
+
+**Context:** Without ground truth, we cannot compute TPR/FPR. Seeded traces have known
+labels (this trace is a loop, this trace is normal). Real traces need manual or
+heuristic labeling.
+
+**Success looks like:** A `GroundTruthLabeler` that applies known labels to seeded
+traces and heuristic labels to real traces, enabling TPR/FPR computation across
+the full corpus.
+
+- [ ] Build `GroundTruthLabeler`: tag seeded traces with expected anomaly types
+- [ ] Heuristic labeling for real traces: flag known patterns (high retry count, long duration, etc.) as likely positives
+- [ ] Build `ValidationReport` generator: per-detector TPR, FPR, precision, recall
+- [ ] Flag ambiguous traces for manual review
+- [ ] Generate confusion matrix per detector
+- [ ] Threshold tuning recommendations based on validation results
+
 **Milestone 8.8 Quality Gates:**
+- [ ] Code review passed
+- [ ] Comments present on public API and complex logic
+- [ ] Ruff: zero violations (`ruff check .`)
+- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [ ] Tests pass: all unit/integration tests green (`pytest`)
+- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+
+---
+
+## Milestone 8.9: Field-Test Execution ⬜
+
+> **Priority:** Critical-path validation gate. This milestone runs the end-to-end field
+> test on real agents: download + instrument the field-test agents (4 seeded workloads +
+> 15 OSS agents), run the scenarios from `docs/field-test-plan.md`, collect and convert the
+> resulting traces, run all 35 detectors to analyze them, and produce the field-test
+> report. The report is the release-gate evidence for Milestone 12.
+
+### 8.9.1 Download and instrument field-test agents
+
+**Issue:** [#96](https://github.com/deghosal-2026/agent-exec-trace/issues/96) — **OPEN**
+
+**Context:** The workflow needs runnable agent workloads. Four seeded workloads exist
+(Request Triage, Research Crew, RAG Q&A) plus 15 OSS GitHub agents across 6 frameworks.
+Each must be downloaded, set up, and instrumented with the Python SDK so it emits
+OTel spans.
+
+**Success looks like:** All field-test workloads installed locally and instrumented such
+that running them produces traces observable in Jaeger / the analytics pipeline.
+
+- [ ] Download and set up 4 seeded field-test workloads (Request Triage, Research Crew, RAG Q&A)
+- [ ] Download and set up the 15 OSS GitHub agents (LangGraph, CrewAI, AutoGen, OpenAI Agents, browser-use, aider, SuperAGI)
+- [ ] Instrument each agent with the Python SDK (`TracedGraph` / `@trace_agent` as appropriate)
+- [ ] Verify instrumentation: run each agent once, confirm spans arrive via OTLP
+- [ ] Add a run manifest cataloging agent, framework, and instrumentation status
+
+### 8.9.2 Run the field-test scenarios
+
+**Issue:** [#97](https://github.com/deghosal-2026/agent-exec-trace/issues/97) — **OPEN**
+
+**Context:** `docs/field-test-plan.md` defines the ~55-minute execution timeline (Phase 1
+setup, Phase 2 bulk run ~115 runs, Phase 3 review). This task executes those scenarios
+against the instrumented agents under the local stack.
+
+**Success looks like:** All field-test runs executed and traces ingested; the analytics
+worker materializes summaries and fleet/version rollups with no failures.
+
+- [ ] Execute Phase 1: stack boot + seeded Scenario calibration, verify traces in Jaeger
+- [ ] Execute Phase 2: bulk run of Request Triage (parameterized), Research Crew, RAG Q&A
+- [ ] Execute 15 OSS agent runs producing real trace data
+- [ ] Confirm analytics worker ingests all runs and materializes rollups
+- [ ] Log results to a run ledger (run IDs, timestamps, pass/fail)
+
+### 8.9.3 Collect and convert field-test traces
+
+**Issue:** [#98](https://github.com/deghosal-2026/agent-exec-trace/issues/98) — **OPEN**
+
+**Context:** Raw traces from diverse frameworks land in varying shapes (LangChain trees,
+JSON dumps, OTel). They must be normalized into the OTel-compatible SpanNode format the
+analytics pipeline consumes, via the trace conversion pipeline.
+
+**Success looks like:** A unified trace corpus in `data/traces/processed/` with valid
+spans (trace IDs, span IDs, parent-child relationships) and a manifest.
+
+- [ ] Collect traces from all field-test runs into `data/traces/`
+- [ ] Convert traces through the conversion pipeline to SpanNode format
+- [ ] Validate converted spans (IDs, parent-child, timing)
+- [ ] Store processed traces in `data/traces/processed/` with a manifest
+
+### 8.9.4 Run 35 detectors against field-test traces
+
+**Issue:** [#99](https://github.com/deghosal-2026/agent-exec-trace/issues/99) — **OPEN**
+
+**Context:** Run the full detector set over the collected traces to surface anomalies and
+compute detection metrics. This is the functional validation of the 35 rule-based
+detectors against real-world traces.
+
+**Success looks like:** Every detector runs over every trace; anomaly counts and
+distributions are produced per detector, per workload, per framework.
+
+- [ ] Run all 35 detectors over the collected field-test traces
+- [ ] Produce per-detector anomaly counts and distribution analysis
+- [ ] Flag suspicious detectors (fires on >50% of traces → threshold bug)
+- [ ] Cross-correlate co-firing detectors (e.g., duration + loop)
+
+### 8.9.5 Produce field-test report
+
+**Issue:** [#100](https://github.com/deghosal-2026/agent-exec-trace/issues/100) — **OPEN**
+
+**Context:** `docs/field-test-plan.md` defines strict validation criteria (TPR ≥ 95%,
+FPR ≤ 5%, clarity ≥ 4.5, actionability ≥ 4.5) and a review protocol. This task compiles
+the anomaly review sheet into a final report documenting results, verdict, and
+actionable follow-ups.
+
+**Success looks like:** A consolidated field-test report that serves as the release-gate
+evidence for Milestone 12, with per-detector metrics and a clear verdict.
+
+- [ ] Fill the anomaly review sheet from field-test observations
+- [ ] Compute per-detector TPR / FPR / precision / recall against ground truth
+- [ ] Score severity accuracy, operator experience, cross-workload consistency
+- [ ] Document false negatives and follow-up actions
+- [ ] Write final verdict paragraph and append report to `docs/`
+
+**Milestone 8.9 Quality Gates:**
 - [ ] Code review passed
 - [ ] Comments present on public API and complex logic
 - [ ] Ruff: zero violations (`ruff check .`)

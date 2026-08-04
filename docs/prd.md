@@ -262,7 +262,7 @@ This matrix matters because mature observability tools are judged not only by th
 - **GoalDriftDetector** — intent evolution tracking
 - **QualityDegradationDetector** — output quality vs baseline
 - **ConfusionPatternDetector** — contradictory reasoning
-- Local LLM via Ollama (llama3.2/qwen2.5, 3B params)
+- Local LLM via MLX (llama3.2/qwen2.5, 3B params)
 
 ### Key Design Properties
 

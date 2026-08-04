@@ -43,7 +43,7 @@ Downloaded HF traces need conversion from their native format to OTel-compatible
 - CrewAI traces → OTel spans via `@trace_agent` decorator
 - Custom traces → normalize to SpanNode format
 
-## LLM-Augmented Detection (Local LLM via Ollama)
+## LLM-Augmented Detection (Local LLM via MLX)
 
 ### What the LLM Does (Not Replace Rule-Based, Augment)
 
@@ -59,8 +59,8 @@ Downloaded HF traces need conversion from their native format to OTel-compatible
 ### Local LLM Setup
 
 ```python
-# Uses Ollama with llama3.2 or qwen2.5 (3B params, runs on laptop)
-# Fallback: if Ollama not available, skip LLM features gracefully
+# Uses MLX (mlx-lm) with llama3.2 or qwen2.5 (3B params, runs on Apple Silicon laptop)
+# Fallback: if MLX model server not available, skip LLM features gracefully
 # All LLM calls are optional — detectors work without LLM
 ```
 
