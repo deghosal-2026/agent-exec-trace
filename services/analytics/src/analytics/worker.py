@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime, timezone
+from typing import cast
 
 from analytics.alerts import WebhookAlerter
 from analytics.config import settings
@@ -63,6 +64,7 @@ class AnalyticsWorker:
         self.retry_detector = RetryStormDetector()
         self.cost_detector = CostSpikeDetector()
         self.detectors: list[BaseDetector] = create_all_detectors()
+        self.disabled_set: frozenset[str] = frozenset(settings.detector_disabled)
         self.fleet_materializer = FleetRollupMaterializer()
         self.cohort_materializer = VersionCohortMaterializer()
         self.alerter = WebhookAlerter(webhook_url=settings.webhook_url)
@@ -139,37 +141,44 @@ class AnalyticsWorker:
         """Run all anomaly detectors against a summary and persist/alert on hits.
 
         Runs the original three detectors (loop, retry, cost) first for backward
-        compatibility, then runs the full set of 35 detectors.  Anomalies found
-        are persisted to the database and dispatched via the webhook alerter.
+        compatibility, then runs the full set of 35 detectors.  Detectors whose
+        ``anomaly_type`` is listed in ``settings.detector_disabled`` are skipped.
+        Anomalies found are persisted to the database and dispatched via the
+        webhook alerter, with per-type metrics tracked.
         """
         anomalies: list[Anomaly] = []
 
         # Original three detectors (backward compatible)
-        try:
-            loop_anomaly = self.loop_detector.detect(summary, spans)
-            if loop_anomaly:
-                anomalies.append(loop_anomaly)
-        except Exception:
-            logger.exception("LoopDetector failed for run %s", summary.run_id)
+        if "loop" not in self.disabled_set:
+            try:
+                loop_anomaly = self.loop_detector.detect(summary, spans)
+                if loop_anomaly:
+                    anomalies.append(loop_anomaly)
+            except Exception:
+                logger.exception("LoopDetector failed for run %s", summary.run_id)
 
-        try:
-            retry_anomaly = self.retry_detector.detect(summary, spans)
-            if retry_anomaly:
-                anomalies.append(retry_anomaly)
-        except Exception:
-            logger.exception("RetryStormDetector failed for run %s", summary.run_id)
+        if "retry_storm" not in self.disabled_set:
+            try:
+                retry_anomaly = self.retry_detector.detect(summary, spans)
+                if retry_anomaly:
+                    anomalies.append(retry_anomaly)
+            except Exception:
+                logger.exception("RetryStormDetector failed for run %s", summary.run_id)
 
-        try:
-            cost_anomaly = await self.cost_detector.detect(summary, spans, pool=pool)
-            if cost_anomaly:
-                anomalies.append(cost_anomaly)
-        except Exception:
-            logger.exception("CostSpikeDetector failed for run %s", summary.run_id)
+        if "cost_spike" not in self.disabled_set:
+            try:
+                cost_anomaly = await self.cost_detector.detect(summary, spans, pool=pool)
+                if cost_anomaly:
+                    anomalies.append(cost_anomaly)
+            except Exception:
+                logger.exception("CostSpikeDetector failed for run %s", summary.run_id)
 
-        # All 35 detectors (deduplicating the original three by type)
+        # All 35 detectors (deduplicating the original three by type, respecting toggles)
         async_tasks = []
         for detector in self.detectors:
             if isinstance(detector, (LoopDetector, RetryStormDetector, CostSpikeDetector)):
+                continue
+            if detector.anomaly_type in self.disabled_set:
                 continue
             if (
                 hasattr(type(detector), "detect_async")
@@ -180,9 +189,11 @@ class AnalyticsWorker:
                 )
             else:
                 try:
+                    # This branch only runs for detectors that do not override
+                    # BaseDetector.detect_async (i.e., purely sync detectors).
                     result = detector.detect(summary, spans)
                     if result is not None:
-                        anomalies.append(result)
+                        anomalies.append(cast(Anomaly, result))
                 except Exception:
                     logger.exception(
                         "Detector %s failed for run %s",
@@ -197,7 +208,7 @@ class AnalyticsWorker:
             try:
                 await persist_anomaly(pool, anomaly)
                 await self.alerter.send_alert(anomaly)
-                self.metrics.inc_anomaly_detected()
+                self.metrics.inc_anomaly_detected(anomaly_type=anomaly.anomaly_type)
             except Exception:
                 logger.exception(
                     "Failed to persist/alert anomaly %s for run %s",

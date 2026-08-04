@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from analytics.models import AnomalyType
 from pydantic import BaseModel, Field
 
 
@@ -62,7 +63,7 @@ class AnomalyInfo(BaseModel):
     """An anomaly associated with a run, as returned by the API."""
 
     id: str = Field(serialization_alias="anomaly_id")
-    anomaly_type: str = Field(serialization_alias="type")
+    anomaly_type: AnomalyType = Field(serialization_alias="type")
     severity: str = "warning"
     agent_name: str
     run_id: str
@@ -138,7 +139,7 @@ class AnomalyInboxItem(BaseModel):
     """A single anomaly as shown in the anomaly inbox list."""
 
     id: str = Field(serialization_alias="anomaly_id")
-    anomaly_type: str = Field(serialization_alias="type")
+    anomaly_type: AnomalyType = Field(serialization_alias="type")
     severity: str = "warning"
     agent_name: str
     run_id: str

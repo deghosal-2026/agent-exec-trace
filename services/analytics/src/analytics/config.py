@@ -52,6 +52,13 @@ class Settings(BaseSettings):
 
     webhook_url: str = ""
 
+    # --- LLM client settings (MLX / OpenAI-compatible endpoint) ---
+    llm_base_url: str = "http://127.0.0.1:8000/v1"
+    llm_api_key: str = "omlx-test"
+    llm_chat_model: str = "Qwen3.5-4B-4bit"
+    llm_embed_model: str = "all-MiniLM-L6-v2"
+    llm_timeout_seconds: float = 30.0
+
     # --- Tool execution detector thresholds ---
     detector_pattern_loop_window: int = 4
     detector_argument_loop_threshold: int = 3
@@ -94,6 +101,9 @@ class Settings(BaseSettings):
     detector_anomaly_cluster_min_types: int = 3
     detector_run_frequency_min_runs: int = 5
     detector_run_frequency_max_multiplier: float = 3.0
+
+    # --- Per-detector on/off toggle ---
+    detector_disabled: set[str] = set()
 
     model_config = {"env_prefix": "ANALYTICS_", "env_file": ".env", "extra": "ignore"}
 

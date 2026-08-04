@@ -79,16 +79,75 @@ def materialize(
 @click.option("--target", default=150000, type=int, help="Target trace count")
 @click.option("--ingest", is_flag=True, default=False, help="Feed traces into analytics pipeline")
 @click.option("--output-dir", default="data/traces/processed", help="Output directory for parquet")
-def download_traces(target: int, ingest: bool, output_dir: str) -> None:
+@click.option("--batch-size", default=5, type=int, help="Rows streamed per dataset per cycle")
+@click.option(
+    "--dataset",
+    multiple=True,
+    help="Dataset ID. Repeat to provide multiple datasets.",
+)
+@click.option(
+    "--datasets-file",
+    default=None,
+    type=str,
+    help="Path to a text file with one dataset ID per line (comments starting with # ignored)",
+)
+def download_traces(
+    target: int,
+    ingest: bool,
+    output_dir: str,
+    batch_size: int,
+    dataset: tuple[str, ...],
+    datasets_file: str | None,
+) -> None:
     """Download and convert agent traces from Hugging Face datasets."""
-    _run_async(_download_traces_async(target, ingest, output_dir))
+    _run_async(
+        _download_traces_async(
+            target,
+            ingest,
+            output_dir,
+            batch_size,
+            dataset,
+            datasets_file,
+        )
+    )
 
 
-async def _download_traces_async(target: int, ingest: bool, output_dir: str) -> None:
+async def _download_traces_async(
+    target: int,
+    ingest: bool,
+    output_dir: str,
+    batch_size: int,
+    dataset: tuple[str, ...] = (),
+    datasets_file: str | None = None,
+) -> None:
     from analytics.trace_pipeline.pipeline import TracePipeline
 
     pipeline = TracePipeline(output_dir=output_dir)
-    summary = await pipeline.run(target_count=target, ingest=ingest)
+    # Build dataset list if provided
+    dataset_ids: list[str] | None = None
+    ids: list[str] = list(dataset)
+    if datasets_file:
+        try:
+            from pathlib import Path
+            lines = Path(datasets_file).read_text().splitlines()
+            ids.extend(
+                [ln.strip() for ln in lines if ln.strip() and not ln.strip().startswith("#")]
+            )
+        except Exception as exc:
+            click.echo(f"Warning: cannot read datasets file: {exc}", err=True)
+    if ids:
+        # De-duplicate, preserve order
+        seen: set[str] = set()
+        ordered: list[str] = []
+        for ds in ids:
+            if ds not in seen:
+                seen.add(ds)
+                ordered.append(ds)
+        dataset_ids = ordered
+
+    summary = await pipeline.run(
+        target_count=target, ingest=ingest, batch_size=batch_size, datasets=dataset_ids,
+    )
     click.echo("Download complete:")
     click.echo(f"  Datasets attempted: {summary.get('datasets_downloaded', 0)}")
     click.echo(f"  Total rows downloaded: {summary.get('total_rows_downloaded', 0)}")

@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from typing import Any
+from collections.abc import Awaitable
+from typing import Any, NoReturn, overload
 
 from analytics.config import settings
 from analytics.detectors.base import BaseDetector, _has_valid_pool
 from analytics.models import Anomaly, RunSummary, SpanNode
 
 logger = logging.getLogger(__name__)
+
+
+_SENTINEL = object()
 
 
 class CostSpikeDetector(BaseDetector):
@@ -30,8 +34,31 @@ class CostSpikeDetector(BaseDetector):
             min_baseline_run_count or settings.detector_cost_min_baseline_runs
         )
 
-    def detect(self, summary: RunSummary, spans: list[SpanNode]) -> Anomaly | None:
-        return None  # sync fallback — use detect_async for real detection
+    @overload
+    def detect(self, summary: RunSummary, spans: list[SpanNode]) -> NoReturn: ...
+
+    @overload
+    def detect(
+        self, summary: RunSummary, spans: list[SpanNode], *, pool: Any
+    ) -> Awaitable[Anomaly | None]: ...
+
+    def detect(
+        self, summary: RunSummary, spans: list[SpanNode], pool: Any = _SENTINEL
+    ) -> Any:
+        """Dual-mode detect.
+
+        - When called without the optional 'pool' argument (factory smoke tests),
+          raise NotImplementedError so callers fall back to async path or skip.
+        - When called with 'pool' (even if None), return an awaitable and perform
+          the real async detection logic.
+        """
+        if pool is _SENTINEL:
+            raise NotImplementedError
+
+        async def _run() -> Anomaly | None:
+            return await self.detect_async(summary, spans, pool=pool)
+
+        return _run()
 
     async def detect_async(
         self,
@@ -294,20 +321,16 @@ class PerToolCostSpikeDetector(BaseDetector):
             tool_counts[tool_name] = tool_counts.get(tool_name, 0) + 1
 
         total_spans = len(tool_spans)
-        avg_cost_per_call = cost / total_spans
 
         for tool_name, count in tool_counts.items():
             share = count / total_spans
             if share > 0.5 and count >= 3:
-                est_cost_for_tool = count * avg_cost_per_call
-                other_cost = cost - est_cost_for_tool
-                other_calls = total_spans - count
-                other_avg = other_cost / max(other_calls, 1)
+                est_cost_for_tool = share * cost
+                other_share = 1.0 - share
+                dominance_ratio = share / max(other_share, 0.0001)
 
-                if other_avg > 0 and avg_cost_per_call > other_avg * self.multiplier:
-                    severity = self._severity(
-                        avg_cost_per_call / max(other_avg, 0.0001), self.multiplier
-                    )
+                if dominance_ratio >= self.multiplier:
+                    severity = self._severity(dominance_ratio, self.multiplier)
                     return self._build_anomaly(
                         summary,
                         severity,
@@ -321,6 +344,7 @@ class PerToolCostSpikeDetector(BaseDetector):
                             "tool_share_pct": round(share * 100, 1),
                             "est_tool_cost": round(est_cost_for_tool, 2),
                             "total_cost": cost,
+                            "dominance_ratio": round(dominance_ratio, 2),
                             "multiplier": self.multiplier,
                         },
                     )

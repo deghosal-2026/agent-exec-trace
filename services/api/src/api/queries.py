@@ -15,6 +15,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
+from analytics.models import AnomalyType
 from asyncpg import Pool  # type: ignore[import-untyped]
 
 from api.models import (
@@ -233,7 +234,7 @@ def build_run_timeline(
     anomalies = [
         AnomalyInfo(
             id=str(a["id"]),
-            anomaly_type=str(a["anomaly_type"]),
+            anomaly_type=AnomalyType(str(a["anomaly_type"])),
             severity=str(a.get("severity", "warning")),
             agent_name=str(a["agent_name"]),
             run_id=str(a["run_id"]),
@@ -361,7 +362,7 @@ def build_anomaly_item(row: dict[str, Any]) -> dict[str, Any]:
     explanation = str(row.get("explanation") or "")
     return AnomalyInboxItem(
         id=str(row["id"]),
-        anomaly_type=str(row["anomaly_type"]),
+        anomaly_type=AnomalyType(str(row["anomaly_type"])),
         severity=str(row.get("severity", "warning")),
         agent_name=str(row["agent_name"]),
         run_id=str(row["run_id"]),

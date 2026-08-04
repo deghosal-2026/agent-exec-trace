@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import inspect
+from collections.abc import Awaitable
 from typing import Any
 
 from analytics.models import Anomaly, RunSummary, SpanNode
@@ -29,7 +31,9 @@ class BaseDetector:
 
     anomaly_type: str = ""
 
-    def detect(self, summary: RunSummary, spans: list[SpanNode]) -> Anomaly | None:
+    def detect(
+        self, summary: RunSummary, spans: list[SpanNode]
+    ) -> Anomaly | None | Awaitable[Anomaly | None]:
         raise NotImplementedError
 
     async def detect_async(
@@ -38,7 +42,15 @@ class BaseDetector:
         spans: list[SpanNode],
         pool: Any = None,
     ) -> Anomaly | None:
-        return self.detect(summary, spans)
+        """Default async path that bridges sync/async detect implementations.
+
+        If a subclass implements an async-style detect that returns an awaitable,
+        we await it here; otherwise we return the sync result.
+        """
+        result = self.detect(summary, spans)
+        if inspect.isawaitable(result):
+            return await result
+        return result
 
     def _build_anomaly(
         self,

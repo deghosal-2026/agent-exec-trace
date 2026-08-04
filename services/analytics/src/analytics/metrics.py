@@ -30,6 +30,7 @@ class AnalyticsMetrics:
         self._duplicate_skip_count: int = 0
         self._replay_rebuild_count: int = 0
         self._anomaly_detected_count: int = 0
+        self._anomaly_by_type: dict[str, int] = {}
         self._read_model_freshness: datetime | None = None
 
     @property
@@ -77,9 +78,17 @@ class AnalyticsMetrics:
         with self._lock:
             self._replay_rebuild_count += n
 
-    def inc_anomaly_detected(self, n: int = 1) -> None:
+    def inc_anomaly_detected(self, n: int = 1, anomaly_type: str | None = None) -> None:
         with self._lock:
             self._anomaly_detected_count += n
+            if anomaly_type:
+                self._anomaly_by_type[anomaly_type] = (
+                    self._anomaly_by_type.get(anomaly_type, 0) + n
+                )
+
+    def anomaly_count_by_type(self, anomaly_type: str) -> int:
+        with self._lock:
+            return self._anomaly_by_type.get(anomaly_type, 0)
 
     def snapshot(self) -> dict[str, Any]:
         """Atomically capture all counter values.
@@ -95,6 +104,7 @@ class AnalyticsMetrics:
                 "duplicate_skip_count": self._duplicate_skip_count,
                 "replay_rebuild_count": self._replay_rebuild_count,
                 "anomaly_detected_count": self._anomaly_detected_count,
+                "anomaly_by_type": dict(self._anomaly_by_type),
                 "read_model_freshness": (
                     self._read_model_freshness.isoformat() if self._read_model_freshness else None
                 ),
@@ -103,13 +113,20 @@ class AnalyticsMetrics:
     def log_summary(self) -> None:
         """Log the current metrics snapshot at INFO level."""
         snap = self.snapshot()
+        by_type = snap.get("anomaly_by_type", {})
+        type_summary = (
+            ", ".join(f"{k}={v}" for k, v in sorted(by_type.items()))
+            if by_type
+            else "none"
+        )
         logger.info(
             "Metrics snapshot: processed=%d failed=%d skipped=%d rebuild=%d "
-            "anomalies=%d freshness=%s",
+            "anomalies=%d freshness=%s by_type=[%s]",
             snap["processed_run_count"],
             snap["failed_run_count"],
             snap["duplicate_skip_count"],
             snap["replay_rebuild_count"],
             snap["anomaly_detected_count"],
             snap["read_model_freshness"] or "never",
+            type_summary,
         )

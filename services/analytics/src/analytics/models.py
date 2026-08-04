@@ -10,8 +10,59 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from enum import Enum
 
 from pydantic import BaseModel, Field
+
+
+class AnomalyType(str, Enum):
+    """Enumeration of all anomaly types produced by the 35 rule-based + 6 LLM detectors.
+
+    Each value matches the ``anomaly_type`` class attribute on its corresponding
+    detector.  Used by the API layer for validation and by the analytics worker for
+    per-detector toggles and metrics.
+    """
+
+    loop = "loop"
+    pattern_loop = "pattern_loop"
+    argument_loop = "argument_loop"
+    tool_error_rate = "tool_error_rate"
+    specific_tool_error = "specific_tool_error"
+    tool_latency = "tool_latency"
+    tool_timeout = "tool_timeout"
+    redundant_tool_call = "redundant_tool_call"
+    cost_spike = "cost_spike"
+    cost_vs_baseline = "cost_vs_baseline"
+    cost_efficiency = "cost_efficiency"
+    token_explosion = "token_explosion"
+    per_tool_cost_spike = "per_tool_cost_spike"
+    wasted_tool_calls = "wasted_tool_calls"
+    run_duration = "run_duration"
+    max_step_hit = "max_step_hit"
+    step_efficiency = "step_efficiency"
+    inactivity = "inactivity"
+    premature_completion = "premature_completion"
+    retry_storm = "retry_storm"
+    systemic_retry = "systemic_retry"
+    transient_retry = "transient_retry"
+    cascading_retry = "cascading_retry"
+    recovery_path = "recovery_path"
+    intervention_frequency = "intervention_frequency"
+    escalation_rate = "escalation_rate"
+    approval_latency = "approval_latency"
+    intervention_rejection = "intervention_rejection"
+    empty_response = "empty_response"
+    low_output = "low_output"
+    indeterminate_status = "indeterminate_status"
+    output_drift = "output_drift"
+    anomaly_cluster = "anomaly_cluster"
+    run_frequency_anomaly = "run_frequency_anomaly"
+    first_run_heuristic = "first_run_heuristic"
+    semantic_loop = "semantic_loop"
+    hallucination = "hallucination"
+    goal_drift = "goal_drift"
+    quality_degradation = "quality_degradation"
+    confusion_pattern = "confusion_pattern"
 
 
 class RunSummary(BaseModel):
