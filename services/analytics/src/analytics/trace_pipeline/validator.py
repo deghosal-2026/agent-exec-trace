@@ -564,7 +564,7 @@ class Validator:
         if not parquet_files:
             return []
 
-        sample_size = min(len(parquet_files), max(target // 2, 20))
+        sample_size = min(len(parquet_files), max(target * 10, 500))
         sampled_files = random.sample(parquet_files, sample_size)
 
         import pyarrow.parquet as pq
