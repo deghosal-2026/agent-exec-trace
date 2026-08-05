@@ -194,7 +194,13 @@ class Validator:
                     detector_errors.setdefault(d_type, "exception")
 
             if trace_anomalies:
+                before_len = len(trace_anomalies)
                 trace_anomalies = _dedup_loop_family(trace_anomalies)
+                if len(trace_anomalies) < before_len:
+                    for dt in ("pattern_loop", "step_efficiency"):
+                        if dt not in trace_anomalies:
+                            anomaly_counter[dt] = max(0, anomaly_counter.get(dt, 0) - 1)
+                            detector_fire_count[dt] = max(0, detector_fire_count.get(dt, 0) - 1)
                 trace_anomaly_map[trace_id] = trace_anomalies
                 anomalies_by_trace.append(
                     {
@@ -855,10 +861,12 @@ LOOP_FAMILY = {"loop", "pattern_loop", "argument_loop"}
 
 
 def _dedup_loop_family(anomaly_types: list[str]) -> list[str]:
-    loop_fired = any(t in LOOP_FAMILY for t in anomaly_types)
-    if not loop_fired:
-        return anomaly_types
-    return [t for t in anomaly_types if t != "step_efficiency"]
+    loop_set = set(anomaly_types)
+    if "loop" in loop_set:
+        return [t for t in anomaly_types if t != "step_efficiency" and t != "pattern_loop"]
+    if any(t in LOOP_FAMILY for t in anomaly_types):
+        return [t for t in anomaly_types if t != "step_efficiency"]
+    return anomaly_types
 
 
 def _is_output_unavailable_trace(spans: list[SpanNode]) -> bool:
