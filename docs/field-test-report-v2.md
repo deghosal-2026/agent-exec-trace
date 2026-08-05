@@ -3,16 +3,56 @@
 > Second iteration. Generated from `analytics validate --diagnose` against 100K Hugging Face trace corpus.
 > v1 focused on detector behavior. v2 focuses on **compatibility**: which detectors can fairly run on which traces.
 > All 35 rule-based detectors in scope. No detectors excluded.
+> **Last updated:** 2026-08-04 — includes detector noise fixes (see [Fixes Applied](#fixes-applied))
 
 ## Summary
 
-| Metric | v1 | v2 |
-|---|---|---|
-| Traces processed | 100,010 | 100,010 |
-| Datasets | 303 | 303 |
-| Detectors in scope | 35 | 35 |
-| Compatibility score (dataset-level, old) | 82.8% | — |
-| Compatibility score (per-trace, new metric) | — | 42.4% |
+| Metric | v1 | v2 (before fixes) | v2 (after fixes) |
+|---|---|---|---|
+| Traces processed | 100,010 | 100,074 | 101,720 |
+| Datasets | 303 | 303 | ~400 |
+| Detectors in scope | 35 | 35 | 35 |
+| Compatibility score (dataset-level, old) | 82.8% | — | — |
+| Compatibility score (per-trace, new metric) | — | 42.4% | 42.2% |
+| Traces with anomalies | — | 42,471 | **11,872** |
+| Total anomalies | — | 56,869 | **16,651** |
+| Detectors firing (anomaly found) | — | 10 | 7 |
+| Normalization fixes applied | 3 | 4 | 7 |
+| Validation date | 2026-08-04 | 2026-08-04 | 2026-08-04 |
+
+### Detector Impact — Before vs After Fixes
+
+| Detector | Before | After | Change |
+|---|---|---|---|
+| premature_completion | 35,930 | **0** | Removed (overfiring) |
+| argument_loop | 5,768 | **0** | Removed (false args collapse) |
+| empty_response | 5,095 | **6,545** | ↑ Slight increase (unified extraction) |
+| loop (loop_detected) | 3,614 | **3,614** | Unchanged |
+| pattern_loop | 2,012 | **2,012** | Unchanged |
+| step_efficiency | 1,797 | **1,958** | ↑ Minor |
+| wasted_tool_calls | 1,451 | **1,640** | ↑ Minor |
+| low_output | 673 | **722** | ↑ Minor |
+| redundant_tool_call | 509 | **0** | Removed (false args collapse) |
+| max_step_hit | 20 | **160** | ↑ 8x (status fix) |
+| **Total** | **56,869** | **16,651** | **-71% noise removed** |
+
+### Fixes Applied
+
+1. **Status derivation fix** (`ingest.py`): blank/empty span status no longer flips
+   run status to `"error"`. Only explicit error statuses trigger error.
+2. **premature_completion tightened** (`runtime.py`): final `plan/think` span only
+   fires when status is error-like, no output exists, and no successful terminal tool.
+3. **argument_loop args fix** (`tool.py`): missing tool args no longer collapsed to
+   empty strings. Skips arg-sensitive checks when args are absent.
+4. **redundant_tool_call args fix** (`tool.py`): same missing-args fix.
+5. **Output extraction unified** (`base.py`, `output.py`): shared `_extract_output`
+   helper on BaseDetector. All output detectors use same alias resolution.
+6. **Validator pool pass** (`validator.py`, `main.py`): `--db` flag passes pool
+   to async detectors. Falls back gracefully when Postgres unavailable.
+7. **argument_loop compatibility definition** (`validator.py`): removed incorrect
+   `has_tool_args` requirement; uses `has_tool_name` + `has_operations`.
+
+## What Changed from v1
 | Detectors at 100% eligibility | — | 9 |
 | Detectors at 0% eligibility | — | 6 |
 | Normalization fixes applied | 3 | 4 |
