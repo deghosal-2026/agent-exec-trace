@@ -7,50 +7,47 @@
 
 ## Summary
 
-| Metric | v1 | v2 (before fixes) | v2 (after fixes) |
+| Metric | v2 (before fixes) | v2 (after round 1) | v2 (after round 2) |
 |---|---|---|---|
-| Traces processed | 100,010 | 100,074 | 101,720 |
-| Datasets | 303 | 303 | ~400 |
+| Traces processed | 100,074 | 101,720 | 101,720 |
+| Datasets | 303 | ~400 | ~400 |
 | Detectors in scope | 35 | 35 | 35 |
-| Compatibility score (dataset-level, old) | 82.8% | — | — |
-| Compatibility score (per-trace, new metric) | — | 42.4% | 42.2% |
-| Traces with anomalies | — | 42,471 | **11,872** |
-| Total anomalies | — | 56,869 | **16,651** |
-| Detectors firing (anomaly found) | — | 10 | 7 |
-| Normalization fixes applied | 3 | 4 | 7 |
-| Validation date | 2026-08-04 | 2026-08-04 | 2026-08-04 |
+| Compatibility score (per-trace) | 42.4% | 42.2% | 42.2% |
+| Traces with anomalies | 42,471 | 11,872 | **11,382** |
+| Total anomalies | 56,869 | 16,651 | **11,294** |
+| Detectors firing | 10 | 7 | 7 |
 
-### Detector Impact — Before vs After Fixes
+### Detector Impact — 56,869 → 11,294 (-80% noise)
 
-| Detector | Before | After | Change |
-|---|---|---|---|
-| premature_completion | 35,930 | **0** | Removed (overfiring) |
-| argument_loop | 5,768 | **0** | Removed (false args collapse) |
-| empty_response | 5,095 | **6,545** | ↑ Slight increase (unified extraction) |
-| loop (loop_detected) | 3,614 | **3,614** | Unchanged |
-| pattern_loop | 2,012 | **2,012** | Unchanged |
-| step_efficiency | 1,797 | **1,958** | ↑ Minor |
-| wasted_tool_calls | 1,451 | **1,640** | ↑ Minor |
-| low_output | 673 | **722** | ↑ Minor |
-| redundant_tool_call | 509 | **0** | Removed (false args collapse) |
-| max_step_hit | 20 | **160** | ↑ 8x (status fix) |
-| **Total** | **56,869** | **16,651** | **-71% noise removed** |
+| Detector | Before (raw) | Round 1 | Round 2 (final) | Change |
+|---|---|---|---|---|
+| premature_completion | 35,930 | 0 | 0 | Removed (overfiring) |
+| argument_loop | 5,768 | 0 | 0 | Removed (false args collapse) |
+| empty_response | 5,095 | 6,545 | **6,545** | Genuine (unified extraction + V2 traces) |
+| loop | 3,614 | 3,614 | **3,614** | Genuine |
+| pattern_loop | 2,012 | 2,012 | **67** | Deduped from loop |
+| step_efficiency | 1,797 | 1,958 | **184** | Deduped from loop |
+| wasted_tool_calls | 1,451 | 1,640 | **2** | Multi-tool gate |
+| low_output | 673 | 722 | **722** | Genuine |
+| redundant_tool_call | 509 | 0 | 0 | Removed (false args collapse) |
+| max_step_hit | 20 | 160 | **160** | Genuine (visible after noise removal) |
+| **Total** | **56,869** | **16,651** | **11,294** | **-80%** |
 
 ### Fixes Applied
 
-1. **Status derivation fix** (`ingest.py`): blank/empty span status no longer flips
-   run status to `"error"`. Only explicit error statuses trigger error.
-2. **premature_completion tightened** (`runtime.py`): final `plan/think` span only
-   fires when status is error-like, no output exists, and no successful terminal tool.
-3. **argument_loop args fix** (`tool.py`): missing tool args no longer collapsed to
-   empty strings. Skips arg-sensitive checks when args are absent.
+**Round 1 — Root cause fixes:**
+1. **Status derivation fix** (`ingest.py`): blank/empty span status no longer flips run status to `"error"`. Only explicit error statuses trigger error.
+2. **premature_completion tightened** (`runtime.py`): final `plan/think` span only fires when status is error-like, no output exists, and no successful terminal tool.
+3. **argument_loop args fix** (`tool.py`): missing tool args no longer collapsed to empty strings. Skips arg-sensitive checks when args are absent.
 4. **redundant_tool_call args fix** (`tool.py`): same missing-args fix.
-5. **Output extraction unified** (`base.py`, `output.py`): shared `_extract_output`
-   helper on BaseDetector. All output detectors use same alias resolution.
-6. **Validator pool pass** (`validator.py`, `main.py`): `--db` flag passes pool
-   to async detectors. Falls back gracefully when Postgres unavailable.
-7. **argument_loop compatibility definition** (`validator.py`): removed incorrect
-   `has_tool_args` requirement; uses `has_tool_name` + `has_operations`.
+5. **Output extraction unified** (`base.py`, `output.py`): shared `_extract_output` helper on BaseDetector. All output detectors use same alias resolution.
+6. **Validator pool pass** (`validator.py`, `main.py`): `--db` flag passes pool to async detectors. Falls back gracefully when Postgres unavailable.
+7. **argument_loop compatibility definition** (`validator.py`): removed incorrect `has_tool_args` requirement.
+
+**Round 2 — Dedup and signal tightening:**
+8. **wasted_tool_calls multi-tool gate** (`cost.py`): now requires identical output from DIFFERENT tools (same tool producing same output is normal). Added `_matches_output` helper. 1,640 → 2.
+9. **Loop-family dedup** (`validator.py`): when `loop` fires on a trace, suppress `pattern_loop` and `step_efficiency` (all describe same underlying loop behavior). Added `_dedup_loop_family` post-processing.
+10. **Dedup counter correction** (`validator.py`): anomaly counters now reflect post-dedup counts in summary output.
 
 ## What Changed from v1
 | Detectors at 100% eligibility | — | 9 |
