@@ -119,7 +119,7 @@ class Validator:
         out_dir = self.output_dir / mode
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        if self.llm_sample:
+        if self.diagnose and self.llm_sample:
             traces = self._load_traces_fast(self.llm_sample * 10)
             traces = traces[::10][:self.llm_sample] if len(traces) > self.llm_sample else traces
         else:
