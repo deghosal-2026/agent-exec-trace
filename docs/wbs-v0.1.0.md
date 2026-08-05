@@ -91,7 +91,7 @@ Suggested issue types for later GitHub conversion:
 | Milestone 8.7 | LLM-augmented anomaly detection issues |
 | Milestone 8.8 | trace dataset ingestion/validation issues |
 | Milestone 8.9 | field-test execution issues |
-| Milestone 9 | non-LLM + LLM trace compatibility issues (9.1.x ✅, 9.2.x pending) |
+| Milestone 9 | non-LLM + LLM trace compatibility issues (9.1.x ✅, 9.2.x ⟳ v0.2.0) |
 | Milestone 10 | local stack/demo issues |
 | Milestone 11 | testing/hardening issues |
 | Milestone 12 | docs/OSS readiness issues |
@@ -1988,7 +1988,9 @@ hidden gaps.
 6. Status derivation fix (blank → not error)
 7. Output extraction unified across detectors
 
-#### 9.2 LLM trace compatibility, root-cause isolation, and semantic detector improvement
+#### 9.2 LLM trace compatibility, root-cause isolation, and semantic detector improvement ⟳ DEFERRED to v0.2.0
+
+> **Status:** Deferred. LLM investigation completed with full instrumentation (live candidate/attempt/response logs). Root cause identified: model response quality insufficient for structured JSON judging (Qwen2.5-1.5B → Qwen3.5-4B switched, prompts tightened, JSON extraction fallback added). Calls reach the server and return content, but JSON compliance is inconsistent. All code and instrumentation left in place for v0.2.0 restart. Issues #106-111 closed as deferred.
 
 This section exists because LLM-augmented detector silence is currently ambiguous in a different
 way than rule-based detector silence. When LLM detectors do not fire, the project cannot yet say
