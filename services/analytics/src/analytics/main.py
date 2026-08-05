@@ -186,6 +186,34 @@ def validate(
         click.echo(f"\nReports: {report_dir}/")
         click.echo(f"Summary: {report_dir / 'summary.json'}")
 
+        if llm_sample:
+            llm_anomalies: dict[str, int] = {}
+            for dt, cnt in by_type.items():
+                if dt in {
+                    "semantic_loop", "hallucination", "goal_drift",
+                    "quality_degradation", "confusion_pattern", "output_drift",
+                }:
+                    llm_anomalies[dt] = cnt
+            if llm_anomalies:
+                click.echo("\n=== LLM DETECTOR RESULTS ===")
+                for dt, cnt in sorted(llm_anomalies.items()):
+                    click.echo(f"  {dt}: {cnt}")
+            else:
+                click.echo("\n=== LLM DETECTORS: 0 anomalies found ===")
+            skipped = report.get("skipped_detectors", {})
+            errors = report.get("detector_errors", {})
+            llm_types = {
+                "semantic_loop", "hallucination", "goal_drift",
+                "quality_degradation", "confusion_pattern",
+            }
+            if any(t in skipped or t in errors for t in llm_types):
+                click.echo("  Skipped/errored:")
+                for t in llm_types:
+                    if t in skipped:
+                        click.echo(f"    {t}: skipped {skipped[t]}")
+                    if t in errors:
+                        click.echo(f"    {t}: {errors[t]}")
+
     _run_async(_run())
 
 

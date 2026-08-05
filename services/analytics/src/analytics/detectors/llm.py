@@ -111,6 +111,14 @@ class EmbeddingDriftDetector(BaseDetector):
         self._threshold = threshold
         self._baselines: dict[str, list[float]] = {}
 
+    async def detect_async(
+        self, summary: RunSummary, spans: list[SpanNode], pool: Any = None,
+    ) -> Anomaly | None:
+        output = self._extract_output(spans)
+        if not output:
+            return None
+        return await self.detect_drift(output, summary.agent_name)
+
     async def detect_drift(
         self,
         output_text: str,
@@ -123,7 +131,6 @@ class EmbeddingDriftDetector(BaseDetector):
 
         baseline = self._baselines.get(baseline_key)
         if baseline is None:
-            # Seed the baseline on first run.
             self._baselines[baseline_key] = current_vector
             return None
 
@@ -141,10 +148,8 @@ class EmbeddingDriftDetector(BaseDetector):
                 ),
                 evidence={"cosine_distance": distance, "baseline_key": baseline_key},
             )
-
         return None
 
-    # BaseDetector interface — not used (detector is async-only).
     def detect(self, summary: RunSummary, spans: list[SpanNode]) -> Anomaly | None:
         return None
 
@@ -246,7 +251,10 @@ class SemanticLoopDetector(BaseDetector):
     def _extract_outputs(self, spans: list[SpanNode]) -> list[str]:
         results: list[str] = []
         for span in self._walk_spans(spans):
-            for key in ("gen_ai.response.content", "gen_ai.agent.output", "output"):
+            for key in (
+                "gen_ai.response.content", "gen_ai.agent.output",
+                "assistant_response", "completion", "content", "output",
+            ):
                 val = span.attributes.get(key)
                 if isinstance(val, str) and val.strip():
                     results.append(val)
@@ -308,7 +316,7 @@ class HallucinationDetector(BaseDetector):
     def _build_context(self, spans: list[SpanNode]) -> str:
         parts: list[str] = []
         for span in self._walk_spans(spans):
-            for key in ("tool.output", "gen_ai.tool_result", "observation"):
+            for key in ("gen_ai.tool.result", "gen_ai.tool.output", "observation"):
                 val = span.attributes.get(key)
                 if isinstance(val, str):
                     parts.append(val[:200])
@@ -357,8 +365,11 @@ class GoalDriftDetector(BaseDetector):
 
     def _find_goal(self, spans: list[SpanNode]) -> str | None:
         for span in self._walk_spans(spans):
-            if span.operation_name in ("plan", "planning"):
-                for key in ("gen_ai.request.content", "goal", "description"):
+            if span.operation_name in ("plan", "planning", "think"):
+                for key in (
+                    "gen_ai.request.content", "gen_ai.response.content",
+                    "goal", "description", "content", "plan_text",
+                ):
                     val = span.attributes.get(key)
                     if isinstance(val, str) and val.strip():
                         return val
@@ -389,8 +400,8 @@ class QualityDegradationDetector(BaseDetector):
     async def detect_async(
         self, summary: RunSummary, spans: list[SpanNode], pool: Any = None,
     ) -> Anomaly | None:
-        current = self._extract_output(spans)
-        baseline = self._extract_baseline(spans)
+        current = self._get_output(spans)
+        baseline = self._get_baseline(spans)
         if not current or not baseline:
             return None
         result = await self._check(baseline, current)
@@ -415,18 +426,26 @@ class QualityDegradationDetector(BaseDetector):
             pass
         return None
 
-    def _extract_output(self, spans: list[SpanNode]) -> str | None:
+    def _get_output(self, spans: list[SpanNode]) -> str | None:
         for span in self._walk_spans(spans):
             val = span.attributes.get("gen_ai.response.content")
             if isinstance(val, str) and val.strip():
                 return val
         return None
 
-    def _extract_baseline(self, spans: list[SpanNode]) -> str | None:
+    def _get_baseline(self, spans: list[SpanNode]) -> str | None:
         for span in self._walk_spans(spans):
             val = span.attributes.get("gen_ai.baseline_output")
-            if isinstance(val, str):
+            if isinstance(val, str) and val.strip():
                 return val
+        all_spans = self._walk_spans(spans)
+        outputs = [
+            str(span.attributes.get("gen_ai.response.content", ""))
+            for span in all_spans
+            if isinstance(span.attributes.get("gen_ai.response.content"), str)
+        ]
+        if len(outputs) >= 2:
+            return outputs[0]
         return None
 
     def detect(self, summary: RunSummary, spans: list[SpanNode]) -> Anomaly | None:
@@ -475,8 +494,11 @@ class ConfusionPatternDetector(BaseDetector):
 
     def _find_plan(self, spans: list[SpanNode]) -> str | None:
         for span in self._walk_spans(spans):
-            if span.operation_name in ("plan", "planning"):
-                for key in ("gen_ai.response.content", "plan_text", "goal"):
+            if span.operation_name in ("plan", "planning", "think"):
+                for key in (
+                    "gen_ai.response.content", "gen_ai.request.content",
+                    "plan_text", "goal", "description", "content",
+                ):
                     val = span.attributes.get(key)
                     if isinstance(val, str) and val.strip():
                         return val
@@ -485,9 +507,9 @@ class ConfusionPatternDetector(BaseDetector):
     def _summarise_execution(self, spans: list[SpanNode]) -> str:
         parts: list[str] = []
         for span in self._walk_spans(spans):
-            if span.operation_name in ("execute_tool", "tool_call"):
-                name = span.attributes.get("tool.name", span.operation_name)
-                parts.append(str(name))
+            if span.operation_name in ("execute_tool", "tool_call", "tool"):
+                name = str(span.attributes.get("gen_ai.tool.name", span.operation_name))
+                parts.append(name)
         return ", ".join(parts[:10])
 
     def detect(self, summary: RunSummary, spans: list[SpanNode]) -> Anomaly | None:
