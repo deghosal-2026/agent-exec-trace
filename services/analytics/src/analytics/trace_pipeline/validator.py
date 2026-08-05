@@ -117,11 +117,8 @@ class Validator:
         out_dir.mkdir(parents=True, exist_ok=True)
 
         if self.llm_sample:
-            pool_size = self.llm_sample * 10
-            traces = self._load_traces(max_traces=pool_size)
-            if len(traces) > pool_size:
-                traces = traces[:pool_size]
-            traces = traces[::10][:self.llm_sample]
+            traces = self._load_traces_fast(self.llm_sample * 10)
+            traces = traces[::10][:self.llm_sample] if len(traces) > self.llm_sample else traces
         else:
             traces = self._load_traces()
 
@@ -557,6 +554,70 @@ class Validator:
             total_trace_count, len(dataset_trace_counts), global_score,
         )
         return report
+
+    def _load_traces_fast(
+        self, target: int,
+    ) -> list[tuple[str, RunSummary, list[SpanNode], str]]:
+        import random
+
+        parquet_files = sorted(self.input_dir.rglob("*.parquet"))
+        if not parquet_files:
+            return []
+
+        sample_size = min(len(parquet_files), max(target // 2, 20))
+        sampled_files = random.sample(parquet_files, sample_size)
+
+        import pyarrow.parquet as pq
+
+        traces: list[tuple[str, RunSummary, list[SpanNode], str]] = []
+        for pq_file in sampled_files:
+            try:
+                table = pq.read_table(str(pq_file))  # type: ignore[no-untyped-call]
+            except Exception:
+                continue
+
+            groups: dict[tuple[str, int], list[SpanNode]] = {}
+            for row in table.to_pylist():
+                idx_raw = row.get("source_row_idx", 0)
+                key = (str(row["trace_id"]), int(idx_raw) if idx_raw else 0)
+                attrs_raw = row.get("attributes_json", "{}")
+                attrs: dict[str, Any] = json.loads(attrs_raw) if isinstance(attrs_raw, str) else {}
+                if not isinstance(attrs, dict):
+                    attrs = {}
+                raw_op = str(row.get("operation_name", ""))
+                operation_name = _normalize_operation_name(raw_op, attrs)
+                attrs = _normalize_attrs(attrs, operation_name)
+                dur_raw = row.get("duration_ms")
+                span = SpanNode(
+                    span_id=str(row["span_id"]),
+                    trace_id=str(row["trace_id"]),
+                    parent_span_id=(
+                        str(row["parent_span_id"]) if row.get("parent_span_id") else None
+                    ),
+                    operation_name=operation_name,
+                    start_time=_parse_dt(row.get("start_time")),
+                    end_time=_parse_dt(row.get("end_time")),
+                    duration_ms=int(dur_raw) if dur_raw else None,
+                    attributes=attrs,
+                    status=str(row.get("status") or ""),
+                )
+                groups.setdefault(key, []).append(span)
+
+            for (trace_id, _), spans in groups.items():
+                roots = _build_trees(spans)
+                if not roots:
+                    continue
+                summary = RunSummaryBuilder.build_from_span_tree(roots, trace_id)
+                if summary is not None:
+                    traces.append((trace_id, summary, roots, str(pq_file)))
+                if len(traces) >= target:
+                    break
+
+        logger.info(
+            "Fast-loaded %d traces from %d/%d files",
+            len(traces), len(sampled_files), len(parquet_files),
+        )
+        return traces
 
     def _load_traces(
         self, max_traces: int | None = None,
