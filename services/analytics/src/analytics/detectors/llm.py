@@ -19,6 +19,26 @@ from analytics.models import Anomaly, RunSummary, SpanNode
 logger = logging.getLogger(__name__)
 
 
+def _parse_jsonish(raw: str) -> dict[str, Any] | None:
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+
+    start = raw.find("{")
+    end = raw.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        try:
+            parsed = json.loads(raw[start : end + 1])
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            return None
+    return None
+
+
 # ---------------------------------------------------------------------------
 # 8.7.2  Explanation quality scoring
 # ---------------------------------------------------------------------------
@@ -41,7 +61,9 @@ class ExplanationScorer:
         if raw is None:
             return None
         try:
-            parsed = json.loads(raw)
+            parsed = _parse_jsonish(raw)
+            if not parsed or "score" not in parsed:
+                return None
             return {
                 "score": int(parsed.get("score", 0)),
                 "reasoning": str(parsed.get("reasoning", "")),
@@ -77,7 +99,9 @@ class LLMTriageClassifier:
         if raw is None:
             return None
         try:
-            parsed = json.loads(raw)
+            parsed = _parse_jsonish(raw)
+            if not parsed or "verdict" not in parsed:
+                return None
             return {
                 "verdict": str(parsed.get("verdict", "uncertain")),
                 "confidence": float(parsed.get("confidence", 0.5)),
@@ -232,7 +256,7 @@ class SemanticLoopDetector(BaseDetector):
         if raw is None:
             return None
         try:
-            parsed = json.loads(raw)
+            parsed = _parse_jsonish(raw) or {}
             if parsed.get("identical") and float(parsed.get("similarity", 0)) >= self._threshold:
                 return Anomaly(agent_name="unknown",
                     run_id="semantic",
@@ -289,7 +313,7 @@ class HallucinationDetector(BaseDetector):
         if raw is None:
             return None
         try:
-            parsed = json.loads(raw)
+            parsed = _parse_jsonish(raw) or {}
             if parsed.get("hallucination"):
                 return Anomaly(agent_name="unknown",
                     run_id="halluc",
@@ -350,7 +374,7 @@ class GoalDriftDetector(BaseDetector):
         if raw is None:
             return None
         try:
-            parsed = json.loads(raw)
+            parsed = _parse_jsonish(raw) or {}
             if parsed.get("diverged"):
                 return Anomaly(agent_name="unknown",
                     run_id="drift",
@@ -413,7 +437,7 @@ class QualityDegradationDetector(BaseDetector):
         if raw is None:
             return None
         try:
-            parsed = json.loads(raw)
+            parsed = _parse_jsonish(raw) or {}
             if parsed.get("degraded"):
                 return Anomaly(agent_name="unknown",
                     run_id="quality",
@@ -476,7 +500,7 @@ class ConfusionPatternDetector(BaseDetector):
         if raw is None:
             return None
         try:
-            parsed = json.loads(raw)
+            parsed = _parse_jsonish(raw) or {}
             if parsed.get("contradiction"):
                 return Anomaly(agent_name="unknown",
                     run_id="confusion",

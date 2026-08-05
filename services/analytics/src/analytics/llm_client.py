@@ -10,6 +10,7 @@ keep working without the LLM layer.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from collections.abc import Sequence
 from typing import Any
@@ -218,16 +219,24 @@ class PromptBuilder:
     Each classmethod returns ``(system, user)`` ready for ``LLMClient.chat()``.
     """
 
+    @staticmethod
+    def _clean_text(text: str, limit: int = 500) -> str:
+        text = re.sub(r"<think>.*?</think>", " ", text, flags=re.DOTALL)
+        text = re.sub(r"<tool_call>.*?</tool_call>", " ", text, flags=re.DOTALL)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text[:limit]
+
     @classmethod
     def explain_quality(cls, anomaly_type: str, explanation: str) -> tuple[str, str]:
         system = (
             "You are an observability assistant. Rate the clarity and actionability "
             "of anomaly detector explanations on a 1-5 scale. 5 = immediately "
-            "actionable and crystal clear. 1 = confusing or unhelpful."
+            "actionable and crystal clear. 1 = confusing or unhelpful. "
+            "RETURN ONLY VALID JSON. NO PROSE."
         )
         user = (
             f"Anomaly type: {anomaly_type}\n"
-            f"Explanation: {explanation}\n\n"
+            f"Explanation: {cls._clean_text(explanation, 300)}\n\n"
             "Return a JSON object: {\"score\": <int 1-5>, \"reasoning\": \"<one sentence>\"}"
         )
         return system, user
@@ -238,12 +247,12 @@ class PromptBuilder:
             "You are a triage classifier. Given an anomaly alert, classify it as "
             "\"tp\" (true positive), \"fp\" (false positive), or \"uncertain\". "
             "A false positive is a benign condition that happens to cross a numeric "
-            "threshold without real problems."
+            "threshold without real problems. RETURN ONLY VALID JSON. NO PROSE."
         )
         user = (
             f"Anomaly type: {anomaly_type}\n"
             f"Severity: {severity}\n"
-            f"Run summary: {summary}\n\n"
+            f"Run summary: {cls._clean_text(summary, 400)}\n\n"
             "Return JSON: {\"verdict\": \"tp|fp|uncertain\", \"confidence\": <0.0-1.0>, "
             "\"reasoning\": \"<one sentence>\"}"
         )
@@ -253,11 +262,12 @@ class PromptBuilder:
     def drift_check(cls, prior_output: str, current_output: str) -> tuple[str, str]:
         system = (
             "You compare agent outputs across versions. Determine whether a semantic "
-            "drift has occurred: did the agent change WHAT it says, not just HOW?"
+            "drift has occurred: did the agent change WHAT it says, not just HOW? "
+            "RETURN ONLY VALID JSON. NO PROSE."
         )
         user = (
-            f"Prior version output: {prior_output}\n"
-            f"Current version output: {current_output}\n\n"
+            f"Prior version output: {cls._clean_text(prior_output)}\n"
+            f"Current version output: {cls._clean_text(current_output)}\n\n"
             "Return JSON: {\"drift\": true|false, \"magnitude\": \"none|minor|major\", "
             "\"note\": \"<one sentence>\"}"
         )
@@ -267,10 +277,10 @@ class PromptBuilder:
     def semantic_loop(cls, prev: str, curr: str) -> tuple[str, str]:
         system = (
             "Check whether two consecutive agent outputs are semantically identical "
-            "even if wording differs. Reply with a similarity score 0-1."
+            "even if wording differs. RETURN ONLY VALID JSON. NO PROSE."
         )
         user = (
-            f"Output A: {prev}\nOutput B: {curr}\n\n"
+            f"Output A: {cls._clean_text(prev)}\nOutput B: {cls._clean_text(curr)}\n\n"
             "Return JSON: {\"identical\": true|false, \"similarity\": <0.0-1.0>}"
         )
         return system, user
@@ -279,10 +289,11 @@ class PromptBuilder:
     def hallucination(cls, claim: str, context: str) -> tuple[str, str]:
         system = (
             "Verify whether a claim made by an agent is supported by the provided "
-            "context (tool outputs, documents). Unsupported claims are hallucinations."
+            "context (tool outputs, documents). Unsupported claims are hallucinations. "
+            "RETURN ONLY VALID JSON. NO PROSE."
         )
         user = (
-            f"Claim: {claim}\nContext: {context}\n\n"
+            f"Claim: {cls._clean_text(claim, 300)}\nContext: {cls._clean_text(context, 500)}\n\n"
             "Return JSON: {\"hallucination\": true|false, "
             "\"evidence\": \"<quote from context or 'none'>\"}"
         )
@@ -290,10 +301,13 @@ class PromptBuilder:
 
     @classmethod
     def goal_drift(cls, original_goal: str, current_action: str) -> tuple[str, str]:
-        system = "Detect goal drift: is the agent pursuing a different objective than intended?"
+        system = (
+            "Detect goal drift: is the agent pursuing a different objective than intended? "
+            "RETURN ONLY VALID JSON. NO PROSE."
+        )
         user = (
-            f"Original goal: {original_goal}\n"
-            f"Current action: {current_action}\n\n"
+            f"Original goal: {cls._clean_text(original_goal, 300)}\n"
+            f"Current action: {cls._clean_text(current_action, 200)}\n\n"
             "Return JSON: {\"diverged\": true|false, "
             "\"similarity\": <0.0-1.0>, \"note\": \"<one sentence>\"}"
         )
@@ -301,10 +315,13 @@ class PromptBuilder:
 
     @classmethod
     def quality_degradation(cls, baseline_output: str, current_output: str) -> tuple[str, str]:
-        system = "Rate whether agent output quality has degraded relative to a baseline."
+        system = (
+            "Rate whether agent output quality has degraded relative to a baseline. "
+            "RETURN ONLY VALID JSON. NO PROSE."
+        )
         user = (
-            f"Baseline output: {baseline_output}\n"
-            f"Current output: {current_output}\n\n"
+            f"Baseline output: {cls._clean_text(baseline_output)}\n"
+            f"Current output: {cls._clean_text(current_output)}\n\n"
             "Return JSON: {\"degraded\": true|false, \"severity\": \"none|minor|major\", "
             "\"note\": \"<one sentence>\"}"
         )
@@ -312,9 +329,12 @@ class PromptBuilder:
 
     @classmethod
     def confusion(cls, plan: str, execution: str) -> tuple[str, str]:
-        system = "Detect contradictions between an agent's plan and its execution."
+        system = (
+            "Detect contradictions between an agent's plan and its execution. "
+            "RETURN ONLY VALID JSON. NO PROSE."
+        )
         user = (
-            f"Plan: {plan}\nExecution: {execution}\n\n"
+            f"Plan: {cls._clean_text(plan, 300)}\nExecution: {cls._clean_text(execution, 200)}\n\n"
             "Return JSON: {\"contradiction\": true|false, "
             "\"explanation\": \"<one sentence if contradiction>\"}"
         )
