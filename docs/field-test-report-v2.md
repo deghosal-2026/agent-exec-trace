@@ -18,6 +18,26 @@
 | Normalization fixes applied | 3 | 4 |
 | Validation date | 2026-08-04 | 2026-08-04 |
 
+### Detector Confidence Framework (new in v2)
+
+Cross-referencing per-trace compatibility with detector fire results produces three
+categories. This separates "silence because nothing was there" from "silence because
+the detector had no chance."
+
+| Metric | Count |
+|---|---|
+| **FIRING** — found anomalies on compatible traces | 8 detectors |
+| **TRUSTWORTHY SILENT** — had eligible traces, found nothing | 21 detectors |
+| **EXPECTED SILENT** — no eligible traces, structurally impossible | 6 detectors |
+| **Total detectors** | 35 |
+
+Of the 21 trustworthy silent detectors:
+
+| Sub-risk | Count | Meaning |
+|---|---|---|
+| High-risk (100% eligible, never fired) | 10 | Every trace available, still nothing — threshold/logic review needed |
+| Medium-risk (7.5–73.7% eligible, never fired) | 11 | Partial eligibility — some silence is expected, but higher-eligibility cases warrant audit |
+
 ## What Changed from v1
 
 ### Metric Definition Change
@@ -159,6 +179,73 @@ It measures the fraction of (trace, detector) pairs where the trace exposes the 
 semantic signals that detector requires. It is **not** a measure of detector quality, anomaly
 detection accuracy, or code health. It is a measure of **corpus compatibility**.
 
+### Detector Confidence Matrix
+
+Beyond compatibility (can the detector run?), the validation run also tells us which
+detectors actually fired (found anomalies). Cross-referencing compatibility with fire status
+produces a confidence matrix that separates three outcomes:
+
+| # | Classification | Count | Meaning |
+|---|---|---|---|
+| FIRING | Found anomalies | 8 | Detector works and found real patterns |
+| TRUSTWORTHY SILENT | Had eligible traces, found nothing | 21 | Ran on traces with right signals, genuinely no matches |
+| EXPECTED SILENT | No eligible traces at all | 6 | Structurally impossible — corpus has zero signals needed |
+
+#### Detectors That Fired (8)
+
+| Detector | Eligible % | Anomalies |
+|---|---|---|
+| premature_completion | 37.7% | 36,692 |
+| argument_loop | 0.0%* | 5,827 |
+| loop_detected | 7.5% | 3,638 |
+| empty_response | 73.7% | 2,819 |
+| pattern_loop | 7.5% | 2,026 |
+| step_efficiency | 37.7% | 1,774 |
+| wasted_tool_calls | 7.5% | 1,439 |
+| redundant_tool_call | 7.5% | 487 |
+
+\* `argument_loop` shows 0% eligible in the compatibility matrix because the diagnostic
+requires `has_tool_args` for it, but the actual detector runs on tool name and
+operation patterns and does not require args. **This is a compatibility definition bug.**
+
+#### Expected Silent (6) — Corpus Limitation
+
+`retry_storm`, `systemic_retry`, `transient_retry`, `cascading_retry`, `recovery_path`,
+`per_tool_cost_spike`
+
+These detectors require `has_retry_semantics` or `has_tool_args`, which exist on zero
+traces in this corpus. They cannot fire regardless of detector quality. These are
+documented as known corpus limitations.
+
+#### Trustworthy Silent (21) — Need Investigation
+
+21 detectors had eligible traces but found nothing. These break into three risk tiers:
+
+**High-risk — 100% eligible, never fired (10 detectors):**
+`anomaly_cluster`, `approval_latency`, `escalation_rate`, `first_run_heuristic`,
+`inactivity`, `indeterminate_status`, `intervention_frequency`, `intervention_rejection`,
+`run_frequency_anomaly`, `run_duration`
+
+These had every trace available and still found nothing. Possible causes:
+- Thresholds too high for this corpus
+- Detector logic expects signals the normalization didn't produce
+- Patterns genuinely absent (e.g., no inactivity gaps in flat traces)
+
+**Medium-risk — partially eligible, never fired (11 detectors):**
+`cost_efficiency`, `cost_spike`, `cost_vs_baseline`, `loop_detected`, `max_step_hit`,
+`output_drift`, `specific_tool_error`, `token_explosion`, `tool_error_rate`,
+`tool_latency`, `tool_timeout`
+
+These had 7.5%–73.7% eligibility. Low eligibility explains some of the silence, but
+detectors with higher eligibility (e.g. `output_drift` at 73.7%) warrant investigation.
+
+### Bug: `argument_loop` Compatibility Definition
+
+`argument_loop` produced 5,827 anomalies but is classified as 0% eligible. The diagnostic
+requires `has_tool_args` for this detector, but the actual detector code checks tool name
+repetition and operation patterns — args are optional. The compatibility requirement in
+`_detector_requirements()` is too strict and must be corrected.
+
 ## Known Limitations
 
 1. **Tool args unavailable**: No trace in the HF corpus exposes tool arguments. Detectors
@@ -188,3 +275,45 @@ To raise this number above 80%, the project needs a corpus that genuinely contai
 structured agent execution traces — with tool names, operation taxonomy, and retry signals —
 not flat chat transcripts. The next iteration should either source such a corpus from
 richer HF datasets or self-instrument real agents.
+
+## Next Steps — WBS 9.1 Work Items
+
+Based on the v2 findings, the following work items are added to WBS section 9.1.
+
+### 9.1.6 Fix `argument_loop` compatibility definition
+
+**Finding:** `argument_loop` fired 5,827 anomalies but the diagnostic classifies it as 0%
+eligible because it requires `has_tool_args`. The actual detector uses tool name repetition
+and operation patterns — args are optional.
+
+**Action:** Remove `has_tool_args` from `argument_loop`'s required fields in
+`_detector_requirements()`. Re-run diagnostic to confirm eligibility rises above 0%.
+
+### 9.1.7 Audit 100% eligible non-firing detectors
+
+**Finding:** 10 detectors are eligible on every trace but never produced an anomaly:
+`anomaly_cluster`, `approval_latency`, `escalation_rate`, `first_run_heuristic`,
+`inactivity`, `indeterminate_status`, `intervention_frequency`, `intervention_rejection`,
+`run_frequency_anomaly`, `run_duration`.
+
+**Action:** For each detector, trace-sample 10 clean traces and determine whether silence
+is a true negative (pattern absent) or a false negative (threshold too high / logic gap).
+
+### 9.1.8 Add detector confidence matrix to validator output
+
+**Finding:** The current validator reports anomalies and fire rates but does not cross-
+reference with compatibility. The confidence matrix (FIRING / TRUSTWORTHY SILENT /
+EXPECTED SILENT) must be built manually from two separate JSON files.
+
+**Action:** Add `detector_confidence_matrix` to the `summary.json` output. Include:
+- firing detectors with eligibility %
+- trustworthy silent with eligibility % and risk tier
+- expected silent with missing field list
+
+### 9.1.9 Document structurally incompatible detectors
+
+**Finding:** 6 detectors require `has_retry_semantics` or `has_tool_args` which do not exist
+in the HF corpus. These are not detector bugs — they are corpus limitations.
+
+**Action:** Add a `docs/detector-compatibility.md` file documenting per-detector signal
+requirements, known corpus limitations, and which detectors are blocked on which corpora.

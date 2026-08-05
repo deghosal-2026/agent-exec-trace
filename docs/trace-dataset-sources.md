@@ -2,6 +2,8 @@
 
 ## Primary Sources (Hugging Face)
 
+### V1 Datasets (chat/log format — downloaded)
+
 | # | Dataset | Rows | Description | URL |
 |---|---|---|---|---|
 | 1 | `agent-data/misc-merged-claude-code-traces-v1` | **32.1K** | Real Claude Code agent traces merged from multiple sources | huggingface.co/datasets/agent-data/misc-merged-claude-code-traces-v1 |
@@ -14,6 +16,23 @@
 | 8 | `juliensimon/agent-traces-code-review-pipeline` | **2K** | Code review agent pipeline traces | huggingface.co/datasets/juliensimon/agent-traces-code-review-pipeline |
 | 9 | `juliensimon/agent-traces-data-pipeline-debugging` | **2K** | Data pipeline debugging traces | huggingface.co/datasets/juliensimon/agent-traces-data-pipeline-debugging |
 | 10 | `juliensimon/agent-traces-market-research` | **1.7K** | Market research agent traces | huggingface.co/datasets/juliensimon/agent-traces-market-research |
+
+**V1 limitation:** These datasets are primarily flat chat logs / reasoning transcripts. Only ~7.5% have tool names and 0% have retry semantics. 63% lack operation taxonomy entirely.
+
+### V2 Datasets (structured execution format — targeted for tool-use, retry, cost coverage)
+
+| # | Dataset | Rows | Description | Key Features |
+|---|---|---|---|---|
+| 1 | `Exgentic/agent-llm-traces-v2` | **10K** | OpenTelemetry-shaped execution traces | OTel format, tool-use, gen-ai spans, SWE-bench, BrowseComp, τ² |
+| 2 | `DiscoPosse/agent-llm-traces` | **~5K** | Multi-benchmark OTel agent traces | OpenTelemetry, multi-benchmark, structured spans |
+| 3 | `trace-commons/agent-traces` | **~1K** | Claude Code coding sessions | Tool-use tagged, JSONL sessions with tool calls |
+| 4 | `aisa-group/instrumental-choices-agent-traces` | **1.7K** | Agent safety evaluation trajectories | Tool-use, Inspect AI framework |
+| 5 | `mcphunt-benchmark/mcphunt-agent-traces` | **~500** | MCP agent tool execution traces | Tool execution, cross-boundary MCP calls |
+| 6 | `kingkw1/read-along-ai-agent-traces` | **~200** | Pair-programming agent traces | Coding agent sessions with tool calls |
+| 7 | `open-agent-leaderboard/traces` | **~700** | Agent leaderboard evaluation traces | Multi-agent evaluation runs |
+| 8 | `netpreme/coding_agent_traces` | **~300** | Claude Code vs custom model traces | Coding agent with tool calls |
+
+**Usage:** `python -m analytics.main download-traces --datasets-version v2 --target 150000`
 
 ## 15 GitHub OSS Agents (Self-Instrument)
 
