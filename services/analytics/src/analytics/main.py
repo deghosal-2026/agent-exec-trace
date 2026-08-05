@@ -118,10 +118,14 @@ def validate(
 
         pool = None
         if db:
-            from analytics.db import ensure_schema, get_pool
+            try:
+                from analytics.db import ensure_schema, get_pool
 
-            pool = await get_pool()
-            await ensure_schema(pool)
+                pool = await get_pool()
+                await ensure_schema(pool)
+                click.echo("Postgres connected — baseline detectors enabled")
+            except Exception:
+                click.echo("Postgres unavailable — running file-only validation")
 
         v = Validator(
             input_dir=input_dir, output_dir=output_dir,
