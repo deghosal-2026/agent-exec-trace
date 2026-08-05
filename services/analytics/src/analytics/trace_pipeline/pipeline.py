@@ -43,16 +43,6 @@ def _infer_framework(dataset_id: str, rows: list[dict[str, object]]) -> str:
         return "coding_agent"
     if "hermes" in lower:
         return "hermes"
-    if "exgentic" in lower or "discoposse" in lower:
-        return "opentelemetry"
-    if "mcphunt" in lower or "mcp" in lower:
-        return "mcp_agent"
-    if "instrumental" in lower:
-        return "inspect_ai"
-    if "trace-commons" in lower:
-        return "claude_code"
-    if "read-along" in lower:
-        return "coding_agent"
 
     if rows:
         sample = rows[0]
@@ -61,8 +51,6 @@ def _infer_framework(dataset_id: str, rows: list[dict[str, object]]) -> str:
             return "langchain"
         if "messages" in keys:
             return "chat"
-        if "spans" in keys:
-            return "opentelemetry"
 
     return "unknown"
 

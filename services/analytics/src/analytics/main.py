@@ -198,12 +198,6 @@ def materialize(
     type=str,
     help="Path to a text file with one dataset ID per line (comments starting with # ignored)",
 )
-@click.option(
-    "--datasets-version",
-    default=None,
-    type=str,
-    help="Use v1 (original) or v2 (tool-use/OTel structured) datasets",
-)
 def download_traces(
     target: int,
     ingest: bool,
@@ -211,7 +205,6 @@ def download_traces(
     batch_size: int,
     dataset: tuple[str, ...],
     datasets_file: str | None,
-    datasets_version: str | None,
 ) -> None:
     """Download and convert agent traces from Hugging Face datasets."""
     _run_async(
@@ -222,7 +215,6 @@ def download_traces(
             batch_size,
             dataset,
             datasets_file,
-            datasets_version,
         )
     )
 
@@ -234,17 +226,13 @@ async def _download_traces_async(
     batch_size: int,
     dataset: tuple[str, ...] = (),
     datasets_file: str | None = None,
-    datasets_version: str | None = None,
 ) -> None:
     from analytics.trace_pipeline.pipeline import TracePipeline
 
     pipeline = TracePipeline(output_dir=output_dir)
+    # Build dataset list if provided
     dataset_ids: list[str] | None = None
     ids: list[str] = list(dataset)
-    if datasets_version == "v2":
-        from analytics.trace_pipeline.downloader import V2_DATASETS
-
-        ids = list(V2_DATASETS)
     if datasets_file:
         try:
             from pathlib import Path

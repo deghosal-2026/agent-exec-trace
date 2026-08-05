@@ -45,21 +45,12 @@ DEFAULT_DATASETS: list[str] = [
     "compsciencelab/traces_claude_chem_agent",
     "agent-evals/hal_traces",
     "MaxDevv/real-pi-coding-agent-traces-sessions",
-]
-
-V2_DATASETS: list[str] = [
     "Exgentic/agent-llm-traces-v2",
     "DiscoPosse/agent-llm-traces",
     "trace-commons/agent-traces",
     "aisa-group/instrumental-choices-agent-traces",
     "mcphunt-benchmark/mcphunt-agent-traces",
-    "kingkw1/read-along-ai-agent-traces",
-    "open-agent-leaderboard/traces",
-    "netpreme/coding_agent_traces",
 ]
-
-V2_DATASET_SPLITS: dict[str, str] = {
-}
 
 
 class HFTraceDownloader:
