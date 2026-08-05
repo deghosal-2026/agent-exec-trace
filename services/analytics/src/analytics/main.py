@@ -107,6 +107,18 @@ def health() -> None:
     default=False,
     help="Connect to Postgres for baseline-dependent detectors",
 )
+@click.option(
+    "--max-files",
+    default=None,
+    type=int,
+    help="Limit validation to the first N parquet files",
+)
+@click.option(
+    "--max-traces",
+    default=None,
+    type=int,
+    help="Limit validation to the first N traces",
+)
 def validate(
     input_dir: str,
     output_dir: str,
@@ -115,6 +127,8 @@ def validate(
     resume: bool,
     diagnose: bool,
     db: bool,
+    max_files: int | None,
+    max_traces: int | None,
 ) -> None:
     """Run all detectors against processed traces and produce validation reports."""
 
@@ -137,7 +151,7 @@ def validate(
         v = Validator(
             input_dir=input_dir, output_dir=output_dir,
             llm_sample=llm_sample, resume=resume, diagnose=diagnose,
-            pool=pool, llm_batch=llm_batch,
+            pool=pool, llm_batch=llm_batch, max_files=max_files, max_traces=max_traces,
         )
         if diagnose:
             diag_report: dict[str, Any] = v.run_diagnose()

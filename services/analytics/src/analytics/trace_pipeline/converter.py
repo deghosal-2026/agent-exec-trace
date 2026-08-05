@@ -494,6 +494,7 @@ class TraceConverter:
         roots: list[SpanNode] = []
         for s in children:
             if s.parent_span_id is None or s.parent_span_id not in spans_map:
+                s.parent_span_id = None
                 roots.append(s)
             elif s.parent_span_id in spans_map:
                 spans_map[s.parent_span_id].child_spans.append(s)

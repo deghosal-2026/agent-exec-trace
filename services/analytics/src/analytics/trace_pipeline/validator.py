@@ -45,6 +45,8 @@ class Validator:
         diagnose: bool = False,
         pool: object | None = None,
         llm_batch: int = 25,
+        max_files: int | None = None,
+        max_traces: int | None = None,
     ) -> None:
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
@@ -53,6 +55,8 @@ class Validator:
         self.diagnose = diagnose
         self.pool = pool
         self.llm_batch = llm_batch
+        self.max_files = max_files
+        self.max_traces = max_traces
         self._llm_detectors: list[BaseDetector] | None = None
         if self.llm_sample:
             self._llm_detectors = create_llm_detectors()
@@ -113,6 +117,51 @@ class Validator:
             )
         )
 
+    def _write_partial_reports(
+        self,
+        out_dir: Path,
+        processed: int,
+        anomalies_by_trace: list[dict[str, Any]],
+        anomaly_counter: Counter[str],
+        severity_counter: Counter[str],
+        detector_fire_count: Counter[str],
+        trace_anomaly_map: dict[str, list[str]],
+        detector_errors: dict[str, str],
+        skipped: dict[str, int],
+    ) -> None:
+        correlation = _build_correlation(trace_anomaly_map)
+        suspicious: dict[str, float] = {}
+        if processed > 0:
+            suspicious = {
+                dt: round(count / processed * 100, 1)
+                for dt, count in detector_fire_count.items()
+                if count / processed > 0.5
+            }
+
+        report: dict[str, Any] = {
+            "traces_processed": processed,
+            "traces_with_anomalies": len(anomalies_by_trace),
+            "anomaly_count": sum(anomaly_counter.values()),
+            "anomaly_by_type": dict(anomaly_counter.most_common()),
+            "anomaly_by_severity": dict(severity_counter),
+            "detector_fire_rate": {
+                dt: round(count / processed * 100, 1) if processed else 0
+                for dt, count in detector_fire_count.items()
+            },
+            "suspicious_patterns": suspicious,
+            "cross_detector_correlation": correlation,
+            "skipped_detectors": skipped,
+            "detector_errors": detector_errors,
+            "partial": True,
+        }
+
+        (out_dir / "progress-summary.json").write_text(
+            json.dumps(report, indent=2, default=str)
+        )
+        (out_dir / "progress-traces.json").write_text(
+            json.dumps(anomalies_by_trace, indent=2, default=str)
+        )
+
     async def run(self) -> dict[str, Any]:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         mode = "with-llm" if self.llm_sample else "without-llm"
@@ -136,10 +185,14 @@ class Validator:
             self._llm_attempt_log = attempt_log
 
         if self.diagnose and self.llm_sample:
-            traces = self._load_traces_fast(self.llm_sample * 10)
+            traces: list[tuple[str, RunSummary, list[SpanNode], str]] | None = self._load_traces_fast(self.llm_sample * 10)
             traces = traces[::10][:self.llm_sample] if len(traces) > self.llm_sample else traces
+            trace_iter = iter(traces)
+            total = len(traces)
         else:
-            traces = self._load_traces()
+            traces = None
+            trace_iter = self._iter_traces(max_traces=self.max_traces)
+            total = self._count_traces()
 
         if self.resume:
             completed: set[tuple[str, str]] = self._load_progress()
@@ -153,14 +206,13 @@ class Validator:
         trace_anomaly_map: dict[str, list[str]] = {}
         detector_errors: dict[str, str] = {}
         skipped: dict[str, int] = {}
-        total = len(traces)
         processed = 0
 
         empty_response_sources: Counter[str] = Counter()
         empty_response_examples: list[dict[str, str]] = []
 
         self._llm_traces_done = 0
-        for _idx, (trace_id, summary, spans, source_file) in enumerate(traces):
+        for _idx, (trace_id, summary, spans, source_file) in enumerate(trace_iter):
             trace_key = (trace_id, str(summary.run_id))
             if trace_key in completed:
                 processed += 1
@@ -278,15 +330,25 @@ class Validator:
                     "Processed %d/%d traces, %d anomalies%s",
                     processed, total, len(anomalies_by_trace), llm_summary,
                 )
-                if self.resume or self.llm_sample:
-                    self._save_progress(
-                        completed,
-                        anomaly_counter,
-                        severity_counter,
-                        detector_fire_count,
-                        trace_anomaly_map,
-                        total,
-                    )
+                self._save_progress(
+                    completed,
+                    anomaly_counter,
+                    severity_counter,
+                    detector_fire_count,
+                    trace_anomaly_map,
+                    total,
+                )
+                self._write_partial_reports(
+                    out_dir,
+                    processed,
+                    anomalies_by_trace,
+                    anomaly_counter,
+                    severity_counter,
+                    detector_fire_count,
+                    trace_anomaly_map,
+                    detector_errors,
+                    skipped,
+                )
 
         correlation = _build_correlation(trace_anomaly_map)
 
@@ -354,22 +416,22 @@ class Validator:
                 )
             )
 
-        if self.resume:
-            self._save_progress(
-                completed,
-                anomaly_counter,
-                severity_counter,
-                detector_fire_count,
-                trace_anomaly_map,
-                total,
-            )
+        self._save_progress(
+            completed,
+            anomaly_counter,
+            severity_counter,
+            detector_fire_count,
+            trace_anomaly_map,
+            total,
+        )
 
         logger.info("Reports written to %s", out_dir)
         return report
 
     def run_diagnose(self) -> dict[str, Any]:
-        traces = self._load_traces()
-        if not traces:
+        trace_iter = self._iter_traces(max_traces=self.max_traces)
+        total_trace_count = self._count_traces()
+        if total_trace_count == 0:
             logger.warning("No traces to diagnose")
             return {}
 
@@ -380,16 +442,14 @@ class Validator:
         dataset_trace_counts: Counter[str] = Counter()
         dataset_detector_eligibility: dict[str, Counter[str]] = {}
         incompatibility_reasons: Counter[str] = Counter()
-        total_trace_count = 0
         behavior_ops = {
             "plan", "think", "execute_tool", "tool",
             "retrieval", "memory", "invoke_agent",
         }
 
-        for _trace_id, summary, spans, source_file in traces:
+        for _trace_id, summary, spans, source_file in trace_iter:
             ds_name = Path(source_file).stem
             dataset_trace_counts[ds_name] += 1
-            total_trace_count += 1
 
             if ds_name not in dataset_fields:
                 dataset_fields[ds_name] = Counter()
@@ -702,15 +762,64 @@ class Validator:
     def _load_traces(
         self, max_traces: int | None = None,
     ) -> list[tuple[str, RunSummary, list[SpanNode], str]]:
-        traces: list[tuple[str, RunSummary, list[SpanNode], str]] = []
-        parquet_files = sorted(self.input_dir.rglob("*.parquet"))
+        traces = list(self._iter_traces(max_traces=max_traces))
+        logger.info(
+            "Loaded %d traces from %d parquet files", len(traces), len(list(self.input_dir.rglob('*.parquet')))
+        )
+        return traces
+
+    def _count_traces(self) -> int:
+        parquet_files = self._parquet_files()
         if not parquet_files:
-            logger.warning("No parquet files found in %s", self.input_dir)
-            return traces
+            return 0
 
         import pyarrow.parquet as pq
 
+        total = 0
         for pq_file in parquet_files:
+            logger.info("Counting traces in %s", pq_file.name)
+            try:
+                table = pq.read_table(str(pq_file), columns=["trace_id", "source_row_idx"])  # type: ignore[no-untyped-call]
+            except Exception:
+                logger.warning("Cannot read %s for counting, skipping", pq_file)
+                continue
+            keys = {
+                (
+                    str(row["trace_id"]),
+                    int(row.get("source_row_idx", 0) or 0),
+                )
+                for row in table.to_pylist()
+            }
+            total += len(keys)
+        if self.max_traces is not None:
+            return min(total, self.max_traces)
+        return total
+
+    def _parquet_files(self) -> list[Path]:
+        parquet_files = sorted(self.input_dir.rglob("*.parquet"))
+        if self.max_files is not None:
+            return parquet_files[: self.max_files]
+        return parquet_files
+
+    def _iter_traces(
+        self, max_traces: int | None = None,
+    ) -> Any:
+        parquet_files = self._parquet_files()
+        if not parquet_files:
+            logger.warning("No parquet files found in %s", self.input_dir)
+            return
+
+        import pyarrow.parquet as pq
+
+        yielded = 0
+        effective_max_traces = max_traces if max_traces is not None else self.max_traces
+        for file_idx, pq_file in enumerate(parquet_files, start=1):
+            logger.info(
+                "Reading parquet file %d/%d: %s",
+                file_idx,
+                len(parquet_files),
+                pq_file.name,
+            )
             try:
                 table = pq.read_table(str(pq_file))  # type: ignore[no-untyped-call]
             except Exception:
@@ -718,34 +827,24 @@ class Validator:
                 continue
 
             groups: dict[tuple[str, int], list[SpanNode]] = {}
-            rows = table.to_pylist()
-            for row in rows:
+            for row in table.to_pylist():
                 source_row_idx = row.get("source_row_idx", 0)
                 idx_val = int(source_row_idx) if source_row_idx is not None else 0
                 key = (str(row["trace_id"]), idx_val)
                 attrs_raw = row.get("attributes_json", "{}")
-                attrs: dict[str, Any] = (
-                    json.loads(attrs_raw) if isinstance(attrs_raw, str) else {}
-                )
+                attrs: dict[str, Any] = json.loads(attrs_raw) if isinstance(attrs_raw, str) else {}
                 if not isinstance(attrs, dict):
                     attrs = {}
                 raw_op = str(row.get("operation_name", ""))
                 operation_name = _normalize_operation_name(raw_op, attrs)
                 attrs = _normalize_attrs(attrs, operation_name)
                 duration_raw = row.get("duration_ms")
-                duration: int | None = (
-                    int(duration_raw) if duration_raw is not None else None
-                )
-                del duration_raw
+                duration: int | None = int(duration_raw) if duration_raw is not None else None
 
                 span = SpanNode(
                     span_id=str(row["span_id"]),
                     trace_id=str(row["trace_id"]),
-                    parent_span_id=(
-                        str(row["parent_span_id"])
-                        if row.get("parent_span_id")
-                        else None
-                    ),
+                    parent_span_id=(str(row["parent_span_id"]) if row.get("parent_span_id") else None),
                     operation_name=operation_name,
                     start_time=_parse_dt(row.get("start_time")),
                     end_time=_parse_dt(row.get("end_time")),
@@ -761,15 +860,10 @@ class Validator:
                     continue
                 summary = RunSummaryBuilder.build_from_span_tree(roots, trace_id)
                 if summary is not None:
-                    traces.append((trace_id, summary, roots, str(pq_file)))
-
-                if max_traces is not None and len(traces) >= max_traces:
-                    break
-
-        logger.info(
-            "Loaded %d traces from %d parquet files", len(traces), len(parquet_files)
-        )
-        return traces
+                    yield (trace_id, summary, roots, str(pq_file))
+                    yielded += 1
+                if effective_max_traces is not None and yielded >= effective_max_traces:
+                    return
 
 
 def _is_awaitable(obj: Any) -> bool:
