@@ -95,12 +95,19 @@ def health() -> None:
     default=False,
     help="Run compatibility diagnostic: map trace fields, produce detector eligibility report",
 )
+@click.option(
+    "--db",
+    is_flag=True,
+    default=False,
+    help="Connect to Postgres for baseline-dependent detectors",
+)
 def validate(
     input_dir: str,
     output_dir: str,
     llm_sample: int | None,
     resume: bool,
     diagnose: bool,
+    db: bool,
 ) -> None:
     """Run all detectors against processed traces and produce validation reports."""
 
@@ -109,9 +116,17 @@ def validate(
 
         from analytics.trace_pipeline.validator import Validator
 
+        pool = None
+        if db:
+            from analytics.db import ensure_schema, get_pool
+
+            pool = await get_pool()
+            await ensure_schema(pool)
+
         v = Validator(
             input_dir=input_dir, output_dir=output_dir,
             llm_sample=llm_sample, resume=resume, diagnose=diagnose,
+            pool=pool,
         )
         if diagnose:
             diag_report: dict[str, Any] = v.run_diagnose()

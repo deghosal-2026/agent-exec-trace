@@ -43,12 +43,14 @@ class Validator:
         llm_sample: int | None = None,
         resume: bool = False,
         diagnose: bool = False,
+        pool: object | None = None,
     ) -> None:
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
         self.llm_sample = llm_sample
         self.resume = resume
         self.diagnose = diagnose
+        self.pool = pool
         self.detectors: list[BaseDetector] = create_all_detectors()
         if self.llm_sample:
             self.detectors.extend(create_llm_detectors())
@@ -162,7 +164,7 @@ class Validator:
                         hasattr(type(detector), "detect_async")
                         and type(detector).detect_async is not BaseDetector.detect_async
                     ):
-                        raw: Any = await detector.detect_async(summary, spans)
+                        raw: Any = await detector.detect_async(summary, spans, pool=self.pool)
                     else:
                         raw = detector.detect(summary, spans)
 
@@ -659,7 +661,7 @@ def _detector_requirements() -> dict[str, list[str]]:
         "output_drift": ["has_output"],
         "loop_detected": ["has_tool_name", "has_operations"],
         "pattern_loop": ["has_tool_name", "has_operations"],
-        "argument_loop": ["has_tool_name", "has_tool_args", "has_operations"],
+        "argument_loop": ["has_tool_name", "has_operations"],
         "tool_error_rate": ["has_tool_name", "has_tool_result", "has_operations"],
         "specific_tool_error": ["has_tool_name", "has_tool_result", "has_operations"],
         "tool_latency": ["has_tool_name", "has_timestamps", "has_operations"],

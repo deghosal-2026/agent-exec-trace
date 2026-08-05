@@ -276,44 +276,76 @@ structured agent execution traces — with tool names, operation taxonomy, and r
 not flat chat transcripts. The next iteration should either source such a corpus from
 richer HF datasets or self-instrument real agents.
 
+## Root Cause Analysis — 21 Silent Detectors
+
+The 21 trustworthy silent detectors were investigated at the code level.
+
+### Infrastructure Bug: Pool Never Passed to Async Detectors
+
+The validator calls `detector.detect_async(summary, spans)` without a `pool=pool` parameter.
+8 detectors guard against `pool is None` as their first check and silently return `None`.
+
+| Detector | Fix |
+|---|---|
+| `anomaly_cluster` | Validator now passes `pool=self.pool` to `detect_async()` |
+| `escalation_rate` | Same |
+| `first_run_heuristic` | Same |
+| `run_frequency_anomaly` | Same |
+| `run_duration` | Same |
+| `cost_vs_baseline` | Same |
+| `cost_spike` | Same (partial — also has threshold issue) |
+| `output_drift` | Same |
+
+**Status:** Fixed. Validator updated to accept `--db` flag and pass pool through. Run with:
+```bash
+python3 -m analytics.main validate --input data/traces/processed --db
+```
+
+### Corpus Limitations — 6 Detectors (No Actionable Fix)
+
+These detectors correctly returned `None` because the required signals don't exist in the HF corpus:
+
+| Detector | Reason |
+|---|---|
+| `approval_latency` | No human-intervention spans anywhere in corpus |
+| `intervention_frequency` | `total_interventions` always 0 |
+| `intervention_rejection` | `total_interventions` always 0 |
+| `indeterminate_status` | No trace uses ambiguous status values |
+| `specific_tool_error` | Tool error rate near 0% in 7.5% of traces that have tool data |
+| `tool_error_rate` | Same |
+
+### Threshold Issues — 7 Detectors (Needs Tuning)
+
+These detectors ran on eligible traces but thresholds are too strict for the corpus:
+
+| Detector | Current Threshold | Why It Doesn't Fire |
+|---|---|---|
+| `inactivity` | Gap > 30s between spans | Spans execute sub-second in agent traces |
+| `cost_efficiency` | >$0.50 per tool call or >20 calls | Agent costs are cents, not dollars |
+| `loop_detected` | Same tool ≥5 consecutive times | Rare in 7.5% of traces with tool data |
+| `max_step_hit` | >20 tool spans or "max_steps_exceeded" status | Most traces under 20 tool spans |
+| `token_explosion` | Late-half tokens 3x early-half tokens | Token counts are stable across runs |
+| `tool_latency` | Single call >3x mean duration | Tool latency is consistent within runs |
+| `tool_timeout` | Single call >60 seconds | Most tool calls complete in seconds |
+
+### Fixed: `argument_loop` Compatibility Definition
+
+`argument_loop` fired 5,827 anomalies but was classified as 0% eligible because the diagnostic
+incorrectly required `has_tool_args`. Fixed: requirements changed to `["has_tool_name", "has_operations"]`.
+
 ## Next Steps — WBS 9.1 Work Items
 
-Based on the v2 findings, the following work items are added to WBS section 9.1.
+### 9.1.6 Fix argument_loop compatibility definition ✅ DONE
+### 9.1.7 Fix pool passing to async detectors ✅ DONE — added `--db` flag
 
-### 9.1.6 Fix `argument_loop` compatibility definition
+### 9.1.8 Audit and tune threshold-dependent detectors
 
-**Finding:** `argument_loop` fired 5,827 anomalies but the diagnostic classifies it as 0%
-eligible because it requires `has_tool_args`. The actual detector uses tool name repetition
-and operation patterns — args are optional.
-
-**Action:** Remove `has_tool_args` from `argument_loop`'s required fields in
-`_detector_requirements()`. Re-run diagnostic to confirm eligibility rises above 0%.
-
-### 9.1.7 Audit 100% eligible non-firing detectors
-
-**Finding:** 10 detectors are eligible on every trace but never produced an anomaly:
-`anomaly_cluster`, `approval_latency`, `escalation_rate`, `first_run_heuristic`,
-`inactivity`, `indeterminate_status`, `intervention_frequency`, `intervention_rejection`,
-`run_frequency_anomaly`, `run_duration`.
-
-**Action:** For each detector, trace-sample 10 clean traces and determine whether silence
-is a true negative (pattern absent) or a false negative (threshold too high / logic gap).
-
-### 9.1.8 Add detector confidence matrix to validator output
-
-**Finding:** The current validator reports anomalies and fire rates but does not cross-
-reference with compatibility. The confidence matrix (FIRING / TRUSTWORTHY SILENT /
-EXPECTED SILENT) must be built manually from two separate JSON files.
-
-**Action:** Add `detector_confidence_matrix` to the `summary.json` output. Include:
-- firing detectors with eligibility %
-- trustworthy silent with eligibility % and risk tier
-- expected silent with missing field list
+7 detectors have thresholds too strict for this corpus. For each:
+- Run with `--db` to enable baseline comparison where applicable
+- Trace-sample and determine if detection should fire on known patterns
+- Lower thresholds or add corpus-adaptive baseline computation
 
 ### 9.1.9 Document structurally incompatible detectors
 
-**Finding:** 6 detectors require `has_retry_semantics` or `has_tool_args` which do not exist
-in the HF corpus. These are not detector bugs — they are corpus limitations.
-
-**Action:** Add a `docs/detector-compatibility.md` file documenting per-detector signal
-requirements, known corpus limitations, and which detectors are blocked on which corpora.
+6 detectors require human-interaction or retry data that does not exist in the HF corpus.
+Add `docs/detector-compatibility.md` documenting per-detector requirements and limitations.
