@@ -59,6 +59,14 @@ class LLMClient:
             "total_latency_ms": 0.0,
         }
         self._responses: list[dict[str, Any]] = []
+        self._response_log: str | None = None
+        self._trace_context: dict[str, str] = {}
+
+    def set_response_log(self, path: str) -> None:
+        self._response_log = path
+
+    def set_trace_context(self, trace_id: str, detector: str) -> None:
+        self._trace_context = {"trace_id": trace_id, "detector": detector}
 
     def _client_instance(self) -> Any:
         """Lazily build the OpenAI client (imported on first use)."""
@@ -133,10 +141,20 @@ class LLMClient:
             self._record(start, "chat_calls")
             self._cache[key] = content
             self._responses.append({
+                **self._trace_context,
                 "system": system or "",
                 "prompt": prompt[:500],
                 "response": content[:500],
             })
+            if self._response_log:
+                import json as _json
+                with open(self._response_log, "a") as _f:
+                    _f.write(_json.dumps({
+                        **self._trace_context,
+                        "system": system or "",
+                        "prompt": prompt[:500],
+                        "response": content[:500],
+                    }) + "\n")
             return content  # type: ignore[no-any-return]
         except Exception as exc:
             self._record(start, "chat_calls")

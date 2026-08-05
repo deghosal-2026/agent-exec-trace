@@ -118,6 +118,22 @@ class Validator:
         mode = "with-llm" if self.llm_sample else "without-llm"
         out_dir = self.output_dir / mode
         out_dir.mkdir(parents=True, exist_ok=True)
+        if self._llm_detectors:
+            resp_log = out_dir / "llm_responses.jsonl"
+            candidate_log = out_dir / "llm_trace_candidates.jsonl"
+            attempt_log = out_dir / "llm_detector_attempts.jsonl"
+            if not resp_log.exists():
+                resp_log.write_text("")
+            if not candidate_log.exists():
+                candidate_log.write_text("")
+            if not attempt_log.exists():
+                attempt_log.write_text("")
+            for det in self._llm_detectors:
+                client = getattr(det, "_client", None)
+                if client is not None and hasattr(client, "set_response_log"):
+                    client.set_response_log(str(resp_log))
+            self._llm_candidate_log = candidate_log
+            self._llm_attempt_log = attempt_log
 
         if self.diagnose and self.llm_sample:
             traces = self._load_traces_fast(self.llm_sample * 10)
@@ -196,11 +212,26 @@ class Validator:
 
             llm_limit = self.llm_sample or 0
             if self._llm_detectors and trace_anomalies and self._llm_traces_done < llm_limit:
+                with open(self._llm_candidate_log, "a") as f:
+                    f.write(json.dumps({
+                        "trace_id": trace_id,
+                        "run_id": str(summary.run_id),
+                        "rule_anomalies": list(trace_anomalies),
+                    }) + "\n")
                 for llm_det in self._llm_detectors:
                     llm_type = llm_det.anomaly_type
                     if llm_type in settings.detector_disabled:
                         continue
                     try:
+                        client = getattr(llm_det, "_client", None)
+                        if client is not None and hasattr(client, "set_trace_context"):
+                            client.set_trace_context(trace_id, llm_type)
+                        with open(self._llm_attempt_log, "a") as f:
+                            f.write(json.dumps({
+                                "trace_id": trace_id,
+                                "run_id": str(summary.run_id),
+                                "detector": llm_type,
+                            }) + "\n")
                         raw = await llm_det.detect_async(summary, spans, pool=self.pool)
                         if raw is not None and not _is_awaitable(raw):
                             llm_anomaly: Anomaly = raw
