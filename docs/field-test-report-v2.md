@@ -75,6 +75,81 @@ Of the 21 trustworthy silent detectors:
 | High-risk (100% eligible, never fired) | 10 | Every trace available, still nothing — threshold/logic review needed |
 | Medium-risk (7.5–73.7% eligible, never fired) | 11 | Partial eligibility — some silence is expected, but higher-eligibility cases warrant audit |
 
+### LLM Investigation Addendum
+
+The LLM path was instrumented after the rule-based cleanup so we could inspect raw model
+responses instead of guessing whether the prompts were reaching the model.
+
+#### New LLM execution flow
+
+The original `--llm-sample` flow ran LLM detectors on a small random set of traces, which was
+both slow and low-value because most sampled traces were clean. The flow was changed to:
+
+1. run rule-based detectors on the full corpus first
+2. select only traces where rule-based detectors already fired
+3. run LLM detectors on the first `N` anomalous traces (`--llm-sample N`)
+4. save progress every `--llm-batch` traces
+
+This makes the LLM pass a targeted semantic review step rather than a blind second copy of the
+rule-based pass.
+
+#### LLM diagnostic artifacts now written live
+
+During `--llm-sample` runs, the validator now writes three live files under:
+
+`data/traces/validations/with-llm/`
+
+- `llm_trace_candidates.jsonl` — traces selected for LLM because rule-based detectors fired
+- `llm_detector_attempts.jsonl` — every detector attempt per trace
+- `llm_responses.jsonl` — raw LLM responses as they come back
+
+This removes ambiguity about whether the query reached the model.
+
+#### What the raw LLM responses showed
+
+The LLM server was reachable and returning content. However, the saved raw responses showed a
+clear quality problem:
+
+- many responses were **not valid JSON**
+- some responses simply **echoed the prompt back**
+- some responses contained **garbled / repetitive unicode text**
+- some responses answered generically instead of following the structured scoring task
+
+This proves the request path is working, but the model/prompt combination is weak.
+
+#### LLM fixes applied
+
+1. **Raw response logging** (`llm_client.py`, `validator.py`)
+   - responses now stream to `llm_responses.jsonl` immediately
+
+2. **Hallucination context fix** (`llm.py`)
+   - detector now reads `gen_ai.tool.result` instead of nonexistent `tool.output`
+
+3. **QualityDegradation baseline fix** (`llm.py`)
+   - removed hard dependency on missing `gen_ai.baseline_output`
+   - falls back to first available output in the trace
+
+4. **EmbeddingDrift routing fix** (`llm.py`)
+   - validator now hits `detect_async()` path that actually calls embedding drift logic
+
+5. **Semantic / plan field widening** (`llm.py`)
+   - SemanticLoop now uses more output aliases
+   - GoalDrift and ConfusionPattern use wider plan/goal field extraction
+
+6. **Model upgrade** (`config.py`)
+   - default LLM model switched from `Qwen2.5-1.5B-4bit` to `Qwen3.5-4B-4bit`
+
+#### Current LLM conclusion
+
+The failure mode was not “LLM was never called.” The failure mode was:
+
+- calls reached the server
+- responses were often malformed or low-quality
+- the prior 1.5B model was too weak for structured JSON semantic judging
+
+The stronger 4B model is now configured as the default. The next LLM validation pass should be
+judged against the saved `llm_responses.jsonl` artifacts, not only anomaly counts.
+
 ## What Changed from v1
 
 ### Metric Definition Change

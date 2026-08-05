@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     # --- LLM client settings (MLX / OpenAI-compatible endpoint) ---
     llm_base_url: str = "http://127.0.0.1:8000/v1"
     llm_api_key: str = "omlx-test"
-    llm_chat_model: str = "Qwen2.5-1.5B-4bit"
+    llm_chat_model: str = "Qwen3.5-4B-4bit"
     llm_embed_model: str = "all-MiniLM-L6-v2"
     llm_timeout_seconds: float = 30.0
 
