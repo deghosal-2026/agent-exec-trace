@@ -89,7 +89,19 @@ def health() -> None:
     default=False,
     help="Skip previously completed traces (uses progress.json)",
 )
-def validate(input_dir: str, output_dir: str, llm_sample: int | None, resume: bool) -> None:
+@click.option(
+    "--diagnose",
+    is_flag=True,
+    default=False,
+    help="Run compatibility diagnostic: map trace fields, produce detector eligibility report",
+)
+def validate(
+    input_dir: str,
+    output_dir: str,
+    llm_sample: int | None,
+    resume: bool,
+    diagnose: bool,
+) -> None:
     """Run all detectors against processed traces and produce validation reports."""
 
     async def _run() -> None:
@@ -99,8 +111,24 @@ def validate(input_dir: str, output_dir: str, llm_sample: int | None, resume: bo
 
         v = Validator(
             input_dir=input_dir, output_dir=output_dir,
-            llm_sample=llm_sample, resume=resume,
+            llm_sample=llm_sample, resume=resume, diagnose=diagnose,
         )
+        if diagnose:
+            diag_report: dict[str, Any] = v.run_diagnose()
+            click.echo("\n=== TRACE COMPATIBILITY DIAGNOSTIC ===")
+            click.echo(f"Traces analyzed:     {diag_report.get('total_traces', 0)}")
+            click.echo(f"Datasets:            {diag_report.get('total_datasets', 0)}")
+            click.echo(f"Detectors:           {diag_report.get('total_detectors', 0)}")
+            score = diag_report.get("global_compatibility_score_pct", 0)
+            click.echo(f"Compatibility score: {score}%")
+            click.echo("\nCorpus field coverage:")
+            for field, data in (diag_report.get("corpus_field_coverage", {}) or {}).items():
+                if isinstance(data, dict):
+                    click.echo(f"  {field}: {data.get('pct', 0)}% ({data.get('count', 0)} traces)")
+            mode = "without-llm"
+            report_dir = (Path(output_dir) / mode).resolve()
+            click.echo(f"\nReport: {report_dir / 'compatibility_matrix.json'}")
+            return
         report: dict[str, Any] = await v.run()
         total = int(report["traces_processed"])
         anomaly_count = int(report["anomaly_count"])

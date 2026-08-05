@@ -42,11 +42,13 @@ class Validator:
         output_dir: str = "data/traces/validations",
         llm_sample: int | None = None,
         resume: bool = False,
+        diagnose: bool = False,
     ) -> None:
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
         self.llm_sample = llm_sample
         self.resume = resume
+        self.diagnose = diagnose
         self.detectors: list[BaseDetector] = create_all_detectors()
         if self.llm_sample:
             self.detectors.extend(create_llm_detectors())
@@ -280,6 +282,273 @@ class Validator:
         logger.info("Reports written to %s", out_dir)
         return report
 
+    def run_diagnose(self) -> dict[str, Any]:
+        traces = self._load_traces()
+        if not traces:
+            logger.warning("No traces to diagnose")
+            return {}
+
+        out_dir = self.output_dir / "without-llm"
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        dataset_fields: dict[str, Counter[str]] = {}
+        dataset_trace_counts: Counter[str] = Counter()
+        dataset_detector_eligibility: dict[str, Counter[str]] = {}
+        incompatibility_reasons: Counter[str] = Counter()
+        total_trace_count = 0
+        behavior_ops = {
+            "plan", "think", "execute_tool", "tool",
+            "retrieval", "memory", "invoke_agent",
+        }
+
+        for _trace_id, summary, spans, source_file in traces:
+            ds_name = Path(source_file).stem
+            dataset_trace_counts[ds_name] += 1
+            total_trace_count += 1
+
+            if ds_name not in dataset_fields:
+                dataset_fields[ds_name] = Counter()
+            if ds_name not in dataset_detector_eligibility:
+                dataset_detector_eligibility[ds_name] = Counter()
+
+            fields = dataset_fields[ds_name]
+            all_spans = _walk_all_span_roots(spans)
+
+            output_found = False
+            tool_name_found = False
+            tool_result_found = False
+            tool_args_found = False
+            tokens_found = False
+            cost_found = False
+            op_found = False
+            ts_found = False
+            pc_found = False
+            retry_found = False
+
+            for span in all_spans:
+                attrs = span.attributes
+
+                if not output_found:
+                    content = attrs.get("gen_ai.response.content")
+                    agent_out = attrs.get("gen_ai.agent.output")
+                    if (isinstance(content, str) and content.strip()) or (
+                        isinstance(agent_out, str) and agent_out.strip()
+                    ):
+                        output_found = True
+
+                if not tool_name_found:
+                    tn = attrs.get("gen_ai.tool.name")
+                    if isinstance(tn, str) and tn.strip():
+                        tool_name_found = True
+
+                if not tool_result_found:
+                    tr = attrs.get("gen_ai.tool.result")
+                    if tr is not None:
+                        tool_result_found = True
+
+                if not tool_args_found:
+                    ta = attrs.get("gen_ai.tool.args")
+                    if ta is not None:
+                        tool_args_found = True
+
+                if not tokens_found:
+                    pt = attrs.get("gen_ai.usage.prompt_tokens")
+                    ct = attrs.get("gen_ai.usage.completion_tokens")
+                    if isinstance(pt, int | float) or isinstance(ct, int | float):
+                        tokens_found = True
+
+                if not cost_found:
+                    c = attrs.get("gen_ai.agent.run.cost.total")
+                    if isinstance(c, int | float):
+                        cost_found = True
+
+                if not op_found and span.operation_name in behavior_ops:
+                    op_found = True
+
+                if not ts_found and span.start_time is not None:
+                    ts_found = True
+
+                if not pc_found and span.parent_span_id is not None:
+                    pc_found = True
+
+                if not retry_found:
+                    if str(attrs.get("retry", "")).lower() in ("true", "1"):
+                        retry_found = True
+                    error_code = str(attrs.get("error.code", "")).lower().strip()
+                    if error_code and error_code not in ("ok", "none", ""):
+                        retry_found = True
+
+            if output_found:
+                fields["has_output"] += 1
+            if tool_name_found:
+                fields["has_tool_name"] += 1
+            if tool_result_found:
+                fields["has_tool_result"] += 1
+            if tool_args_found:
+                fields["has_tool_args"] += 1
+            if summary.status and str(summary.status).strip():
+                fields["has_status"] += 1
+            if ts_found:
+                fields["has_timestamps"] += 1
+            if pc_found:
+                fields["has_parent_child"] += 1
+            if tokens_found:
+                fields["has_tokens"] += 1
+            if cost_found:
+                fields["has_cost"] += 1
+            if op_found:
+                fields["has_operations"] += 1
+
+            duration_ok = summary.duration_ms and summary.duration_ms > 0
+            if not duration_ok:
+                min_start = min(
+                    (s.start_time for s in all_spans if s.start_time), default=None
+                )
+                max_end = max(
+                    (s.end_time for s in all_spans if s.end_time), default=None
+                )
+                if min_start is not None and max_end is not None:
+                    duration_ok = True
+            if duration_ok:
+                fields["has_run_duration"] += 1
+            if retry_found or (summary.total_retries and summary.total_retries > 0):
+                fields["has_retry_semantics"] += 1
+
+            trace_field_presence = {
+                "has_output": output_found,
+                "has_tool_name": tool_name_found,
+                "has_tool_result": tool_result_found,
+                "has_tool_args": tool_args_found,
+                "has_status": bool(summary.status and str(summary.status).strip()),
+                "has_timestamps": ts_found,
+                "has_parent_child": pc_found,
+                "has_tokens": tokens_found,
+                "has_cost": cost_found,
+                "has_operations": op_found,
+                "has_run_duration": duration_ok,
+                "has_retry_semantics": bool(
+                    retry_found or (summary.total_retries and summary.total_retries > 0)
+                ),
+            }
+
+            for d_type, required in _detector_requirements().items():
+                missing = [f for f in required if not trace_field_presence.get(f, False)]
+                if not missing:
+                    dataset_detector_eligibility[ds_name][d_type] += 1
+                    continue
+                for field_name in missing:
+                    incompatibility_reasons[field_name] += 1
+
+        per_dataset: dict[str, dict[str, Any]] = {}
+        for ds, total in sorted(dataset_trace_counts.items()):
+            c = dataset_fields.get(ds, Counter())
+            per_dataset[ds] = {
+                "total_traces": total,
+                "fields": {
+                    f: _field_pct(c, f, total) for f in DIAGNOSE_FIELDS
+                },
+            }
+
+        corpus_totals: dict[str, dict[str, int | float]] = {}
+        for field_name in DIAGNOSE_FIELDS:
+            total_count = sum(c.get(field_name, 0) for c in dataset_fields.values())
+            corpus_totals[field_name] = {
+                "count": total_count,
+                "pct": round(total_count / max(total_trace_count, 1) * 100, 1),
+            }
+
+        detector_requirements = _detector_requirements()
+
+        per_dataset_eligibility: dict[str, dict[str, Any]] = {}
+        for ds in sorted(dataset_trace_counts.keys()):
+            ds_eligible_counts = dataset_detector_eligibility.get(ds, Counter())
+            ds_total = dataset_trace_counts[ds]
+            eligible: list[str] = []
+            ineligible: list[str] = []
+            for d_type, required in detector_requirements.items():
+                eligible_count = ds_eligible_counts.get(d_type, 0)
+                if eligible_count > 0:
+                    eligible.append(d_type)
+                else:
+                    missing = sorted(set(required))
+                    ineligible.append(f"{d_type} (missing: {', '.join(missing)})")
+            per_dataset_eligibility[ds] = {
+                "total_traces": ds_total,
+                "eligible_detectors": sorted(eligible),
+                "eligible_count": len(eligible),
+                "ineligible_detectors": sorted(ineligible),
+                "ineligible_count": len(ineligible),
+                "per_detector_trace_eligibility": {
+                    d_type: {
+                        "eligible_traces": ds_eligible_counts.get(d_type, 0),
+                        "eligible_pct": round(
+                            ds_eligible_counts.get(d_type, 0) / max(ds_total, 1) * 100,
+                            1,
+                        ),
+                    }
+                    for d_type in detector_requirements
+                },
+            }
+
+        total_detectors = len(detector_requirements)
+        global_compatible = sum(
+            count
+            for detector_counts in dataset_detector_eligibility.values()
+            for count in detector_counts.values()
+        )
+        global_total = total_trace_count * total_detectors
+        global_score = round(global_compatible / max(global_total, 1) * 100, 1)
+
+        per_detector_coverage = {
+            d_type: {
+                "eligible_traces": sum(
+                    detector_counts.get(d_type, 0)
+                    for detector_counts in dataset_detector_eligibility.values()
+                ),
+                "eligible_pct": round(
+                    sum(
+                        detector_counts.get(d_type, 0)
+                        for detector_counts in dataset_detector_eligibility.values()
+                    )
+                    / max(total_trace_count, 1)
+                    * 100,
+                    1,
+                ),
+            }
+            for d_type in detector_requirements
+        }
+
+        report: dict[str, Any] = {
+            "total_traces": total_trace_count,
+            "total_datasets": len(dataset_trace_counts),
+            "total_detectors": total_detectors,
+            "corpus_field_coverage": corpus_totals,
+            "per_dataset": per_dataset,
+            "detector_requirements": {
+                dt: {"required_fields": req}
+                for dt, req in detector_requirements.items()
+            },
+            "per_dataset_eligibility": per_dataset_eligibility,
+            "per_detector_coverage": per_detector_coverage,
+            "global_compatibility_score_pct": global_score,
+            "eligible_detector_trace_pairs": global_compatible,
+            "total_detector_trace_pairs": global_total,
+            "incompatibility_reasons": dict(incompatibility_reasons.most_common()),
+            "notes": [
+                "score = eligible_detector_trace_pairs / total_detector_trace_pairs",
+                "Eligibility is computed per trace, per detector, across all 35 detectors.",
+            ],
+        }
+
+        (out_dir / "compatibility_matrix.json").write_text(
+            json.dumps(report, indent=2, default=str)
+        )
+        logger.info(
+            "Diagnostics complete: %d traces, %d datasets, global compatibility score %.1f%%",
+            total_trace_count, len(dataset_trace_counts), global_score,
+        )
+        return report
+
     def _load_traces(
         self, max_traces: int | None = None,
     ) -> list[tuple[str, RunSummary, list[SpanNode], str]]:
@@ -310,15 +579,14 @@ class Validator:
                 )
                 if not isinstance(attrs, dict):
                     attrs = {}
-                attrs = _normalize_attrs(attrs, str(row.get("operation_name", "")))
+                raw_op = str(row.get("operation_name", ""))
+                operation_name = _normalize_operation_name(raw_op, attrs)
+                attrs = _normalize_attrs(attrs, operation_name)
                 duration_raw = row.get("duration_ms")
                 duration: int | None = (
                     int(duration_raw) if duration_raw is not None else None
                 )
-
-                operation_name = _normalize_operation_name(
-                    str(row.get("operation_name", "")), attrs
-                )
+                del duration_raw
 
                 span = SpanNode(
                     span_id=str(row["span_id"]),
@@ -370,6 +638,58 @@ def create_llm_detectors() -> list[BaseDetector]:
     ]
 
 
+def _field_pct(counter: Counter[str], field: str, total: int) -> dict[str, int | float]:
+    count = counter.get(field, 0)
+    return {"count": count, "pct": round(count / max(total, 1) * 100, 1)}
+
+
+DIAGNOSE_FIELDS: list[str] = [
+    "has_output", "has_tool_name", "has_tool_result", "has_tool_args",
+    "has_status", "has_timestamps", "has_parent_child",
+    "has_tokens", "has_cost", "has_operations",
+    "has_run_duration", "has_retry_semantics",
+]
+
+
+def _detector_requirements() -> dict[str, list[str]]:
+    return {
+        "empty_response": ["has_output"],
+        "low_output": ["has_output"],
+        "indeterminate_status": ["has_status"],
+        "output_drift": ["has_output"],
+        "loop_detected": ["has_tool_name", "has_operations"],
+        "pattern_loop": ["has_tool_name", "has_operations"],
+        "argument_loop": ["has_tool_name", "has_tool_args", "has_operations"],
+        "tool_error_rate": ["has_tool_name", "has_tool_result", "has_operations"],
+        "specific_tool_error": ["has_tool_name", "has_tool_result", "has_operations"],
+        "tool_latency": ["has_tool_name", "has_timestamps", "has_operations"],
+        "tool_timeout": ["has_tool_name", "has_timestamps", "has_operations"],
+        "redundant_tool_call": ["has_tool_name", "has_operations"],
+        "cost_spike": ["has_cost"],
+        "cost_vs_baseline": ["has_cost"],
+        "cost_efficiency": ["has_cost", "has_tokens"],
+        "token_explosion": ["has_tokens"],
+        "per_tool_cost_spike": ["has_tool_name", "has_cost"],
+        "wasted_tool_calls": ["has_tool_name", "has_tool_result", "has_operations"],
+        "run_duration": ["has_run_duration", "has_timestamps"],
+        "max_step_hit": ["has_operations"],
+        "step_efficiency": ["has_operations", "has_timestamps"],
+        "inactivity": ["has_timestamps"],
+        "premature_completion": ["has_status", "has_operations"],
+        "retry_storm": ["has_retry_semantics"],
+        "systemic_retry": ["has_retry_semantics"],
+        "transient_retry": ["has_retry_semantics"],
+        "cascading_retry": ["has_retry_semantics", "has_tool_name"],
+        "recovery_path": ["has_retry_semantics", "has_tool_name"],
+        "intervention_frequency": [],
+        "escalation_rate": [],
+        "approval_latency": [],
+        "intervention_rejection": [],
+        "anomaly_cluster": [],
+        "run_frequency_anomaly": [],
+        "first_run_heuristic": [],
+    }
+
 def _parse_dt(val: Any) -> datetime | None:
     if val is None:
         return None
@@ -411,7 +731,8 @@ def _normalize_attrs(attrs: dict[str, Any], operation_name: str) -> dict[str, An
         ):
             normalized["gen_ai.response.content"] = source_value
 
-    if operation_name == "execute_tool":
+    tool_like = operation_name in ("execute_tool", "tool") or source_role == "tool"
+    if tool_like:
         if not normalized.get("gen_ai.tool.name"):
             for key in ("tool_name", "name", "label"):
                 value = normalized.get(key)
@@ -571,3 +892,10 @@ def _walk_all_spans(root: SpanNode) -> list[SpanNode]:
     for child in root.child_spans:
         nodes.extend(_walk_all_spans(child))
     return nodes
+
+
+def _walk_all_span_roots(roots: list[SpanNode]) -> list[SpanNode]:
+    all_spans: list[SpanNode] = []
+    for root in roots:
+        all_spans.extend(_walk_all_spans(root))
+    return all_spans
