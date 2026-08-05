@@ -26,16 +26,7 @@ class EmptyResponseDetector(BaseDetector):
         if not all_spans:
             return None
 
-        output_content = ""
-        for span in all_spans:
-            content = span.attributes.get("gen_ai.response.content")
-            if content and isinstance(content, str) and content.strip():
-                output_content = content
-                break
-            output_raw = span.attributes.get("gen_ai.agent.output")
-            if output_raw and isinstance(output_raw, str) and output_raw.strip():
-                output_content = output_raw
-                break
+        output_content = self._extract_output(all_spans)
 
         if not output_content.strip():
             return self._build_anomaly(
@@ -80,18 +71,6 @@ class LowOutputDetector(BaseDetector):
                 },
             )
         return None
-
-    @staticmethod
-    def _extract_output(spans: list[SpanNode]) -> str:
-        for span in spans:
-            content = span.attributes.get("gen_ai.response.content")
-            if content and isinstance(content, str) and content.strip():
-                return content.strip()
-            output_raw = span.attributes.get("gen_ai.agent.output")
-            if output_raw and isinstance(output_raw, str) and output_raw.strip():
-                return output_raw.strip()
-        return ""
-
 
 class IndeterminateDetector(BaseDetector):
     """Detect ambiguous or unclear run status."""
@@ -193,17 +172,6 @@ class OutputDriftDetector(BaseDetector):
                 },
             )
         return None
-
-    @staticmethod
-    def _extract_output(spans: list[SpanNode]) -> str:
-        for span in spans:
-            content = span.attributes.get("gen_ai.response.content")
-            if content and isinstance(content, str) and content.strip():
-                return content.strip()
-            output_raw = span.attributes.get("gen_ai.agent.output")
-            if output_raw and isinstance(output_raw, str) and output_raw.strip():
-                return output_raw.strip()
-        return ""
 
     @staticmethod
     def _compute_entropy(text: str) -> float:

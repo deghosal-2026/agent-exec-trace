@@ -220,8 +220,24 @@ class PrematureCompletionDetector(BaseDetector):
         status = (summary.status or "").lower()
 
         all_spans = self._walk_spans(spans)
+        output_content = self._extract_output(all_spans)
         error_spans = [
-            s for s in all_spans if s.status and s.status not in ("ok", "OK")
+            s
+            for s in all_spans
+            if (s.status or "").strip().lower()
+            in {
+                "error",
+                "failed",
+                "failure",
+                "timeout",
+                "timed_out",
+                "cancelled",
+                "canceled",
+                "interrupted",
+                "incomplete",
+                "max_steps_exceeded",
+                "max_steps_hit",
+            }
         ]
 
         if status == "error" and len(error_spans) == 0:
@@ -236,16 +252,42 @@ class PrematureCompletionDetector(BaseDetector):
                 },
             )
 
-        plan_spans = [s for s in all_spans if s.operation_name in ("plan", "think")]
-        if plan_spans and all_spans and all_spans[-1].operation_name in ("plan", "think"):
+        final_is_plan = bool(all_spans) and all_spans[-1].operation_name in ("plan", "think")
+        successful_terminal_tool = any(
+            s.operation_name == "execute_tool"
+            and (s.status or "").strip().lower() in {"ok", "success", "completed"}
+            for s in all_spans[-3:]
+        )
+        status_indicates_incomplete = status in {
+            "error",
+            "failed",
+            "failure",
+            "timeout",
+            "timed_out",
+            "cancelled",
+            "canceled",
+            "interrupted",
+            "incomplete",
+            "max_steps_exceeded",
+            "max_steps_hit",
+        }
+
+        if (
+            final_is_plan
+            and status_indicates_incomplete
+            and not output_content
+            and not successful_terminal_tool
+        ):
             return self._build_anomaly(
                 summary,
                 "warning",
                 "Agent ended with a plan/think span — may not have completed the task",
                 {
-                    "final_span_operation": all_spans[-1].operation_name,
+                    "final_span_operation": all_spans[-1].operation_name if all_spans else None,
                     "status": summary.status,
                     "total_spans": len(all_spans),
+                    "has_output": bool(output_content),
+                    "successful_terminal_tool": successful_terminal_tool,
                 },
             )
         return None

@@ -248,12 +248,27 @@ class RunSummaryBuilder:
         total_tool_calls = 0
         status: str | None = "success"
 
+        explicit_error_statuses = {
+            "error",
+            "failed",
+            "failure",
+            "timeout",
+            "timed_out",
+            "cancelled",
+            "canceled",
+            "interrupted",
+            "incomplete",
+            "max_steps_exceeded",
+            "max_steps_hit",
+        }
+
         def count_spans(nodes: list[SpanNode]) -> None:
             nonlocal total_tool_calls, status
             for node in nodes:
                 if node.operation_name == "execute_tool":
                     total_tool_calls += 1
-                if node.status and node.status != "ok":
+                node_status = (node.status or "").strip().lower()
+                if node_status in explicit_error_statuses:
                     status = "error"
                 count_spans(node.child_spans)
 

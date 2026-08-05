@@ -154,13 +154,19 @@ class ArgumentLoopDetector(BaseDetector):
             try:
                 args_raw = span.attributes.get("gen_ai.tool.arguments")
                 if args_raw is None:
-                    args_str = ""
+                    args_raw = span.attributes.get("gen_ai.tool.args")
+                if args_raw is None:
+                    current = 0
+                    last_key = ""
+                    continue
                 elif isinstance(args_raw, str):
                     args_str = args_raw
                 else:
                     args_str = json.dumps(args_raw, sort_keys=True)
             except (TypeError, ValueError):
-                args_str = ""
+                current = 0
+                last_key = ""
+                continue
 
             key = f"{tool_name}:{args_str}"
 
@@ -360,13 +366,19 @@ class RedundantToolCallDetector(BaseDetector):
             try:
                 args_raw = span.attributes.get("gen_ai.tool.arguments")
                 if args_raw is None:
-                    args_str = ""
+                    args_raw = span.attributes.get("gen_ai.tool.args")
+                if args_raw is None:
+                    current_streak = 1
+                    prev_key = ""
+                    continue
                 elif isinstance(args_raw, str):
                     args_str = args_raw
                 else:
                     args_str = json.dumps(args_raw, sort_keys=True)
             except (TypeError, ValueError):
-                args_str = ""
+                current_streak = 1
+                prev_key = ""
+                continue
 
             result_raw = span.attributes.get("gen_ai.tool.result")
             if result_raw is None:

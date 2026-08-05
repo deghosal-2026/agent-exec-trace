@@ -103,3 +103,30 @@ class BaseDetector:
                 tool_calls.append(tool_name)
             tool_calls.extend(BaseDetector._walk_tool_names(node.child_spans))
         return tool_calls
+
+    @staticmethod
+    def _extract_output(spans: list[SpanNode]) -> str:
+        """Extract the first user-visible output-like field from a span list."""
+        for span in spans:
+            for key in (
+                "gen_ai.response.content",
+                "gen_ai.agent.output",
+                "assistant_response",
+                "completion",
+                "message_content",
+                "content",
+                "answer",
+            ):
+                value = span.attributes.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+
+            value = span.attributes.get("value")
+            role = str(span.attributes.get("from", "")).lower().strip()
+            if (
+                isinstance(value, str)
+                and value.strip()
+                and role in {"gpt", "assistant", "ai", "model"}
+            ):
+                return value.strip()
+        return ""
