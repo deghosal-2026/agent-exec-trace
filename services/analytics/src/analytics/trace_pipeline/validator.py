@@ -53,9 +53,10 @@ class Validator:
         self.diagnose = diagnose
         self.pool = pool
         self.llm_batch = llm_batch
-        self.detectors: list[BaseDetector] = create_all_detectors()
+        self._llm_detectors: list[BaseDetector] | None = None
         if self.llm_sample:
-            self.detectors.extend(create_llm_detectors())
+            self._llm_detectors = create_llm_detectors()
+        self.detectors: list[BaseDetector] = create_all_detectors()
         self._mode_dir: Path | None = None
 
     def _progress_path(self) -> Path:
@@ -142,6 +143,7 @@ class Validator:
         empty_response_sources: Counter[str] = Counter()
         empty_response_examples: list[dict[str, str]] = []
 
+        self._llm_traces_done = 0
         for _idx, (trace_id, summary, spans, source_file) in enumerate(traces):
             trace_key = (trace_id, str(summary.run_id))
             if trace_key in completed:
@@ -191,6 +193,24 @@ class Validator:
                         "Detector %s failed for trace %s", d_type, trace_id
                     )
                     detector_errors.setdefault(d_type, "exception")
+
+            llm_limit = self.llm_sample or 0
+            if self._llm_detectors and trace_anomalies and self._llm_traces_done < llm_limit:
+                for llm_det in self._llm_detectors:
+                    llm_type = llm_det.anomaly_type
+                    if llm_type in settings.detector_disabled:
+                        continue
+                    try:
+                        raw = await llm_det.detect_async(summary, spans, pool=self.pool)
+                        if raw is not None and not _is_awaitable(raw):
+                            llm_anomaly: Anomaly = raw
+                            detector_fire_count[llm_type] += 1
+                            anomaly_counter[llm_type] += 1
+                            severity_counter[llm_anomaly.severity] += 1
+                            trace_anomalies.append(llm_type)
+                    except Exception:
+                        logger.exception("LLM detector %s failed", llm_type)
+                self._llm_traces_done += 1
 
             if trace_anomalies:
                 before_len = len(trace_anomalies)
@@ -285,6 +305,23 @@ class Validator:
                 default=str,
             )
         )
+
+        if self._llm_detectors:
+            llm_responses: list[dict[str, Any]] = []
+            for det in self._llm_detectors:
+                client = getattr(det, "_client", None)
+                if client is not None and hasattr(client, "responses"):
+                    llm_responses.extend(client.responses())
+            (out_dir / "llm_responses.json").write_text(
+                json.dumps(
+                    {
+                        "total_responses": len(llm_responses),
+                        "responses": llm_responses,
+                    },
+                    indent=2,
+                    default=str,
+                )
+            )
 
         if self.resume:
             self._save_progress(
@@ -539,6 +576,7 @@ class Validator:
             "total_traces": total_trace_count,
             "total_datasets": len(dataset_trace_counts),
             "total_detectors": total_detectors,
+            "llm_traces_processed": self._llm_traces_done if self._llm_detectors else 0,
             "corpus_field_coverage": corpus_totals,
             "per_dataset": per_dataset,
             "detector_requirements": {

@@ -58,6 +58,7 @@ class LLMClient:
             "errors": 0,
             "total_latency_ms": 0.0,
         }
+        self._responses: list[dict[str, Any]] = []
 
     def _client_instance(self) -> Any:
         """Lazily build the OpenAI client (imported on first use)."""
@@ -131,6 +132,11 @@ class LLMClient:
                 return None
             self._record(start, "chat_calls")
             self._cache[key] = content
+            self._responses.append({
+                "system": system or "",
+                "prompt": prompt[:500],
+                "response": content[:500],
+            })
             return content  # type: ignore[no-any-return]
         except Exception as exc:
             self._record(start, "chat_calls")
@@ -182,6 +188,10 @@ class LLMClient:
         Returns None if the endpoint has never been successfully reached.
         """
         return self._models_cache
+
+    def responses(self) -> list[dict[str, Any]]:
+        """Return all raw LLM chat responses recorded during this session."""
+        return list(self._responses)
 
 
 class PromptBuilder:
