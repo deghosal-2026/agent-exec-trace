@@ -84,6 +84,12 @@ def health() -> None:
     help="Sample N traces and include LLM detectors",
 )
 @click.option(
+    "--llm-batch",
+    default=25,
+    type=int,
+    help="Save progress every N traces during LLM sampling",
+)
+@click.option(
     "--resume",
     is_flag=True,
     default=False,
@@ -105,6 +111,7 @@ def validate(
     input_dir: str,
     output_dir: str,
     llm_sample: int | None,
+    llm_batch: int,
     resume: bool,
     diagnose: bool,
     db: bool,
@@ -130,7 +137,7 @@ def validate(
         v = Validator(
             input_dir=input_dir, output_dir=output_dir,
             llm_sample=llm_sample, resume=resume, diagnose=diagnose,
-            pool=pool,
+            pool=pool, llm_batch=llm_batch,
         )
         if diagnose:
             diag_report: dict[str, Any] = v.run_diagnose()

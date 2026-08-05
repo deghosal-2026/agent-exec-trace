@@ -44,6 +44,7 @@ class Validator:
         resume: bool = False,
         diagnose: bool = False,
         pool: object | None = None,
+        llm_batch: int = 25,
     ) -> None:
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
@@ -51,6 +52,7 @@ class Validator:
         self.resume = resume
         self.diagnose = diagnose
         self.pool = pool
+        self.llm_batch = llm_batch
         self.detectors: list[BaseDetector] = create_all_detectors()
         if self.llm_sample:
             self.detectors.extend(create_llm_detectors())
@@ -209,14 +211,23 @@ class Validator:
             completed.add(trace_key)
             processed += 1
 
-            if processed % 5000 == 0:
+            save_interval = self.llm_batch if self.llm_sample else 5000
+            if processed % save_interval == 0:
+                llm_summary = ""
+                if self.llm_sample:
+                    llm_found = {
+                        dt: cnt for dt, cnt in anomaly_counter.items()
+                        if dt in ("semantic_loop", "hallucination", "goal_drift",
+                                  "quality_degradation", "confusion_pattern")
+                    }
+                    llm_summary = (
+                        f", LLM: {llm_found}" if llm_found else ", LLM: 0"
+                    )
                 logger.info(
-                    "Processed %d/%d traces, %d anomalies",
-                    processed,
-                    total,
-                    len(anomalies_by_trace),
+                    "Processed %d/%d traces, %d anomalies%s",
+                    processed, total, len(anomalies_by_trace), llm_summary,
                 )
-                if self.resume:
+                if self.resume or self.llm_sample:
                     self._save_progress(
                         completed,
                         anomaly_counter,
