@@ -223,7 +223,7 @@ async def test_validator_parses_tool_response_blobs() -> None:
                 "source_row_idx": 1,
             },
         ]
-        for i in range(3):
+        for i, tname in enumerate(["search_files", "find_files", "list_files"]):
             rows.append(
                 {
                     "trace_id": "t4",
@@ -233,7 +233,10 @@ async def test_validator_parses_tool_response_blobs() -> None:
                     "start_time": None,
                     "end_time": None,
                     "duration_ms": 100,
-                    "attributes_json": json.dumps({"from": "tool", "value": tool_blob}),
+                    "attributes_json": json.dumps({
+                        "from": "tool",
+                        "value": tool_blob.replace("search_files", tname),
+                    }),
                     "status": "ok",
                     "source_dataset": "test",
                     "source_row_idx": 1,

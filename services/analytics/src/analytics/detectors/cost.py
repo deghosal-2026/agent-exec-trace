@@ -352,7 +352,7 @@ class PerToolCostSpikeDetector(BaseDetector):
 
 
 class WastedToolCallsDetector(BaseDetector):
-    """Detect tool calls producing no effect (identical output 3+ times)."""
+    """Detect tool calls producing no effect (identical output across different tools)."""
 
     anomaly_type = "wasted_tool_calls"
 
@@ -366,12 +366,12 @@ class WastedToolCallsDetector(BaseDetector):
 
         import json
 
-        output_counts: dict[str, int] = {}
+        output_tool_map: dict[str, set[str]] = {}
 
         for span in tool_spans:
             result_raw = span.attributes.get("gen_ai.tool.result")
             if result_raw is None:
-                result_str = ""
+                continue
             elif isinstance(result_raw, str):
                 result_str = result_raw
             else:
@@ -380,22 +380,25 @@ class WastedToolCallsDetector(BaseDetector):
                 except (TypeError, ValueError):
                     result_str = str(result_raw)
 
-            output_counts[result_str] = output_counts.get(result_str, 0) + 1
+            tool_name = str(span.attributes.get("gen_ai.tool.name", "unknown"))
+            output_tool_map.setdefault(result_str, set()).add(tool_name)
 
         max_wasted = 0
         wasted_output = ""
-        for output_str, count in output_counts.items():
-            if count > max_wasted and count >= self.threshold:
-                max_wasted = count
-                wasted_output = output_str
+        for output_str, tool_names in output_tool_map.items():
+            count = sum(1 for _ in tool_spans if self._matches_output(_, output_str))
+            if count >= self.threshold and len(tool_names) >= 2 and count > max_wasted:
+                    max_wasted = count
+                    wasted_output = output_str
 
         if max_wasted > 0:
             severity = self._severity(float(max_wasted), float(self.threshold))
             output_preview = wasted_output[:200] if wasted_output else "(empty)"
+            explain = f"Wasted tool calls: repeated {max_wasted}x across different tools"
             return self._build_anomaly(
                 summary,
                 severity,
-                f"Wasted tool calls: identical output repeated {max_wasted} times",
+                explain,
                 {
                     "wasted_count": max_wasted,
                     "threshold": self.threshold,
@@ -403,3 +406,18 @@ class WastedToolCallsDetector(BaseDetector):
                 },
             )
         return None
+
+    @staticmethod
+    def _matches_output(span: SpanNode, target: str) -> bool:
+        import json
+
+        result_raw = span.attributes.get("gen_ai.tool.result")
+        if result_raw is None:
+            return False
+        elif isinstance(result_raw, str):
+            return result_raw == target
+        else:
+            try:
+                return json.dumps(result_raw, sort_keys=True) == target
+            except (TypeError, ValueError):
+                return str(result_raw) == target

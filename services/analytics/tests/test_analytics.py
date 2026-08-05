@@ -1374,7 +1374,23 @@ class TestRemainingRuleDetectors:
         assert anomaly is not None
         assert anomaly.evidence is not None
         assert anomaly.evidence["tool_name"] == "search"
-        assert wasted.detect(summary, spans) is not None
+        assert wasted.detect(summary, spans) is None
+
+    def test_wasted_calls_across_different_tools(self) -> None:
+        from analytics.detectors.cost import WastedToolCallsDetector
+
+        wasted = WastedToolCallsDetector(threshold=3)
+        summary = self._summary()
+        spans = self._root([
+            self._tool("s1", "search", **{"gen_ai.tool.result": "same"}),
+            self._tool("s2", "lookup", **{"gen_ai.tool.result": "same"}),
+            self._tool("s3", "fetch", **{"gen_ai.tool.result": "same"}),
+            self._tool("s4", "other", **{"gen_ai.tool.result": "x"}),
+        ])
+        anomaly = wasted.detect(summary, spans)
+        assert anomaly is not None
+        assert anomaly.evidence is not None
+        assert anomaly.evidence["wasted_count"] == 3
 
     @pytest.mark.asyncio
     async def test_cross_run_and_output_drift_async(self) -> None:
