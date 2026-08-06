@@ -1,6 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT License">
+  <img src="https://img.shields.io/badge/version-0.1.0-orange.svg" alt="v0.1.0">
 </p>
 
 # agent-exec-trace
@@ -19,6 +20,23 @@ Traditional observability shows you what your services did — latency, errors, 
 
 ---
 
+## Quickstart
+
+```bash
+git clone https://github.com/deghosal-2026/agent-exec-trace.git
+cd agent-exec-trace
+
+make setup        # install SDK + services in editable mode
+make stack-up     # boot Postgres, Jaeger, Collector, API, Analytics, Web
+make seed-e2e     # seed 96 runs, ~240 anomalies, 4 agents
+
+open http://localhost:5173   # the operator UI
+```
+
+See the [User Guide](docs/explanation/user-guide.md) for a full tour of the UI and investigation workflows, or the [Quickstart Guide](docs/reference/quickstart.md) for a step-by-step developer walkthrough.
+
+---
+
 ## What It Does
 
 | Feature | Description |
@@ -26,17 +44,18 @@ Traditional observability shows you what your services did — latency, errors, 
 | Behavior trace schema | Defines span/event types for planning, tool use, memory, validation, approvals, and escalations |
 | Instrumentation SDK | Wraps LangGraph and raw Python agents to emit behavior events |
 | OTLP export | Uses OpenTelemetry/OTLP to pipe behavior data into Tempo, Jaeger, or any OTel-compatible backend |
-| Loop detection | Automatically identifies retry spirals and tool-call loops from trace data |
-| Cost anomaly detection | Flags runs where cost-per-success spikes or deviates from baseline |
-| Run explorer UI | Timeline view, event detail, and filters for inspecting individual agent runs |
-| Version comparison | Side-by-side trace diff between agent versions to see what actually changed |
-| Fleet dashboards | Cross-agent views for drift, tool mix, cost-per-success, and intervention patterns |
+| 35 anomaly detectors | Deterministic rule-based engine across 7 behavioral categories (tool, cost, runtime, retry, interaction, output, cross-run) |
+| 5 LLM detectors | Semantic-level anomaly detection for loops, hallucinations, goal drift, quality degradation, confusion patterns |
+| Run Timeline | Span tree with expand/collapse, anomaly markers, duration bars, and attribute inspection |
+| Fleet Dashboard | Cross-agent views grouped by agent/version/workload with summary cards, filters, and drill-down |
+| Version Compare | Side-by-side delta analysis between two version cohorts (cost, retry rate, success rate, tool usage) |
+| Anomaly Inbox | Prioritized triage list with severity/type/agent filters and one-click drill-down to the run |
 
 ---
 
 ## Features
 
-`agent-exec-trace` ships a deterministic anomaly detection engine with **35 detectors** organized across **7 behavioral categories**:
+`agent-exec-trace` ships **35 deterministic anomaly detectors** across **7 behavioral categories**:
 
 | Category | Count | Detects |
 |---|---|---|
@@ -48,7 +67,11 @@ Traditional observability shows you what your services did — latency, errors, 
 | **Output Quality** | 4 | Empty/low output, indeterminate status, output drift |
 | **Cross-Run Patterns** | 3 | Anomaly clusters, run frequency, first-run heuristics |
 
-All detectors are deterministic (rule-based, zero LLM dependency) and produce structured anomaly records with severity, explanation, and evidence payloads. Configurable thresholds per detector per workload with graceful degradation for missing data and edge cases.
+All detectors are deterministic (rule-based, zero LLM dependency) and produce structured anomaly records with severity, explanation, and evidence payloads. **5 LLM-augmented detectors** (SemanticLoop, Hallucination, GoalDrift, QualityDegradation, ConfusionPattern) provide semantic analysis via local MLX models.
+
+See the [User Guide → Reference: Anomaly Types](docs/explanation/user-guide.md#reference-anomaly-types) for the full 40-type catalog with thresholds, evidence payloads, and false-positive risks.
+
+---
 
 ## What It Is Not
 
@@ -71,58 +94,63 @@ agent-exec-trace/
 ├── apps/web/                # Operator UI (React)
 ├── deploy/                  # Compose configs, collector configs, local stack
 ├── examples/                # Demo agents and seeded scenarios
-├── tests/                   # Cross-cutting / end-to-end tests
-├── docs/                    # Architecture, design, field-test, test, WBS, reference
+├── scripts/                 # DB migrations, e2e seed data
+├── .github/                 # Issue/PR templates, contributing guide
+├── docs/
+│   ├── explanation/         # user guide, screenshots
+│   ├── reference/           # setup, quickstart, instrumentation, config, limitations, releases
 │   ├── architecture/        # spec, architecture diagram, DB schema
 │   ├── design/              # PRD, agent designs, CLI plans, demo scenarios
+│   ├── test/                # e2e test plan, seed data, test report
 │   ├── field-test/          # field-test plan and reports
-│   ├── test/                # e2e test plan, seed data, test reports
-│   ├── reference/           # developer setup guide
 │   └── wbs/                 # detailed WBS (4 parts + table of contents)
-└── Makefile                 # setup / lint / test / stack entrypoints
+├── Makefile                 # setup / lint / test / stack entrypoints
+├── CHANGELOG.md
+├── CONTRIBUTING.md          # → .github/CONTRIBUTING.md
+├── CODE_OF_CONDUCT.md
+├── SECURITY.md
+└── MAINTAINERS.md
 ```
-
-For the complete work breakdown structure, see [docs/wbs/wbs-v0.1.0.md](docs/wbs/wbs-v0.1.0.md).
-
-See [docs/reference/developer-setup.md](docs/reference/developer-setup.md) for the developer onboarding flow.
-
-Traces are stored at `data/traces/processed/` with a `manifest.json` index.
 
 ---
 
-## Quickstart
+## Documentation
 
-> Coming soon. Target flow:
-
-```bash
-pip install agent-exec-trace
-
-# Instrument your agent
-from agent_exec_trace import instrument
-instrument(my_agent)
-
-# Run your agent — traces flow to your OTLP backend
-```
+| Doc | Audience | Purpose |
+|---|---|---|
+| [User Guide](docs/explanation/user-guide.md) | Operators | Full UI tour, anomaly type catalog, investigation workflows |
+| [Quickstart Guide](docs/reference/quickstart.md) | Developers | Step-by-step: clone → setup → boot → seed → run demo |
+| [Instrumentation Guide](docs/reference/instrumentation.md) | Developers | How to instrument LangGraph and raw Python agents |
+| [Configuration Reference](docs/reference/configuration.md) | Operators / Developers | All 70+ env vars across SDK, analytics, API, web |
+| [Developer Setup](docs/reference/developer-setup.md) | Contributors | Dev environment, quality gates, conventions |
+| [Known Limitations](docs/reference/limitations.md) | Everyone | v0.1.0 limitations and planned resolutions |
+| [Release Notes v0.1.0](docs/reference/release-notes-v0.1.0.md) | Everyone | What's in the first release |
+| [CHANGELOG](CHANGELOG.md) | Everyone | Keep-a-Changelog format |
+| [Architecture](docs/architecture/architecture-v0.1.0.md) | Contributors | System design and data flow |
+| [Specification](docs/architecture/spec-v0.1.0.md) | Contributors | Technical spec, assumptions, open questions |
+| [WBS](docs/wbs/wbs-v0.1.0.md) | Contributors | Complete work breakdown structure |
+| [Test Plan](docs/test/e2e-testing-plan.md) | Contributors | E2E test plan, CUJs, screenshot strategy |
+| [Test Report](docs/test/e2e-test-report-v1.md) | Contributors | M11 results: 34/34 Playwright tests pass |
 
 ---
 
 ## Testing
 
-End-to-end UI tests run against the seeded local stack via Playwright.
+```bash
+make test        # Python unit tests (pytest --cov)
+make lint        # ruff check
+make typecheck   # mypy --strict
+
+# E2E (requires running stack)
+make seed-e2e                         # seed Postgres with demo data
+cd apps/web && npx playwright test    # 34 UI tests across 6 spec files
+```
 
 | Doc | Purpose |
 |---|---|
 | [docs/test/e2e-testing-plan.md](docs/test/e2e-testing-plan.md) | Test plan: scope, CUJs, test catalog, screenshot strategy |
-| [docs/test/e2e-seed-data.md](docs/test/e2e-seed-data.md) | Mock data shape produced by `scripts/seed-e2e-data.py` |
+| [docs/test/e2e-seed-data.md](docs/test/e2e-seed-data.md) | Mock data shape: 4 agents, 96 runs, ~240 anomalies |
 | [docs/test/e2e-test-report-v1.md](docs/test/e2e-test-report-v1.md) | v0.1.0 (M11) test report — 34/34 pass, findings, v0.2.0 takeaways |
-
-Run the suite:
-
-```bash
-make e2e   # boots stack, seeds, runs Playwright, captures screenshots
-```
-
-Specs live under `apps/web/tests/e2e/` and target Chromium.
 
 ---
 
@@ -132,22 +160,19 @@ Specs live under `apps/web/tests/e2e/` and target Chromium.
 Agent Runtime (LangGraph / Python)
         │
         ▼
-  Instrumentation SDK ─── emits behavior spans
+  Instrumentation SDK ─── emits behavior spans (OTLP)
         │
         ▼
-  OpenTelemetry Collector (OTLP)
+  OpenTelemetry Collector
         │
         ▼
-  Trace Backend (Tempo / Jaeger)
+  Jaeger (raw trace storage)
         │
         ▼
-  Run Explorer UI (FastAPI + React)
-        │
+  Analytics Service ─── reads traces, runs 35+ detectors
+        │                  writes summaries + anomalies to Postgres
         ▼
-  Behavior Analytics
-  • 35 deterministic detectors (7 categories)
-  • loop detection, cost anomaly, retry storm, drift
-  • structured anomaly records with evidence payloads
+  Postgres ◄── API Service (FastAPI) ◄── React UI (Vite)
 ```
 
 ---
@@ -167,40 +192,47 @@ Agent Runtime (LangGraph / Python)
 |---|---|
 | Instrumentation | OpenTelemetry Python SDK |
 | Collection | OpenTelemetry Collector |
-| Traces | Tempo or Jaeger |
-| Metrics | Prometheus |
-| Dashboards | Grafana |
-| API / UI | FastAPI + React |
+| Traces | Jaeger (Tempo-compatible) |
+| API / UI | FastAPI + React (Vite) |
+| Analytics | Async Python worker + 35 detectors |
+| Database | PostgreSQL (read-model) |
 | Sample workloads | LangGraph + raw Python agents |
 
-Everything runs locally. Demoable with your own agents and seeded bad runs.
+Everything runs locally via `docker compose up -d`. Demoable with seeded bad runs.
 
 ---
 
 ## Roadmap
 
-### v0.1.0 — First Release
-- [ ] Behavior trace schema
-- [ ] Instrumentation wrappers for LangGraph and raw Python agents
-- [ ] OTLP export into local Tempo/Jaeger
-- [ ] Timeline UI for single-run inspection
-- [ ] Loop and cost anomaly detection
-- [ ] Version metadata correlation
+### v0.1.0 — Current
+- [x] Monorepo with SDK, analytics, API, web, deploy, examples
+- [x] Behavior trace schema (8 semantic span types)
+- [x] LangGraph + raw Python instrumentation adapters
+- [x] OTLP export → Jaeger + Tempo
+- [x] 35 deterministic anomaly detectors (7 categories)
+- [x] 5 LLM-augmented detectors (MLX via local models)
+- [x] Run Timeline with span tree, expand/collapse, anomaly markers
+- [x] Fleet Health table with agent/version/workload filters
+- [x] Version Compare with cost/retry/success deltas + tool usage
+- [x] Anomaly Inbox with severity/type/agent triage filters
+- [x] 150K real trace corpus ingested and validated (42.2% per-trace compatibility)
+- [x] 34/34 Playwright e2e tests pass
+- [x] Local compose stack: 6 services, 1 command
 
 ### v0.2.0
-- [ ] Side-by-side run comparison UI
-- [ ] Prompt/model correlation views
-- [ ] Fleet behavior dashboards
+- [ ] PydanticAI adapter
+- [ ] Policy overlay and memory audit views
+- [ ] Span tree materialization (real spans in API, not stubbed)
+- [ ] Cross-browser Playwright smoke tests
+- [ ] `make e2e` wired to CI
+- [ ] Event-based waits replacing `waitForTimeout` in tests
+- [ ] LLM detector validation against production workloads
+- [ ] Streaming trace ingestion
 
-### v0.3.0
-- [ ] Drift detection hooks
-- [ ] Approval/policy event overlays
-- [ ] Control-plane integration
+### Roadmap Notes
 
-### v0.4.0
-- [ ] Multi-agent interaction maps
-- [ ] Public demo workload pack
-- [ ] Benchmark-driven diagnostics stories
+- [Semconv extension proposals](docs/architecture/spec-v0.1.0.md) should be discussed in GitHub issues and tracked in `docs/architecture/`.
+- Multi-agent topology views, drift scoring, and benchmark-driven diagnostics are on the long-term radar but not committed to a specific release.
 
 ---
 
@@ -211,6 +243,7 @@ Everything runs locally. Demoable with your own agents and seeded bad runs.
 - **Human-readable** — default views should make bad runs obvious, not require a query language
 - **Local-first** — everything runs on a laptop before it needs a cluster
 - **Not framework-locked** — SDK wraps any agent runtime, starting with LangGraph and raw Python
+- **Deterministic** — every detector output is reproducible given the same trace and config (LLM detectors degrade gracefully)
 
 ---
 

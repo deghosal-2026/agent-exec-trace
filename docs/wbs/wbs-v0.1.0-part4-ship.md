@@ -323,7 +323,7 @@ the triage workflow.
 
 ---
 
-## Milestone 12: Documentation and OSS Readiness
+## Milestone 12: Documentation and OSS Readiness ✅
 
 ### 12.1 Developer docs
 
@@ -331,10 +331,10 @@ This task turns the internal architecture into something another engineer can ac
 
 **Success looks like:** a new developer can set up the stack, instrument the demo, and understand the service layout by following docs alone.
 
-- [ ] Add local setup doc
-- [ ] Add architecture summary doc links
-- [ ] Add instrumentation quickstart
-- [ ] Add privacy/configuration doc
+- [x] Add local setup doc
+- [x] Add architecture summary doc links
+- [x] Add instrumentation quickstart
+- [x] Add privacy/configuration doc
 
 ### 12.1.1 Configuration documentation
 
@@ -342,10 +342,10 @@ This task turns the configuration surface into something maintainable. Since the
 
 **Success looks like:** contributors can find one clear place that lists all major config knobs and understands which service owns each one.
 
-- [ ] Document SDK configuration surface
-- [ ] Document analytics configuration surface
-- [ ] Document API configuration surface
-- [ ] Document web app configuration surface
+- [x] Document SDK configuration surface
+- [x] Document analytics configuration surface
+- [x] Document API configuration surface
+- [x] Document web app configuration surface
 
 ### 12.2 Product docs
 
@@ -353,9 +353,9 @@ This task explains the product surfaces in user terms. The documentation should 
 
 **Success looks like:** users can understand what each view is for, what an anomaly means, and how to interpret version comparison output.
 
-- [ ] Add "what each view means" doc
-- [ ] Add anomaly explanation doc
-- [ ] Add version compare interpretation doc
+- [x] Add "what each view means" doc
+- [x] Add anomaly explanation doc
+- [x] Add version compare interpretation doc
 
 ### 12.2.1 Versioning rules documentation
 
@@ -363,9 +363,9 @@ This task makes the compare model understandable. Since version comparison is a 
 
 **Success looks like:** users can read one doc and understand the required `agent_version` field, optional secondary version dimensions, and how compare cohorts are formed.
 
-- [ ] Document required `agent_version`
-- [ ] Document optional prompt/model/tool-schema version dimensions
-- [ ] Document compare cohort expectations and caveats
+- [x] Document required `agent_version`
+- [x] Document optional prompt/model/tool-schema version dimensions
+- [x] Document compare cohort expectations and caveats
 
 ### 12.3 OSS readiness
 
@@ -373,10 +373,10 @@ This task prepares the repo to receive outside contributors. The goal is to make
 
 **Success looks like:** contribution paths are visible, roadmap context is easy to find, and the repo feels intentionally open rather than merely public.
 
-- [ ] Add contribution guidance for monorepo layout
-- [ ] Add contribution areas for adapters/detectors/views
-- [ ] Add issue templates if desired
-- [ ] Add roadmap reference to PRD/docs
+- [x] Add contribution guidance for monorepo layout
+- [x] Add contribution areas for adapters/detectors/views
+- [x] Add issue templates if desired
+- [x] Add roadmap reference to PRD/docs
 
 ### 12.4 OSS community scaffolding
 
@@ -384,11 +384,11 @@ This task prepares the repo to behave like a serious OSS project instead of a pr
 
 **Success looks like:** the repository has the minimum community and governance surfaces expected of a credible OSS project, and a new visitor can understand how to participate.
 
-- [ ] Add `CODE_OF_CONDUCT.md`
-- [ ] Add or refine `CONTRIBUTING.md`
-- [ ] Add issue templates for bug, feature request, and adapter proposal
-- [ ] Add pull request template
-- [ ] Add `SECURITY.md`
+- [x] Add `CODE_OF_CONDUCT.md`
+- [x] Add or refine `CONTRIBUTING.md`
+- [x] Add issue templates for bug, feature request, and adapter proposal
+- [x] Add pull request template
+- [x] Add `SECURITY.md`
 
 ### 12.5 OSS maintainer guidance
 
@@ -396,10 +396,10 @@ This task creates the basic maintainer-facing operational layer. It should make 
 
 **Success looks like:** the repo documents who the project is for, what contribution seams are welcomed, how roadmap work is organized, and how maintainers should evaluate incoming changes.
 
-- [ ] Add maintainer notes or `MAINTAINERS.md` if desired
-- [ ] Document supported contribution seams: adapters, detectors, views, docs, demo workloads
-- [ ] Document how semconv extension proposals should be discussed and tracked
-- [ ] Add a short roadmap snapshot for `v0.1.0` and `v0.2.0`
+- [x] Add maintainer notes or `MAINTAINERS.md` if desired
+- [x] Document supported contribution seams: adapters, detectors, views, docs, demo workloads
+- [x] Document how semconv extension proposals should be discussed and tracked
+- [x] Add a short roadmap snapshot for `v0.1.0` and `v0.2.0`
 
 ### 12.6 OSS release packaging
 
@@ -407,11 +407,11 @@ This task makes the first public release consumable. It covers the presentation 
 
 **Success looks like:** the release includes clear install/run instructions, visible screenshots or demo references, and enough packaging polish that someone can evaluate the project without reading the full codebase.
 
-- [ ] Add screenshots or animated captures for key views
-- [ ] Add quickstart section for running the local stack
-- [ ] Add SDK quickstart for instrumenting one demo agent
-- [ ] Add release notes draft for the first OSS release
-- [ ] Add known limitations section for `v0.1.0`
+- [x] Add screenshots or animated captures for key views
+- [x] Add quickstart section for running the local stack
+- [x] Add SDK quickstart for instrumenting one demo agent
+- [x] Add release notes draft for the first OSS release
+- [x] Add known limitations section for `v0.1.0`
 
 ### 12.7 GitHub issue generation prep
 
@@ -419,14 +419,72 @@ This task makes the planning docs ready to turn into tracked work items. Since e
 
 **Success looks like:** maintainers can lift a subsection into a GitHub issue with minimal rewriting and consistent metadata.
 
-- [ ] Add suggested labels to issue conversion guidance
-- [ ] Add dependency notation guidance
-- [ ] Add example issue body template in docs if helpful
-- [ ] Identify milestone subsections that should become the first issue batch
+- [x] Add suggested labels to issue conversion guidance
+- [x] Add dependency notation guidance
+- [x] Add example issue body template in docs if helpful
+- [x] Identify milestone subsections that should become the first issue batch
 
 **Milestone 12 Quality Gates:**
+- [x] Code review passed
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Tests pass: all unit/integration tests green (`pytest`)
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+
+---
+
+## Milestone 13: LLM Validation on Synthetic Traces + GitHub Agent SDK Integration
+
+> **Priority:** Pre-release validation gate. Before declaring v0.1.0 release-ready,
+> the LLM detector pipeline must be validated against synthetic traces, and the SDK
+> integration workflow must be proven against real OSS agents.
+
+### 13.1 LLM detector validation on 200 synthetic traces
+
+**Issue:** (new)
+
+**Context:** The 1M synthetic trace corpus already exists in `data/traces/synthetic/`.
+The LLM detectors (SemanticLoop, Hallucination, GoalDrift, QualityDegradation,
+ConfusionPattern, EmbeddingDrift) were built in M8.7 but never validated against
+a controlled sample. This task runs the rule-based pipeline first, then the LLM
+pipeline, and compares results.
+
+**Success looks like:** A single script generates a comparison report showing which
+LLM detectors fired vs. rule-based only, per-detector counts, and any new anomaly
+types found by LLM that rule-based detectors missed.
+
+- [ ] Create `scripts/m13/run-llm-validation.sh`: orchestrates the full pipeline
+- [ ] Step 1: Run `analytics validate --max-traces 200` on synthetic traces → output to `data/m13/without-llm/`
+- [ ] Step 2: Run `analytics validate --max-traces 200 --llm-sample 200` → output to `data/m13/with-llm/`
+- [ ] Step 3: Generate comparison report with per-detector diff counts
+- [ ] Step 4: Log LLM responses to `data/m13/llm-responses/` for quality audit
+- [ ] Verify LLM client reachability (MLX server status, model loaded)
+- [ ] Document findings in `docs/reference/m13-llm-validation-report.md`
+
+### 13.2 GitHub agent SDK integration
+
+**Issue:** (new)
+
+**Context:** The v0.1.0 story depends on demonstrating that any agent can be
+instrumented with the SDK in minutes. Downloading real OSS agents from GitHub,
+instrumenting them, and running detectors proves the integration story and
+generates real trace data.
+
+**Success looks like:** 10 GitHub agents are downloaded, instrumented with the SDK,
+run to generate traces, and detectors identify anomalies visible in the UI.
+
+- [ ] Identify 10 target OSS agents from the list in `docs/design/trace-dataset-sources.md`
+- [ ] Download and set up each agent locally
+- [ ] Instrument each agent with the SDK (LangGraph adapter or raw `@trace_agent` decorator)
+- [ ] Run each agent to generate traces → Jaeger
+- [ ] Analytics worker ingests traces → anomalies detected → Postgres
+- [ ] Verify anomalies visible in Anomaly Inbox and Run Timeline
+- [ ] Document the walkthrough in `docs/explanation/m13-agent-integration.md` with screenshots
+- [ ] Capture screenshots showing: SDK import, anomaly detection, UI with real agent data
+
+**Milestone 13 Quality Gates:**
 - [ ] Code review passed
-- [ ] Comments present on public API and complex logic
 - [ ] Ruff: zero violations (`ruff check .`)
 - [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
 - [ ] Tests pass: all unit/integration tests green (`pytest`)
@@ -434,9 +492,9 @@ This task makes the planning docs ready to turn into tracked work items. Since e
 
 ---
 
-## Milestone 13: Release Validation
+## Milestone 14: Release Validation
 
-### 13.1 Release criteria check
+### 14.1 Release criteria check
 
 This task maps the implementation back to the PRD promises. The release should not be considered complete because components exist; it is complete when the core operator outcomes are visibly true.
 
@@ -449,7 +507,7 @@ This task maps the implementation back to the PRD promises. The release should n
 - [ ] Confirm version compare works end-to-end
 - [ ] Confirm the need for a separate field-test plan is documented and tracked as a required follow-on before stronger production confidence claims
 
-### 13.1.1 Demo acceptance verification
+### 14.1.1 Demo acceptance verification
 
 This task explicitly checks the demo acceptance bar instead of assuming it is implied by other validations. Since demo-first is a design choice, the release should prove the demo is actually strong.
 
@@ -461,7 +519,7 @@ This task explicitly checks the demo acceptance bar instead of assuming it is im
 - [ ] Validate one fleet grouping demo
 - [ ] Validate one version compare demo
 
-### 13.2 Final packaging
+### 14.2 Final packaging
 
 This task makes sure the repo is coherent as a releasable OSS artifact. The main concern is that docs, commands, package layout, and stack orchestration all agree with reality.
 
@@ -472,7 +530,7 @@ This task makes sure the repo is coherent as a releasable OSS artifact. The main
 - [ ] Confirm docs match actual commands and paths
 - [ ] Confirm repo structure is reflected in README
 
-### 13.3 Launch prep
+### 14.3 Launch prep
 
 This task prepares the project to be shown and evaluated as a real OSS release. It is about making the first external impression legible and honest.
 
@@ -482,7 +540,7 @@ This task prepares the project to be shown and evaluated as a real OSS release. 
 - [ ] Prepare initial issues for `v0.2.0`
 - [ ] Prepare known limitations doc for `v0.1.0`
 
-### 13.4 Post-release follow-on tracking
+### 14.4 Post-release follow-on tracking
 
 This task prevents `v0.1.0` from ending with undocumented next steps. It should capture the immediate follow-ons that are already known from the PRD and WBS.
 
@@ -493,7 +551,7 @@ This task prevents `v0.1.0` from ending with undocumented next steps. It should 
 - [ ] Track memory review and policy overlay as follow-on work
 - [ ] Track `v0.2.0` issue creation as a next step
 
-**Milestone 13 Quality Gates:**
+**Milestone 14 Quality Gates:**
 - [ ] Code review passed
 - [ ] Comments present on public API and complex logic
 - [ ] Ruff: zero violations (`ruff check .`)

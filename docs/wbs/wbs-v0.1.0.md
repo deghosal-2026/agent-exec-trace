@@ -10,7 +10,7 @@
 | [Part 1](wbs-v0.1.0-part1-foundation.md) | M0, M1, M2, M3 | Foundation, demo agent, Python SDK, OTel export |
 | [Part 2](wbs-v0.1.0-part2-services.md) | M4, M5, M6, M7, M8 | Analytics service, materialization, anomaly engine, API, web UI |
 | [Part 3](wbs-v0.1.0-part3-detection.md) | M8.6, M8.7, M8.8, M8.9, M9 | Robust detectors, LLM augmentation, trace datasets, field tests, compatibility |
-| [Part 4](wbs-v0.1.0-part4-ship.md) | M10, M11, M12, M13 | Local stack, e2e Playwright, docs/OSS, release validation |
+| [Part 4](wbs-v0.1.0-part4-ship.md) | M10, M11, M12, M13, M14 | Local stack, e2e Playwright, docs/OSS, LLM validation + GitHub agent integration, release validation |
 
 ## Quality Gates — Required for Every Milestone
 
@@ -102,8 +102,9 @@ Suggested issue types for later GitHub conversion:
 | Milestone 9 | non-LLM + LLM trace compatibility issues (9.1.x ✅, 9.2.x ⟳ v0.2.0) ✅ |
 | Milestone 10 | local stack/demo + service-level testing issues ✅ |
 | Milestone 11 | e2e Playwright testing and screenshot validation ✅ |
-| Milestone 12 | documentation/OSS readiness issues |
-| Milestone 13 | release validation issues |
+| Milestone 12 | documentation/OSS readiness issues ✅ |
+| Milestone 13 | LLM validation on synthetic traces + GitHub agent SDK integration |
+| Milestone 14 | release validation issues |
 
 ## Phased Issue Creation Strategy
 
