@@ -1,13 +1,14 @@
-/** Shared UI components for the agent-exec-trace web frontend.
+/** Shared UI components — agent-exec-trace v0.1.0
  *
- * Provides reusable visual primitives: badges, cards, skeletons, layout shell,
- * span tree, span detail, and filter controls.  All components use Tailwind CSS
- * classes for styling.
+ * Cyber-industrial design system: dark sidebar, electric-blue accents, refined
+ * data surfaces, animated micro-interactions, and professional status indicators.
  */
 
 import { useState, type ReactNode, type MouseEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { Anomaly } from "../types/api";
+
+/* ── Design tokens ── */
 
 const STATUS_COLORS = {
   success: "bg-emerald-500",
@@ -15,432 +16,390 @@ const STATUS_COLORS = {
   loop: "bg-amber-500",
 } as const;
 
-const ANOMALY_COLORS = {
-  info: "bg-sky-500",
-  warning: "bg-amber-500",
-  critical: "bg-red-500",
+const STATUS_LABELS: Record<string, string> = {
+  success: "Healthy",
+  error: "Failed",
+  loop: "Looping",
+};
+
+const SEVERITY_COLORS = {
+  info: { bg: "bg-indigo-50", text: "text-indigo-700", dot: "bg-indigo-500", border: "border-indigo-200" },
+  warning: { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-500", border: "border-amber-200" },
+  critical: { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500", border: "border-red-200" },
 } as const;
 
-const ANOMALY_TYPE_LABELS = {
-  loop: "Loop",
-  retry_storm: "Retry Storm",
-  cost_spike: "Cost Spike",
-} as const;
+const ANOMALY_TYPE_LABELS: Record<string, string> = {
+  loop: "Loop", pattern_loop: "Pattern Loop", argument_loop: "Arg Loop",
+  retry_storm: "Retry Storm", systemic_retry: "Systemic Retry", cascading_retry: "Cascading Retry",
+  cost_spike: "Cost Spike", cost_vs_baseline: "Cost vs Baseline", token_explosion: "Token Explosion",
+  tool_error_rate: "Tool Errors", tool_latency: "Latency Spike", tool_timeout: "Timeout",
+  run_duration: "Duration", inactivity: "Inactivity", empty_response: "Empty Output",
+  output_drift: "Output Drift", escalation_rate: "Escalation",
+};
 
-const OPERATION_ICONS = {
-  invoke_agent: "🤖",
-  plan: "📋",
-  execute_tool: "🔧",
-  retrieval: "📎",
-  create_memory: "💾",
-  search_memory: "🔍",
-  update_memory: "✏️",
-  delete_memory: "🗑️",
-} as const;
+const OPERATION_ICONS: Record<string, string> = {
+  invoke_agent: "🤖", plan: "📋", execute_tool: "🔧", retrieval: "📎",
+  create_memory: "💾", search_memory: "🔍", update_memory: "✏️", delete_memory: "🗑️",
+};
 
-/** Colored badge showing a run's status (success/error/loop). */
+/* ── Status & Severity Badges ── */
+
 export function StatusBadge({ status }: { status: string }) {
-  const color = STATUS_COLORS[status as keyof typeof STATUS_COLORS] ?? "bg-gray-500";
+  const color = STATUS_COLORS[status as keyof typeof STATUS_COLORS] ?? "bg-slate-500";
+  const label = STATUS_LABELS[status] ?? status;
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium text-white ${color}`}
-    >
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white ${color}`}>
       <span className="size-1.5 rounded-full bg-white/70" />
-      {status}
+      {label}
     </span>
   );
 }
 
-/** Colored badge showing an anomaly type with severity-based background. */
-export function AnomalyBadge({
-  anomaly_type,
-  severity,
-}: {
-  anomaly_type: string;
-  severity: string;
-}) {
-  const sevColor =
-    ANOMALY_COLORS[severity as keyof typeof ANOMALY_COLORS] ?? "bg-gray-500";
+export function AnomalyBadge({ anomaly_type, severity }: { anomaly_type: string; severity: string }) {
+  const sev = SEVERITY_COLORS[severity as keyof typeof SEVERITY_COLORS] ?? SEVERITY_COLORS.warning;
+  const label = ANOMALY_TYPE_LABELS[anomaly_type] ?? anomaly_type.replace(/_/g, " ");
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-white ${sevColor} whitespace-nowrap`}
-    >
-      {ANOMALY_TYPE_LABELS[anomaly_type as keyof typeof ANOMALY_TYPE_LABELS] ?? anomaly_type}
+    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold ${sev.bg} ${sev.text} border ${sev.border}`}>
+      <span className={`size-1.5 rounded-full ${sev.dot}`} />
+      {label}
     </span>
   );
 }
 
-/** Small colored dot indicating an anomaly's severity. */
-export function AnomalyMarker({ severity }: { severity: string }) {
-  const color = ANOMALY_COLORS[severity as keyof typeof ANOMALY_COLORS] ?? "bg-gray-500";
-  return <span className={`inline-block size-2 rounded-full ${color} shrink-0`} />;
-}
-
-/** Small colored dot indicating an anomaly's severity (slightly larger). */
 export function SeverityDot({ severity }: { severity: string }) {
-  const color = ANOMALY_COLORS[severity as keyof typeof ANOMALY_COLORS] ?? "bg-gray-500";
-  return <span className={`inline-block size-2.5 rounded-full ${color}`} />;
+  const sev = SEVERITY_COLORS[severity as keyof typeof SEVERITY_COLORS] ?? SEVERITY_COLORS.warning;
+  return (
+    <span className={`inline-flex size-3 rounded-full ${sev.dot} ring-2 ring-offset-1 ${sev.dot.replace("bg-", "ring-")}/30 shrink-0`} />
+  );
 }
 
-/** Icon representing a span operation type. */
+export function AnomalyMarker({ severity }: { severity: string }) {
+  const sev = SEVERITY_COLORS[severity as keyof typeof SEVERITY_COLORS] ?? SEVERITY_COLORS.warning;
+  return <span className={`inline-block size-2 rounded-full ${sev.dot} shrink-0`} />;
+}
+
+/* ── Display formatters ── */
+
 export function OperationIcon({ operation }: { operation: string }) {
   const icon = OPERATION_ICONS[operation as keyof typeof OPERATION_ICONS] ?? "⚙️";
   return <span className="text-sm">{icon}</span>;
 }
 
-/** Formatted dollar cost display. */
 export function CostDisplay({ value }: { value: number }) {
-  return <span>${value.toFixed(4)}</span>;
-}
-
-/** Formatted duration, showing seconds when >= 1000ms. */
-export function DurationDisplay({ ms }: { ms: number }) {
-  if (ms >= 1000) return <span>{(ms / 1000).toFixed(2)}s</span>;
-  return <span>{ms}ms</span>;
-}
-
-/** Colored badge showing a delta value with up/down arrow and suffix. */
-export function DeltaBadge({ value, suffix = "%" }: { value: number; suffix?: string }) {
-  const isPositive = value > 0;
-  const isNeutral = value === 0;
   return (
-    <span
-      className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs font-semibold ${
-        isNeutral
-          ? "bg-gray-100 text-gray-600"
-          : isPositive
-            ? "bg-red-50 text-red-700"
-            : "bg-emerald-50 text-emerald-700"
-      }`}
-    >
-      {isNeutral ? "" : isPositive ? "↑" : "↓"}
-      {Math.abs(value).toFixed(1)}
-      {suffix}
+    <span className="tabular-nums">
+      <span className="text-slate-400">$</span>
+      {value.toFixed(4)}
     </span>
   );
 }
 
-/** Single pulsing skeleton row for loading placeholder lists. */
+export function DurationDisplay({ ms }: { ms: number }) {
+  if (ms >= 60000) return <span className="tabular-nums">{(ms / 60000).toFixed(1)}<span className="text-slate-400">m</span></span>;
+  if (ms >= 1000) return <span className="tabular-nums">{(ms / 1000).toFixed(2)}<span className="text-slate-400">s</span></span>;
+  return <span className="tabular-nums">{ms}<span className="text-slate-400">ms</span></span>;
+}
+
+export function DeltaBadge({ value, suffix = "%" }: { value: number; suffix?: string }) {
+  const abs = Math.abs(value);
+  const isUp = value > 0;
+  const isZero = value === 0;
+  if (isZero) return <span className="text-sm font-medium text-slate-400 tabular-nums">—</span>;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-bold tabular-nums ${isUp ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}`}>
+      <span className="text-[10px]">{isUp ? "▲" : "▼"}</span>
+      {abs.toFixed(1)}{suffix}
+    </span>
+  );
+}
+
+/* ── Loading skeletons ── */
+
 function SkeletonRow() {
   return (
     <div className="flex items-center gap-3 py-3">
-      <div className="h-4 w-4 animate-pulse rounded bg-gray-200" />
-      <div className="h-4 flex-1 animate-pulse rounded bg-gray-200" />
-      <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
-      <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+      <div className="h-4 w-4 shimmer rounded" />
+      <div className="h-4 w-3/5 shimmer rounded" />
+      <div className="h-4 w-20 shimmer rounded" />
+      <div className="h-4 w-16 shimmer rounded" />
     </div>
   );
 }
 
-/** Skeleton placeholder for a list of N rows. */
 export function SkeletonList({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="divide-y divide-gray-100">
-      {Array.from({ length: rows }).map((_, i) => (
-        <SkeletonRow key={i} />
-      ))}
+    <div className="divide-y divide-slate-100">
+      {Array.from({ length: rows }).map((_, i) => <SkeletonRow key={i} />)}
     </div>
   );
 }
 
-/** Skeleton card placeholder for loading states. */
-export function LoadingCard() {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="mb-3 h-4 w-24 animate-pulse rounded bg-gray-200" />
-      <div className="h-8 w-16 animate-pulse rounded bg-gray-200" />
-    </div>
-  );
+export function SkeletonCard() {
+  return <div className="h-28 shimmer rounded-xl" />;
 }
 
-/** Error state with message and optional retry button. */
-export function ErrorState({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry?: () => void;
-}) {
+/* ── States: Error, Empty ── */
+
+export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-8 text-center">
-      <span className="text-3xl">⚠️</span>
-      <p className="text-sm text-red-700">{message}</p>
+    <div className="flex flex-col items-center gap-4 rounded-2xl border border-red-200 bg-gradient-to-b from-red-50 to-white p-10 text-center animate-fade-in-up">
+      <div className="flex size-14 items-center justify-center rounded-2xl bg-red-100 text-2xl shadow-sm">⚠️</div>
+      <div>
+        <h3 className="text-sm font-semibold text-red-800">Something went wrong</h3>
+        <p className="mt-1 text-sm text-red-600">{message}</p>
+      </div>
       {onRetry && (
-        <button
-          onClick={onRetry}
-          className="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-        >
-          Retry
+        <button onClick={onRetry} className="rounded-xl bg-red-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 hover:shadow-md active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+          Try again
         </button>
       )}
     </div>
   );
 }
 
-/** Empty state placeholder with title and optional description. */
-export function EmptyState({
-  title,
-  description,
-}: {
-  title: string;
-  description?: string;
-}) {
+export function EmptyState({ title, description }: { title: string; description?: string }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-gray-300 p-12 text-center">
-      <span className="text-4xl text-gray-300">∅</span>
-      <h3 className="text-sm font-medium text-gray-700">{title}</h3>
-      {description && <p className="text-xs text-gray-500">{description}</p>}
+    <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-12 text-center animate-fade-in">
+      <div className="flex size-14 items-center justify-center rounded-2xl bg-slate-100 text-2xl text-slate-300">∅</div>
+      <h3 className="text-sm font-semibold text-slate-600">{title}</h3>
+      {description && <p className="max-w-xs text-sm text-slate-400">{description}</p>}
     </div>
   );
 }
 
+/* ── Navigation Sidebar ── */
+
 const SIDEBAR_ITEMS = [
-  { path: "/", label: "Dashboard", icon: "⌂" },
-  { path: "/runs", label: "Run Timeline", icon: "↗" },
+  { path: "/", label: "Dashboard", icon: "◈" },
+  { path: "/runs", label: "Run Timeline", icon: "⏱" },
   { path: "/fleet", label: "Fleet Health", icon: "⊞" },
   { path: "/compare", label: "Version Compare", icon: "⇄" },
-  { path: "/anomalies", label: "Anomaly Inbox", icon: "⚠" },
+  { path: "/anomalies", label: "Anomaly Inbox", icon: "⚡" },
 ];
 
-/** Sidebar navigation component with active route highlighting. */
 function Sidebar() {
   const location = useLocation();
   return (
-    <nav className="flex w-56 shrink-0 flex-col border-r border-gray-200 bg-white">
-      <div className="flex items-center gap-2 border-b border-gray-200 px-5 py-4">
-        <span className="text-xl">⟁</span>
-        <span className="text-sm font-semibold text-gray-900">AET</span>
+    <nav className="flex w-60 shrink-0 flex-col border-r border-slate-800 bg-[#0b1120]">
+      <div className="flex items-center gap-3 border-b border-slate-800 px-5 py-5">
+        <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/25">
+          <span className="text-lg font-bold text-white">⟁</span>
+        </div>
+        <div>
+          <div className="text-sm font-bold text-white leading-tight">agent-exec</div>
+          <div className="text-[10px] font-medium uppercase tracking-widest text-blue-400">Trace</div>
+        </div>
       </div>
       <div className="flex flex-col gap-0.5 p-3">
         {SIDEBAR_ITEMS.map((item) => {
-          const active =
-            item.path === "/"
-              ? location.pathname === "/"
-              : location.pathname.startsWith(item.path);
+          const active = item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path);
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                 active
-                  ? "bg-gray-100 text-gray-900"
-                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
+                  ? "bg-blue-600/10 text-blue-400 shadow-sm"
+                  : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
               }`}
             >
-              <span className="w-5 text-center text-base">{item.icon}</span>
+              <span className={`flex size-7 items-center justify-center rounded-lg text-base transition-all ${active ? "bg-blue-600/20 text-blue-400" : "bg-slate-800 text-slate-500 group-hover:bg-slate-700 group-hover:text-slate-300"}`}>
+                {item.icon}
+              </span>
               {item.label}
+              {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-400" />}
             </Link>
           );
         })}
+      </div>
+      <div className="mt-auto border-t border-slate-800 p-4">
+        <div className="rounded-xl bg-slate-800/50 px-3 py-2.5">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">v0.1.0</div>
+          <div className="mt-0.5 text-xs text-slate-400">35 detectors active</div>
+        </div>
       </div>
     </nav>
   );
 }
 
-/** Main layout shell with sidebar and content area. */
 export function Layout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-slate-50">
       <Sidebar />
-      <main className="flex min-w-0 flex-1 flex-col overflow-auto">
-        {children}
-      </main>
+      <main className="flex min-w-0 flex-1 flex-col overflow-auto">{children}</main>
     </div>
   );
 }
 
-/** Page header with title and optional subtitle. */
+/* ── Page chrome ── */
+
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="border-b border-gray-200 bg-white px-8 py-5">
-      <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
-      {subtitle && <p className="mt-0.5 text-sm text-gray-500">{subtitle}</p>}
+    <div className="border-b border-slate-200 bg-white px-8 py-5">
+      <h1 className="text-xl font-bold tracking-tight text-slate-900">{title}</h1>
+      {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
     </div>
   );
 }
 
-/** Page body content wrapper with padding. */
 export function PageBody({ children }: { children: ReactNode }) {
   return <div className="flex-1 p-8">{children}</div>;
 }
 
-/** Format an ISO timestamp to a locale string. */
-function formatTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString();
-}
-
-/** Formatted time display element. */
 export function TimeDisplay({ iso }: { iso: string }) {
-  return <time className="text-xs text-gray-500">{formatTime(iso)}</time>;
+  const d = new Date(iso);
+  return <time className="text-xs tabular-nums text-slate-400">{d.toLocaleString()}</time>;
 }
 
-/** Renders a list of anomalies as compact warning cards. */
-export function AnomalyList({
-  anomalies,
-}: {
-  anomalies: Anomaly[];
+/* ── Summary Stat Card ── */
+
+export function SummaryCard({ label, value, sub, accent }: {
+  label: string; value: ReactNode; sub?: string; accent?: boolean;
 }) {
-  if (anomalies.length === 0) return null;
   return (
-    <div className="space-y-1.5">
-      {anomalies.map((a) => (
-        <div
-          key={a.id}
-          className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs"
-        >
-          <AnomalyBadge anomaly_type={a.anomaly_type} severity={a.severity} />
-          <span className="flex-1 text-amber-800">{a.explanation}</span>
-        </div>
-      ))}
+    <div className={`group rounded-2xl border p-5 transition-all hover:shadow-md ${accent ? "border-blue-200 bg-gradient-to-br from-blue-50 to-white shadow-sm shadow-blue-100/50" : "border-slate-200 bg-white shadow-sm"}`}>
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+      <p className={`mt-2 text-3xl font-bold tracking-tight tabular-nums ${accent ? "text-blue-700" : "text-slate-900"}`}>
+        {value}
+      </p>
+      {sub && <p className="mt-1 text-xs text-slate-400">{sub}</p>}
     </div>
   );
 }
 
-/** Interactive span tree component with expand/collapse and selection.
- *
- * Renders spans as a nested tree with operation icons, duration, and anomaly
- * markers.  Clicking a span selects it (showing detail in ``SpanDetail``).
- * Clicking the collapse toggle expands/collapses children.
- */
-export function SpanTree({
-  spans,
-  anomalies,
-  selectedSpanId,
-  onSelectSpan,
-}: {
+/* ── Anomaly List ── */
+
+export function AnomalyList({ anomalies }: { anomalies: Anomaly[] }) {
+  if (anomalies.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      {anomalies.map((a) => {
+        const sev = SEVERITY_COLORS[a.severity as keyof typeof SEVERITY_COLORS] ?? SEVERITY_COLORS.warning;
+        return (
+          <div key={a.id} className={`flex items-start gap-3 rounded-xl border p-3 text-sm ${sev.bg} ${sev.border}`}>
+            <SeverityDot severity={a.severity} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <AnomalyBadge anomaly_type={a.anomaly_type} severity={a.severity} />
+              </div>
+              <p className={`mt-1 text-xs ${sev.text}`}>{a.explanation}</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Span Tree ── */
+
+export function SpanTree({ spans, anomalies, selectedSpanId, onSelectSpan }: {
   spans: import("../types/api").Span[];
   anomalies: Anomaly[];
   selectedSpanId: string | null;
   onSelectSpan: (spanId: string | null) => void;
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-
-  const anomalySpanIds = new Set<string>();
-  for (const a of anomalies) {
-    if (a.id) anomalySpanIds.add(a.id);
-  }
-
-  const rootSpans = spans.filter((s) => !s.parent_span_id);
+  const anomalySpanIds = new Set(anomalies.map(a => a.id).filter(Boolean));
+  const rootSpans = spans.filter(s => !s.parent_span_id);
   const childrenMap = new Map<string, import("../types/api").Span[]>();
   for (const s of spans) {
     if (s.parent_span_id) {
-      const children = childrenMap.get(s.parent_span_id) ?? [];
-      children.push(s);
-      childrenMap.set(s.parent_span_id, children);
+      const c = childrenMap.get(s.parent_span_id) ?? [];
+      c.push(s);
+      childrenMap.set(s.parent_span_id, c);
     }
   }
 
   function renderSpan(span: import("../types/api").Span, depth: number) {
-    const isSelected = span.span_id === selectedSpanId;
-    const children = childrenMap.get(span.span_id) ?? [];
+    const selected = span.span_id === selectedSpanId;
+    const kids = childrenMap.get(span.span_id) ?? [];
     const isCollapsed = collapsed.has(span.span_id);
-    const hasAnomaly = anomalySpanIds.has(span.span_id);
-    const start = new Date(span.start_time).getTime();
-    const end = new Date(span.end_time).getTime();
-    const dur = end - start;
+    const hasErr = anomalySpanIds.has(span.span_id);
+    const dur = new Date(span.end_time).getTime() - new Date(span.start_time).getTime();
 
-    function toggleCollapse(e: MouseEvent) {
+    function toggle(e: MouseEvent) {
       e.stopPropagation();
-      setCollapsed((prev) => {
-        const next = new Set(prev);
-        if (next.has(span.span_id)) next.delete(span.span_id);
-        else next.add(span.span_id);
-        return next;
+      setCollapsed(prev => {
+        const n = new Set(prev);
+        n.has(span.span_id) ? n.delete(span.span_id) : n.add(span.span_id);
+        return n;
       });
     }
 
     return (
       <div key={span.span_id}>
         <button
-          onClick={() => onSelectSpan(isSelected ? null : span.span_id)}
-          className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-            isSelected
-              ? "bg-blue-50 ring-1 ring-blue-200"
-              : "hover:bg-gray-50"
-          } ${hasAnomaly ? "ring-1 ring-amber-300" : ""}`}
-          style={{ paddingLeft: `${12 + depth * 20}px` }}
+          onClick={() => onSelectSpan(selected ? null : span.span_id)}
+          className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-all ${
+            selected ? "bg-blue-50 ring-1 ring-blue-200 shadow-sm" : "hover:bg-slate-50"
+          } ${hasErr ? "ring-1 ring-amber-300" : ""}`}
+          style={{ paddingLeft: `${16 + depth * 24}px` }}
         >
-          {children.length > 0 && (
-            <button
-              onClick={toggleCollapse}
-              className="size-4 shrink-0 text-gray-400 hover:text-gray-600"
-            >
-              {isCollapsed ? "▶" : "▼"}
-            </button>
-          )}
-          {children.length === 0 && <span className="size-4 shrink-0" />}
+          {kids.length > 0 ? (
+            <span onClick={toggle} className="flex size-5 shrink-0 items-center justify-center rounded text-xs text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors">
+              {isCollapsed ? "▸" : "▾"}
+            </span>
+          ) : <span className="size-5 shrink-0" />}
           <OperationIcon operation={span.operation} />
-          <span className="flex-1 truncate font-medium text-gray-800">
-            {span.name}
-          </span>
-          {hasAnomaly && <AnomalyMarker severity="warning" />}
-          <span className="text-xs text-gray-500">
-            <DurationDisplay ms={dur} />
-          </span>
+          <span className="flex-1 truncate font-medium text-slate-700">{span.name}</span>
+          {hasErr && <AnomalyMarker severity="warning" />}
+          <span className="text-xs tabular-nums text-slate-400"><DurationDisplay ms={dur} /></span>
         </button>
-        {!isCollapsed &&
-          children.map((child) => renderSpan(child, depth + 1))}
+        {!isCollapsed && kids.map(c => renderSpan(c, depth + 1))}
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
-      {rootSpans.map((s) => renderSpan(s, 0))}
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      {rootSpans.length === 0 ? (
+        <div className="p-6 text-center text-sm text-slate-400">No spans recorded</div>
+      ) : (
+        rootSpans.map(s => renderSpan(s, 0))
+      )}
     </div>
   );
 }
 
-/** Detail panel for a selected span, showing metadata and attributes. */
-export function SpanDetail({
-  span,
-  anomalies,
-}: {
+/* ── Span Detail Panel ── */
+
+export function SpanDetail({ span, anomalies }: {
   span: import("../types/api").Span;
   anomalies: Anomaly[];
 }) {
-  const start = new Date(span.start_time).getTime();
-  const end = new Date(span.end_time).getTime();
-  const dur = end - start;
-
-  const spanAnomalies = anomalies.filter((a) => a.id === span.span_id);
+  const dur = new Date(span.end_time).getTime() - new Date(span.start_time).getTime();
+  const spanAnomalies = anomalies.filter(a => a.id === span.span_id);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
-      <h3 className="mb-3 text-sm font-semibold text-gray-900">Span Detail</h3>
-      <dl className="space-y-2 text-sm">
-        <Row label="Name" value={span.name} />
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm animate-slide-in">
+      <div className="mb-4 flex items-center gap-2">
+        <OperationIcon operation={span.operation} />
+        <h3 className="text-sm font-bold text-slate-800">{span.name}</h3>
+        {span.status && <StatusBadge status={span.status} />}
+      </div>
+      <dl className="space-y-2.5 text-sm">
         <Row label="Operation" value={span.operation} />
-        <Row label="Status" value={span.status} />
-        <Row
-          label="Duration"
-          value={<DurationDisplay ms={dur} />}
-        />
+        <Row label="Duration" value={<DurationDisplay ms={dur} />} />
         <Row label="Start" value={new Date(span.start_time).toLocaleString()} />
-        <Row label="End" value={new Date(span.end_time).toLocaleString()} />
         <Row label="Span ID" value={span.span_id} mono />
-        {span.parent_span_id && (
-          <Row label="Parent ID" value={span.parent_span_id} mono />
-        )}
+        {span.parent_span_id && <Row label="Parent ID" value={span.parent_span_id} mono />}
       </dl>
       {spanAnomalies.length > 0 && (
-        <div className="mt-3 space-y-1.5">
-          <h4 className="text-xs font-semibold text-amber-700">Anomalies</h4>
-          {spanAnomalies.map((a) => (
-            <div
-              key={a.id}
-              className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
-            >
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <h4 className="mb-2 text-xs font-bold text-amber-800 uppercase tracking-wider">Anomalies</h4>
+          {spanAnomalies.map(a => (
+            <div key={a.id} className="text-xs text-amber-700 flex items-center gap-2 py-1">
+              <AnomalyMarker severity={a.severity} />
               <strong>{a.anomaly_type}</strong>: {a.explanation}
             </div>
           ))}
         </div>
       )}
       {Object.keys(span.attributes).length > 0 && (
-        <div className="mt-3">
-          <h4 className="mb-1 text-xs font-semibold text-gray-600">Attributes</h4>
-          <pre className="overflow-auto rounded-lg bg-gray-50 p-3 text-xs text-gray-700">
+        <div className="mt-4">
+          <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Attributes</h4>
+          <pre className="overflow-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-600 border border-slate-100">
             {JSON.stringify(span.attributes, null, 2)}
           </pre>
         </div>
@@ -449,97 +408,61 @@ export function SpanDetail({
   );
 }
 
-/** A single key-value row in a definition list. */
-function Row({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: ReactNode;
-  mono?: boolean;
-}) {
+function Row({ label, value, mono }: { label: string; value: ReactNode; mono?: boolean }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="shrink-0 text-gray-500">{label}</dt>
-      <dd
-        className={`text-right text-gray-900 ${
-          mono ? "font-mono text-xs" : ""
-        }`}
-      >
-        {value}
-      </dd>
+      <dt className="shrink-0 text-slate-400">{label}</dt>
+      <dd className={`text-right text-slate-800 ${mono ? "font-mono text-xs" : ""}`}>{value}</dd>
     </div>
   );
 }
 
-/** Dropdown select for filtering, with optional placeholder. */
-export function FilterSelect({
-  value,
-  options,
-  onChange,
-  placeholder,
-}: {
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-  placeholder?: string;
+/* ── Filter Select ── */
+
+export function FilterSelect({ value, options, onChange, placeholder }: {
+  value: string; options: { value: string; label: string }[]; onChange: (v: string) => void; placeholder?: string;
 }) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-    >
+    <select value={value} onChange={e => onChange(e.target.value)}
+      className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
       {placeholder && <option value="">{placeholder}</option>}
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
+      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   );
 }
 
-/** A summary stat card with label, large value, optional subtext, and accent. */
-export function SummaryCard({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: ReactNode;
-  sub?: string;
-  accent?: boolean;
+/* ── Input ── */
+
+export function TextInput({ value, onChange, placeholder, ariaLabel, onKeyDown, className }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; ariaLabel?: string;
+  onKeyDown?: (e: React.KeyboardEvent) => void; className?: string;
 }) {
   return (
-    <div
-      className={`rounded-xl border p-5 shadow-sm ${
-        accent
-          ? "border-blue-200 bg-blue-50"
-          : "border-gray-200 bg-white"
-      }`}
-    >
-      <p className="text-xs font-medium text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-gray-900">{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-gray-500">{sub}</p>}
-    </div>
+    <input value={value} onChange={e => onChange(e.target.value)} onKeyDown={onKeyDown}
+      placeholder={placeholder} aria-label={ariaLabel}
+      className={`rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 transition-all hover:border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${className ?? ""}`} />
   );
 }
 
-/** Hook returning anomaly filter state + setters. */
-export function useAnomalyFilter() {
-  const [severity, setSeverity] = useState("");
-  const [anomalyType, setAnomalyType] = useState("");
-  const [agentName, setAgentName] = useState("");
+/* ── Primary Button ── */
 
-  return {
-    severity,
-    setSeverity,
-    anomalyType,
-    setAnomalyType,
-    agentName,
-    setAgentName,
-  };
+export function PrimaryButton({ onClick, children, className }: {
+  onClick: () => void; children: ReactNode; className?: string;
+}) {
+  return (
+    <button onClick={onClick}
+      className={`rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 ${className ?? ""}`}>
+      {children}
+    </button>
+  );
+}
+
+/* ── Clear Filters Button ── */
+
+export function ClearButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="rounded-xl px-3 py-2 text-xs font-semibold text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600">
+      Clear all
+    </button>
+  );
 }
