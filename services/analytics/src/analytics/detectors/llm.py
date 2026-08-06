@@ -277,6 +277,7 @@ class SemanticLoopDetector(BaseDetector):
         for span in self._walk_spans(spans):
             for key in (
                 "gen_ai.response.content", "gen_ai.agent.output",
+                "gen_ai.node.output", "gen_ai.plan.content",
                 "assistant_response", "completion", "content", "output",
             ):
                 val = span.attributes.get(key)
@@ -340,7 +341,7 @@ class HallucinationDetector(BaseDetector):
         results: list[str] = []
         for span in self._walk_spans(spans):
             val = span.attributes.get(attr)
-            if isinstance(val, str) and len(val) > 20:
+            if isinstance(val, str) and val.strip():
                 results.append(val)
         return results
 

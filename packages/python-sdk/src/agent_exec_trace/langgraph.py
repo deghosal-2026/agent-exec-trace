@@ -63,6 +63,7 @@ from opentelemetry.trace import Span, SpanKind
 from agent_exec_trace.attrs import (
     GEN_AI_OPERATION_NAME,
     GEN_AI_TOOL_NAME,
+    GEN_AI_TOOL_ARGS,
     GEN_AI_TOOL_RESULT,
     GEN_AI_RESPONSE_CONTENT,
     GEN_AI_AGENT_OUTPUT,
@@ -108,6 +109,7 @@ class _NodeCallbackHandler(BaseCallbackHandler):
         # The dict is cleared entry-by-entry as spans end (via ``pop``) so a given
         # run_id is never double-ended.
         self._spans: dict[str, Span] = {}
+        self._node_names: dict[str, str] = {}
 
     @staticmethod
     def _node_name(kwargs: dict[str, Any]) -> str | None:
@@ -201,6 +203,12 @@ class _NodeCallbackHandler(BaseCallbackHandler):
                     GEN_AI_TOOL_NAME: tool_name,
                 },
             )
+            # Capture tool args from the input state (everything except "plan"
+            # which is the tool name, not an argument).
+            if inputs and isinstance(inputs, dict):
+                tool_args = {k: str(v)[:200] for k, v in inputs.items() if k != "plan"}
+                if tool_args:
+                    span.set_attribute(GEN_AI_TOOL_ARGS, str(tool_args)[:500])
         else:
             # ``resolve`` / ``escalate`` or any future node -- produce a generic
             # child span so the timeline shows the node was visited, even without
@@ -210,13 +218,12 @@ class _NodeCallbackHandler(BaseCallbackHandler):
                 kind=SpanKind.INTERNAL,
             )
 
-        # Store the span keyed by run_id so ``on_chain_end`` knows which span to
-        # close.  We only store when ``run_id`` is non-empty; an empty run_id
-        # (unlikely but possible in edge-case callbacks) would never be looked up
-        # anyway, so omitting the store avoids a dangling span.
+        # Store the span AND node name keyed by run_id so ``on_chain_end``
+        # knows which span to close and what content to extract.
         rid = str(kwargs.get("run_id", ""))
         if rid:
             self._spans[rid] = span
+            self._node_names[rid] = node
 
     def on_chain_end(
         self,
@@ -236,14 +243,20 @@ class _NodeCallbackHandler(BaseCallbackHandler):
         """
         rid = str(kwargs.get("run_id", ""))
         span = self._spans.pop(rid, None)
+        node = self._node_names.pop(rid, "")
         if span is not None:
-            # Capture tool result on tool spans. The outputs dict contains
-            # the node's return state — for tool nodes, this includes the
-            # tool's return value in various keys depending on the graph.
+            # Capture node output content based on node type.
             if outputs and isinstance(outputs, dict):
-                result_str = str(outputs.get("tool_result") or outputs.get("result") or outputs.get("output") or "")
-                if result_str:
-                    span.set_attribute(GEN_AI_TOOL_RESULT, result_str[:500])
+                output_str = str(outputs)[:500]
+                if node == "run_tool":
+                    # Tool node: capture the full return state as tool result.
+                    span.set_attribute(GEN_AI_TOOL_RESULT, output_str)
+                elif node == "planner":
+                    # Planner node: capture the plan/reasoning content.
+                    span.set_attribute("gen_ai.plan.content", output_str)
+                # All nodes: capture generic output for detectors.
+                # All nodes: capture generic output for detectors.
+                    span.set_attribute("gen_ai.node.output", output_str)
             span.end()
 
     def on_chain_error(
