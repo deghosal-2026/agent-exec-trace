@@ -177,15 +177,14 @@ readiness checks and no major service is assumed ready by association.
 
 ---
 
-## Milestone 11: E2E Playwright Testing and Screenshot Validation
+## Milestone 11: E2E Playwright Testing and Screenshot Validation ✅
 
 > **Priority:** Release gate. Before any remaining product changes, the current
 > working stack must be validated end-to-end with Playwright. This milestone
 > seeds mock data, runs automated UI tests against every product view, captures
 > screenshots for the user guide, and asserts the product meets demo acceptance
 > criteria. After this milestone passes, the UI and major functionality are frozen.
-
-### 11.1 Playwright infrastructure and mock data seeding
+\n### 11.1 Playwright infrastructure and mock data seeding
 
 **Issue:** (new)
 
@@ -197,11 +196,11 @@ database must contain realistic seeded data that exercises every product surface
 anomalies, fleet rollups, and version cohorts covering all 4 standard views.
 Playwright is installed and configured with a project-level config.
 
-- [ ] Install Playwright and create `apps/web/playwright.config.ts`
-- [ ] Create `scripts/seed-e2e-data.py`: inserts mock runs (normal, loop, cost-spike, retry-storm), anomalies of every type, fleet rollups, and version cohorts
-- [ ] Add `make seed-e2e` to Makefile that runs the seed script against the compose Postgres
-- [ ] Verify all 4 views show non-empty data after seeding
-- [ ] Add Playwright test scripts under `apps/web/tests/e2e/`
+- [x] Install Playwright and create `apps/web/playwright.config.ts`
+- [x] Create `scripts/seed-e2e-data.py`: inserts mock runs (normal, loop, cost-spike, retry-storm), anomalies of every type, fleet rollups, and version cohorts
+- [x] Add `make seed-e2e` to Makefile that runs the seed script against the compose Postgres
+- [x] Verify all 4 views show non-empty data after seeding
+- [x] Add Playwright test scripts under `apps/web/tests/e2e/`
 
 ### 11.2 Fleet Health view tests
 
@@ -215,12 +214,12 @@ that the page renders with data and filters work.
 seeded data, agent name/status filters produce correct subsets, and empty
 states do not crash.
 
-- [ ] Test: fleet health page renders with mock data (non-empty table)
-- [ ] Test: agent name filter narrows results correctly
-- [ ] Test: status filter narrows results correctly
-- [ ] Test: combined filters produce correct intersection
-- [ ] Test: empty filter result shows graceful empty state
-- [ ] Capture fleet health screenshot (with data) for user guide
+- [x] Test: fleet health page renders with mock data (non-empty table)
+- [x] Test: agent name filter narrows results correctly
+- [x] Test: status filter narrows results correctly
+- [x] Test: combined filters produce correct intersection
+- [x] Test: empty filter result shows graceful empty state
+- [x] Capture fleet health screenshot (with data) for user guide
 
 ### 11.3 Run Timeline view tests
 
@@ -234,12 +233,12 @@ and the anomaly detail display.
 renders with span tree, anomalies listed with severity badges, and the
 drill-down flow works end-to-end.
 
-- [ ] Test: click a run in fleet table navigates to timeline
-- [ ] Test: run timeline renders span tree for a normal run
-- [ ] Test: run timeline shows anomalies with severity badges for a loop run
-- [ ] Test: run timeline shows cost spike anomaly details for a high-cost run
-- [ ] Test: back-navigation from timeline to fleet works
-- [ ] Capture run timeline screenshots (normal run + anomaly run) for user guide
+- [x] Test: click a run in fleet table navigates to timeline
+- [x] Test: run timeline renders span tree for a normal run
+- [x] Test: run timeline shows anomalies with severity badges for a loop run
+- [x] Test: run timeline shows cost spike anomaly details for a high-cost run
+- [x] Test: back-navigation from timeline to fleet works
+- [x] Capture run timeline screenshots (normal run + anomaly run) for user guide
 
 ### 11.4 Version Compare view tests
 
@@ -252,11 +251,11 @@ output and that the delta calculations are visible.
 **Success looks like:** Playwright selects two versions, the compare page
 renders with tool count deltas, cost deltas, and anomaly differences.
 
-- [ ] Test: version compare page renders version selector
-- [ ] Test: selecting two versions shows delta table with non-empty data
-- [ ] Test: single-version selection shows appropriate message
-- [ ] Test: versions with no anomalies show zero-delta display
-- [ ] Capture version compare screenshot (with visible deltas) for user guide
+- [x] Test: version compare page renders version selector
+- [x] Test: selecting two versions shows delta table with non-empty data
+- [x] Test: single-version selection shows appropriate message
+- [x] Test: versions with no anomalies show zero-delta display
+- [x] Capture version compare screenshot (with visible deltas) for user guide
 
 ### 11.5 Anomaly Inbox view tests
 
@@ -269,12 +268,12 @@ individual anomaly details.
 **Success looks like:** Playwright filters the inbox by anomaly type and
 severity, verifies count changes, and navigates to anomaly detail.
 
-- [ ] Test: anomaly inbox renders with mock anomalies
-- [ ] Test: anomaly type filter narrows results
-- [ ] Test: severity filter (warning vs critical) works
-- [ ] Test: click anomaly navigates to run timeline with context
-- [ ] Test: empty inbox shows appropriate empty state
-- [ ] Capture anomaly inbox screenshot (with filtered anomalies) for user guide
+- [x] Test: anomaly inbox renders with mock anomalies
+- [x] Test: anomaly type filter narrows results
+- [x] Test: severity filter (warning vs critical) works
+- [x] Test: click anomaly navigates to run timeline with context
+- [x] Test: empty inbox shows appropriate empty state
+- [x] Capture anomaly inbox screenshot (with filtered anomalies) for user guide
 
 ### 11.6 Screenshot capture and user guide assembly
 
@@ -288,11 +287,11 @@ produces them automatically.
 captures screenshots of each view into `docs/screenshots/`, and produces a
 test report. Screenshots are named consistently and ready for the user guide.
 
-- [ ] Configure Playwright to capture screenshots on test completion
-- [ ] Ensure screenshots output to `docs/screenshots/` directory
-- [ ] Add `make e2e` target: seeds data, runs Playwright tests, captures screenshots
-- [ ] Verify all screenshots are non-empty and show seeded data
-- [ ] Add screenshot references to user guide template in `docs/`
+- [x] Configure Playwright to capture screenshots on test completion
+- [x] Ensure screenshots output to `docs/screenshots/` directory
+- [x] Add `make e2e` target: seeds data, runs Playwright tests, captures screenshots
+- [x] Verify all screenshots are non-empty and show seeded data
+- [x] Add screenshot references to user guide template in `docs/`
 
 ### 11.7 Demo acceptance assertion
 
@@ -307,20 +306,20 @@ and asserts: one agent is easier to debug here than with logs alone, the
 four standard views all show non-trivial data, and the anomaly inbox supports
 the triage workflow.
 
-- [ ] Write acceptance test: normal run + loop run both visible and distinguishable
-- [ ] Write acceptance test: fleet view groups by agent name and version
-- [ ] Write acceptance test: version compare shows meaningful deltas between versions
-- [ ] Write acceptance test: anomaly inbox supports type and severity filtering
-- [ ] Run full acceptance suite and confirm all pass
+- [x] Write acceptance test: normal run + loop run both visible and distinguishable
+- [x] Write acceptance test: fleet view groups by agent name and version
+- [x] Write acceptance test: version compare shows meaningful deltas between versions
+- [x] Write acceptance test: anomaly inbox supports type and severity filtering
+- [x] Run full acceptance suite and confirm all pass
 
 **Milestone 11 Quality Gates:**
-- [ ] All Playwright e2e tests pass (`make e2e`)
-- [ ] Screenshots captured for all 4 standard views
-- [ ] Demo acceptance tests pass
-- [ ] Seed script runs cleanly from cold Postgres
-- [ ] Code review passed
-- [ ] Ruff: zero violations on seed scripts (`ruff check .`)
-- [ ] Mypy: strict mode passes on seed scripts (`mypy --strict .`)
+- [x] All Playwright e2e tests pass (`make e2e`)
+- [x] Screenshots captured for all 4 standard views
+- [x] Demo acceptance tests pass
+- [x] Seed script runs cleanly from cold Postgres
+- [x] Code review passed
+- [x] Ruff: zero violations on seed scripts (`ruff check .`)
+- [x] Mypy: strict mode passes on seed scripts (`mypy --strict .`)
 
 ---
 

@@ -72,16 +72,17 @@ agent-exec-trace/
 ├── deploy/                  # Compose configs, collector configs, local stack
 ├── examples/                # Demo agents and seeded scenarios
 ├── tests/                   # Cross-cutting / end-to-end tests
-├── docs/                    # Architecture, design, field-test, WBS, reference
+├── docs/                    # Architecture, design, field-test, test, WBS, reference
 │   ├── architecture/        # spec, architecture diagram, DB schema
 │   ├── design/              # PRD, agent designs, CLI plans, demo scenarios
 │   ├── field-test/          # field-test plan and reports
+│   ├── test/                # e2e test plan, seed data, test reports
 │   ├── reference/           # developer setup guide
 │   └── wbs/                 # detailed WBS (4 parts + table of contents)
-
-For the complete work breakdown structure, see [docs/wbs/wbs-v0.1.0.md](docs/wbs/wbs-v0.1.0.md).
 └── Makefile                 # setup / lint / test / stack entrypoints
 ```
+
+For the complete work breakdown structure, see [docs/wbs/wbs-v0.1.0.md](docs/wbs/wbs-v0.1.0.md).
 
 See [docs/reference/developer-setup.md](docs/reference/developer-setup.md) for the developer onboarding flow.
 
@@ -102,6 +103,26 @@ instrument(my_agent)
 
 # Run your agent — traces flow to your OTLP backend
 ```
+
+---
+
+## Testing
+
+End-to-end UI tests run against the seeded local stack via Playwright.
+
+| Doc | Purpose |
+|---|---|
+| [docs/test/e2e-testing-plan.md](docs/test/e2e-testing-plan.md) | Test plan: scope, CUJs, test catalog, screenshot strategy |
+| [docs/test/e2e-seed-data.md](docs/test/e2e-seed-data.md) | Mock data shape produced by `scripts/seed-e2e-data.py` |
+| [docs/test/e2e-test-report-v1.md](docs/test/e2e-test-report-v1.md) | v0.1.0 (M11) test report — 34/34 pass, findings, v0.2.0 takeaways |
+
+Run the suite:
+
+```bash
+make e2e   # boots stack, seeds, runs Playwright, captures screenshots
+```
+
+Specs live under `apps/web/tests/e2e/` and target Chromium.
 
 ---
 

@@ -17,17 +17,34 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
 import asyncpg
 
 AGENTS = [
-    {"name": "research_crew", "workload": "research_crew", "versions": ["v1.2.0", "v1.3.0"]},
+    {"name": "research_crew", "workload": "research_crew", "versions": ["v1.2.0", "v1.3.0", {"v1.4.0": 3}]},
     {"name": "support_triage", "workload": "support_triage", "versions": ["v1.0.0", "v1.1.0", "v2.0.0"]},
     {"name": "code_review", "workload": "code_review", "versions": ["v1.0.0"]},
     {"name": "demo_triage", "workload": "demo_triage", "versions": ["v0.1.0", "v0.2.0"]},
 ]
+
+
+def _version_entries(agent: dict) -> list[tuple[str, int]]:
+    """Normalise agent versions list to (version_str, run_count) pairs.
+
+    String entries default to 12 runs; dict entries specify an explicit run
+    count (e.g. ``{"v1.4.0": 3}`` for the sparse-cohort scenario).
+    """
+    out: list[tuple[str, int]] = []
+    for v in agent["versions"]:
+        if isinstance(v, str):
+            out.append((v, 12))
+        elif isinstance(v, dict) and len(v) == 1:
+            ver, cnt = next(iter(v.items()))
+            out.append((str(ver), int(cnt)))
+    return out
 
 ANOMALY_TYPES = [
     "loop", "pattern_loop", "argument_loop",
@@ -54,16 +71,18 @@ async def seed(dsn: str) -> None:
     await conn.execute("DELETE FROM run_summaries")
 
     run_ids: list[str] = []
-    runs_per_agent_version = 12
+    run_agent_map: dict[str, str] = {}
     base_time = NOW - timedelta(days=7)
 
     for agent in AGENTS:
-        for vi, version in enumerate(agent["versions"]):
+        for vi, (version, runs_per_agent_version) in enumerate(_version_entries(agent)):
+            error_start = runs_per_agent_version * 2 // 3
             for ri in range(runs_per_agent_version):
                 run_id = str(uuid.uuid4())
                 run_ids.append(run_id)
+                run_agent_map[run_id] = agent["name"]
 
-                is_error = ri >= 8
+                is_error = ri >= error_start
                 is_loop = ri in (2, 9)
                 is_retry_storm = ri in (4, 10)
                 is_cost_spike = ri in (1, 7)
@@ -104,7 +123,7 @@ async def seed(dsn: str) -> None:
 
     anomaly_count = 0
     for run_id in run_ids:
-        agent_info = AGENTS[run_ids.index(run_id) % len(AGENTS)]
+        agent_name = run_agent_map[run_id]
         num_anomalies = 1 + (run_ids.index(run_id) % 4)
 
         for ai in range(num_anomalies):
@@ -116,7 +135,7 @@ async def seed(dsn: str) -> None:
                    VALUES ($1,$2,$3,$4,$5,$6,$7)""",
                 str(uuid.uuid4()),
                 run_id,
-                agent_info["name"],
+                agent_name,
                 atype,
                 severity,
                 f"Detected {atype} anomaly in run {run_id[:8]}: threshold exceeded",
@@ -125,7 +144,7 @@ async def seed(dsn: str) -> None:
             anomaly_count += 1
 
     for agent in AGENTS:
-        for version in agent["versions"]:
+        for version, runs_per_agent_version in _version_entries(agent):
             period_start = base_time.replace(hour=0, minute=0, second=0, microsecond=0)
             for day_offset in range(7):
                 ps = period_start + timedelta(days=day_offset)
@@ -140,7 +159,7 @@ async def seed(dsn: str) -> None:
                        (id, agent_name, agent_version, workload_type, period_start, period_end,
                         total_runs, success_count, error_count, loop_count, anomaly_count,
                         avg_duration_ms, avg_cost)
-                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
                        ON CONFLICT DO NOTHING""",
                     str(uuid.uuid4()),
                     agent["name"],
@@ -158,18 +177,32 @@ async def seed(dsn: str) -> None:
                 )
 
     for agent in AGENTS:
-        for version in agent["versions"]:
+        for version, runs_per_agent_version in _version_entries(agent):
             total = runs_per_agent_version
             errors = total // 3
             loops = total // 6
             tool_calls_total = total * 20
+
+            # Default top_tools mirrors previous seed (JSON array), but for
+            # research_crew v1.2.0/v1.3.0 we provide dict-shaped counts so
+            # Version Compare can compute non-empty tool_deltas.
+            top_tools: object
+            if agent["name"] == "research_crew" and version == "v1.2.0":
+                top_tools = json.dumps({"fetch_data": 30, "analyze": 20, "search": 10})
+            elif agent["name"] == "research_crew" and version == "v1.3.0":
+                top_tools = json.dumps({"fetch_data": 25, "analyze": 35, "search": 5})
+            else:
+                # Keep existing semantics: a simple ordered list of tool names
+                # (stored as JSON array) results in empty tool_deltas, which is
+                # acceptable for E2E except the explicit research_crew compare.
+                top_tools = json.dumps(["fetch_data", "analyze", "search", "compute", "validate"])
 
             await conn.execute(
                 """INSERT INTO version_cohort_summaries
                    (id, agent_name, agent_version, total_runs, success_count, error_count,
                     loop_count, anomaly_count, avg_duration_ms, avg_cost,
                     total_tool_calls, total_retries, top_tools)
-                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::json)
                    ON CONFLICT DO NOTHING""",
                 str(uuid.uuid4()),
                 agent["name"],
@@ -183,7 +216,7 @@ async def seed(dsn: str) -> None:
                 round(0.75, 6),
                 tool_calls_total,
                 total * 2,
-                '["fetch_data", "analyze", "search", "compute", "validate"]',
+                top_tools,
             )
 
     await conn.close()

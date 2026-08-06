@@ -101,7 +101,7 @@ Suggested issue types for later GitHub conversion:
 | Milestone 8.9 | field-test execution issues |
 | Milestone 9 | non-LLM + LLM trace compatibility issues (9.1.x ✅, 9.2.x ⟳ v0.2.0) ✅ |
 | Milestone 10 | local stack/demo + service-level testing issues ✅ |
-| Milestone 11 | e2e Playwright testing and screenshot validation |
+| Milestone 11 | e2e Playwright testing and screenshot validation ✅ |
 | Milestone 12 | documentation/OSS readiness issues |
 | Milestone 13 | release validation issues |
 

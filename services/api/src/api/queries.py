@@ -11,6 +11,7 @@ convert raw database rows into the API response shapes defined in ``api.models``
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
@@ -65,6 +66,20 @@ def _to_int(val: object, default: int = 0) -> int:
 def _row_to_dict(row: Any) -> dict[str, Any]:
     """Convert an asyncpg row to a plain dict."""
     return dict(row)
+
+
+def _parse_json_object(val: object) -> dict[str, Any] | None:
+    """Parse a JSON object stored as either a dict or a JSON string."""
+    if isinstance(val, dict):
+        return val
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+        except json.JSONDecodeError:
+            return None
+        if isinstance(parsed, dict):
+            return parsed
+    return None
 
 
 async def get_run_summary(pool: Pool, run_id: str) -> dict[str, Any] | None:
@@ -321,9 +336,9 @@ def build_version_compare(
         left_runs_max = max(left_runs, 1)
         right_runs_max = max(right_runs, 1)
 
-        left_tools = left.get("top_tools")
-        right_tools = right.get("top_tools")
-        if isinstance(left_tools, dict) and isinstance(right_tools, dict):
+        left_tools = _parse_json_object(left.get("top_tools"))
+        right_tools = _parse_json_object(right.get("top_tools"))
+        if left_tools is not None and right_tools is not None:
             tool_deltas: list[dict[str, Any]] = []
             for tool in sorted(left_tools.keys() | right_tools.keys()):
                 lc = _to_int(left_tools.get(tool, 0))

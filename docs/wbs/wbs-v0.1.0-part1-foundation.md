@@ -625,7 +625,7 @@ This task keeps planning uncertainty visible instead of letting it disappear int
 - [x] Mark which open questions are safe to defer past `v0.1.0`
 
 **Milestone 0 Quality Gates:**
-- [ ] Code review passed
+- [x] Code review passed
 - [x] Comments present on public API and complex logic
 - [x] Ruff: zero violations (`ruff check .`)
 - [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
@@ -691,7 +691,7 @@ This task expands the demo from "a few example inputs" into a product validation
 - [x] Map each scenario to expected UI views that should show useful data
 
 **Milestone 1 Quality Gates:**
-- [ ] Code review passed
+- [x] Code review passed
 - [x] Comments present on public API and complex logic
 - [x] Ruff: zero violations (`ruff check .`)
 - [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
@@ -802,7 +802,7 @@ This task enforces the trust posture at the earliest possible boundary. Sensitiv
 - [x] Add opt-in config for truncated or hashed content capture
 
 **Milestone 2 Quality Gates:**
-- [ ] Code review passed
+- [x] Code review passed
 - [x] Comments present on public API and complex logic
 - [x] Ruff: zero violations (`ruff check .`)
 - [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
@@ -836,8 +836,8 @@ This task creates the primary local proof path for `v0.1.0`. Jaeger is the first
 
 - [x] Add Jaeger service to `docker-compose.yml`
 - [x] Add collector service config
-- [ ] Validate SDK traces appear in Jaeger UI
-- [ ] Capture screenshot or validation note in docs
+- [x] Validate SDK traces appear in Jaeger UI
+- [x] Capture screenshot or validation note in docs
 
 ### 3.3 Tempo compatibility path
 
@@ -848,8 +848,8 @@ This task preserves the long-term OTel positioning of the product. Even though J
 **Success looks like:** the same trace data can be viewed in Tempo with only configuration changes, and compatibility notes are documented clearly.
 
 - [x] Add optional Tempo service config
-- [ ] Validate same SDK traces can be viewed in Tempo
-- [ ] Document compatibility notes
+- [x] Validate same SDK traces can be viewed in Tempo
+- [x] Document compatibility notes
 
 ### 3.4 Collector interoperability checks
 
@@ -861,18 +861,18 @@ This task ensures the product stays OTel-first rather than backend-first. The co
 
 - [x] Add collector service to docker-compose
 - [x] Add collector config forwarding to Jaeger
-- [ ] Validate collector-based OTLP export to Jaeger
-- [ ] Validate collector-based OTLP export to Tempo
-- [ ] Document collector config expectations
-- [ ] Document any backend-specific caveats discovered in testing
+- [x] Validate collector-based OTLP export to Jaeger
+- [x] Validate collector-based OTLP export to Tempo
+- [x] Document collector config expectations
+- [x] Document any backend-specific caveats discovered in testing
 
 **Milestone 3 Quality Gates:**
-- [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
-- [ ] Tests pass: all unit/integration tests green (`pytest`)
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+- [x] Code review passed
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Tests pass: all unit/integration tests green (`pytest`)
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 

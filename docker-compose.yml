@@ -100,7 +100,8 @@ services:
     ports:
       - "5173:5173"
     environment:
-      VITE_API_URL: http://api:8000
+      VITE_API_URL: ""
+      VITE_PROXY_TARGET: http://api:8000
     depends_on:
       - api
 
