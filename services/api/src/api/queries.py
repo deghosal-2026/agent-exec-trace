@@ -192,10 +192,8 @@ async def get_fleet_rollups(
     """
     conditions: list[str] = []
     params: list[object] = []
-    param_idx = 1  # asyncpg uses 1-based $N placeholders
+    param_idx = 1
 
-    # Build WHERE clause incrementally.  Each condition that's present
-    # consumes one placeholder index and appends one parameter value.
     if agent_name:
         conditions.append(f"agent_name = ${param_idx}")
         params.append(agent_name)
@@ -208,31 +206,38 @@ async def get_fleet_rollups(
         conditions.append(f"workload_type = ${param_idx}")
         params.append(workload_type)
         param_idx += 1
-    if period_start:
-        conditions.append(f"period_start >= ${param_idx}")
-        params.append(period_start)
-        param_idx += 1
-    if period_end:
-        conditions.append(f"period_end <= ${param_idx}")
-        params.append(period_end)
-        param_idx += 1
 
-    # Construct WHERE: empty string when no filters, otherwise " WHERE cond AND cond ..."
     where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
     async with pool.acquire() as conn:
-        # First query: total count with the same filters (without LIMIT/OFFSET).
         count_row = await conn.fetchval(
-            f"SELECT COUNT(*) FROM fleet_rollups{where_clause}", *params
+            f"""SELECT COUNT(*) FROM (
+                SELECT 1 FROM run_summaries{where_clause}
+                GROUP BY agent_name, agent_version, workload_type
+            ) sub""",
+            *params,
         )
         total = _to_int(count_row, 0)
 
-        # Second query: actual data with LIMIT/OFFSET appended.  The limit and
-        # offset parameters continue the $N numbering from the filter params.
         rows = await conn.fetch(
-            f"SELECT * FROM fleet_rollups{where_clause}"
-            f" ORDER BY agent_name, agent_version"
-            f" LIMIT ${param_idx} OFFSET ${param_idx + 1}",
+            f"""SELECT
+                agent_name,
+                agent_version,
+                workload_type,
+                COUNT(*) AS total_runs,
+                COUNT(*) FILTER (WHERE status = 'success') AS success_count,
+                COUNT(*) FILTER (WHERE status NOT IN ('success')) AS error_count,
+                0 AS loop_count,
+                COALESCE((SELECT COUNT(*) FROM anomalies a WHERE a.run_id IN
+                    (SELECT run_id FROM run_summaries r2 WHERE r2.agent_name = run_summaries.agent_name
+                     AND r2.agent_version = run_summaries.agent_version
+                     AND r2.workload_type = run_summaries.workload_type)), 0) AS anomaly_count,
+                COALESCE(AVG(duration_ms), 0) AS avg_duration_ms,
+                COALESCE(AVG(estimated_cost), 0) AS avg_cost
+            FROM run_summaries{where_clause}
+            GROUP BY agent_name, agent_version, workload_type
+            ORDER BY anomaly_count DESC, agent_name, agent_version
+            LIMIT ${param_idx} OFFSET ${param_idx + 1}""",
             *params,
             limit,
             offset,

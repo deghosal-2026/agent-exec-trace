@@ -139,7 +139,7 @@ async def get_fleet(
     period_start: datetime | None = Query(None),  # noqa: B008
     period_end: datetime | None = Query(None),  # noqa: B008
     page: int = Query(1, ge=1),  # noqa: B008
-    page_size: int = Query(20, ge=1, le=100),  # noqa: B008
+    page_size: int = Query(100, ge=1, le=500),  # noqa: B008
     pool: Pool = Depends(_get_pool),  # noqa: B008
 ) -> dict[str, Any]:
     """Return paginated fleet health rollups, optionally filtered by agent/version/workload.

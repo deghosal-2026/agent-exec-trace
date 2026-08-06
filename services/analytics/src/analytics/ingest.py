@@ -554,10 +554,10 @@ async def persist_fleet_rollup(pool: Any, rollup: FleetRollup) -> None:
         await conn.execute(
             """
             INSERT INTO fleet_rollups (
-                agent_name, agent_version, workload_type,
+                id, agent_name, agent_version, workload_type,
                 period_start, period_end, total_runs, success_count,
                 error_count, loop_count, anomaly_count, avg_duration_ms, avg_cost
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             ON CONFLICT (agent_name, agent_version, workload_type, period_start, period_end)
             DO UPDATE SET
                 total_runs = EXCLUDED.total_runs,
@@ -568,6 +568,7 @@ async def persist_fleet_rollup(pool: Any, rollup: FleetRollup) -> None:
                 avg_duration_ms = EXCLUDED.avg_duration_ms,
                 avg_cost = EXCLUDED.avg_cost
             """,
+            rollup.id,
             rollup.agent_name,
             rollup.agent_version,
             rollup.workload_type,

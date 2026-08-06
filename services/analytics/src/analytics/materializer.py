@@ -27,6 +27,7 @@ comparison page.
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -156,6 +157,7 @@ class FleetRollupMaterializer:
                     ) or 0
 
             rollup = FleetRollup(
+                id=str(uuid.uuid4()),
                 agent_name=agent,
                 agent_version=version,
                 workload_type=workload,

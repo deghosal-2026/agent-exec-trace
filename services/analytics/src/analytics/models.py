@@ -158,6 +158,7 @@ class FleetRollup(BaseModel):
           correlated subquery.
     """
 
+    id: str = ""
     agent_name: str
     agent_version: str | None = None
     workload_type: str | None = None

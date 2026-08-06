@@ -5,7 +5,6 @@ services:
     image: jaegertracing/all-in-one:1.57
     ports:
       - "16686:16686"   # Jaeger UI
-      - "4317:4317"     # OTLP gRPC ingestion
     environment:
       - COLLECTOR_OTLP_ENABLED=true
 
@@ -65,7 +64,7 @@ services:
       context: ./services/api
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8100:8000"
     environment:
       API_DB_DSN: postgresql://analytics:analytics@postgres:5432/analytics
       API_HOST: "0.0.0.0"
