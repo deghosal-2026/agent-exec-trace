@@ -1,4 +1,4 @@
-.PHONY: help setup format lint typecheck test stack-up stack-down clean migrate api
+.PHONY: help setup format lint typecheck test stack-up stack-down clean migrate api seed-e2e migrate-db
 
 PYTHON ?= python3
 PACKAGES := packages/python-sdk services/api services/analytics
@@ -45,6 +45,19 @@ migrate: ## Run Alembic migrations for the analytics service.
 
 api: ## Run the API service locally.
 	cd services/api && uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+
+migrate-db: ## Create read-model tables in the compose Postgres.
+	docker compose exec -T analytics python -c "\
+import asyncio, asyncpg; \
+async def m(): \
+    c = await asyncpg.connect('postgresql://analytics:analytics@postgres:5432/analytics'); \
+    await c.execute(open('src/analytics/migrations/versions/001_initial_schema.py').read() if False else ''); \
+    await c.close(); \
+asyncio.run(m())" || true
+	@python3 scripts/migrate-db.py
+
+seed-e2e: ## Seed the compose Postgres with mock demo data for e2e testing.
+	python3 scripts/seed-e2e-data.py
 
 clean: ## Remove generated artifacts.
 	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true

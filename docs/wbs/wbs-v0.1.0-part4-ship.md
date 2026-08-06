@@ -3,7 +3,7 @@
 > [← Back to WBS Table of Contents](wbs-v0.1.0.md)
 
 
-## Milestone 10: End-to-End Local Stack
+## Milestone 10: End-to-End Local Stack ✅
 
 ### 10.1 Compose integration
 
@@ -25,9 +25,9 @@ This task makes the local stack demonstrable and testable. A good OSS project sh
 
 **Success looks like:** contributors can run scripts or commands that reliably generate the good run and bad run scenarios needed for demos and tests.
 
-- [ ] Add script to run demo scenarios
-- [ ] Add script to seed bad runs
-- [ ] Add script or doc to replay traces into the stack
+- [x] Add script to run demo scenarios
+- [x] Add script to seed bad runs
+- [x] Add script or doc to replay traces into the stack
 
 ### 10.2.1 Replay acceptance requirement
 
@@ -35,9 +35,9 @@ This subtask makes replay a first-class requirement rather than a nice-to-have s
 
 **Success looks like:** the same seeded traces or scenarios can be replayed multiple times to validate instrumentation, analytics, APIs, and UI behaviors predictably.
 
-- [ ] Confirm replay works after clean database reset
-- [ ] Confirm replay works after analytics code changes
-- [ ] Confirm replay outcomes are documented for demo and test use
+- [x] Confirm replay works after clean database reset
+- [x] Confirm replay works after analytics code changes
+- [x] Confirm replay outcomes are documented for demo and test use
 
 ### 10.3 End-to-end validation
 
@@ -45,10 +45,10 @@ This task verifies the product loop, not just individual services. It should con
 
 **Success looks like:** the demo scenarios are visible across the whole stack and the core `v0.1.0` views all show meaningful, non-empty data.
 
-- [ ] Validate one normal run
-- [ ] Validate one loop anomaly run
-- [ ] Validate fleet view shows multiple runs/cohorts
-- [ ] Validate version compare shows non-empty deltas
+- [x] Validate one normal run
+- [x] Validate one loop anomaly run
+- [x] Validate fleet view shows multiple runs/cohorts
+- [x] Validate version compare shows non-empty deltas
 
 ### 10.4 Interoperability smoke checks
 
@@ -56,10 +56,10 @@ This task checks whether the stack still behaves like an OTel-native product rat
 
 **Success looks like:** the local reference stack proves Jaeger-first operation while preserving collector-first and Tempo-compatible behavior with documented caveats.
 
-- [ ] Smoke test Jaeger-first stack
-- [ ] Smoke test Tempo-compatible path
-- [ ] Smoke test collector-mediated export
-- [ ] Record interop findings in docs
+- [x] Smoke test Jaeger-first stack
+- [x] Smoke test Tempo-compatible path
+- [x] Smoke test collector-mediated export
+- [x] Record interop findings in docs
 
 ### 10.5 Failure-recovery smoke checks
 
@@ -67,18 +67,18 @@ This task verifies that the chosen architecture can recover from predictable dev
 
 **Success looks like:** developers can recover from common failures such as Postgres resets or analytics reprocessing needs using documented workflows.
 
-- [ ] Validate Postgres reset + rebuild flow
-- [ ] Validate analytics reprocessing flow after detector changes
-- [ ] Validate duplicate-run handling during replay
-- [ ] Document known weak recovery paths in `v0.1.0`
+- [x] Validate Postgres reset + rebuild flow
+- [x] Validate analytics reprocessing flow after detector changes
+- [x] Validate duplicate-run handling during replay
+- [x] Document known weak recovery paths in `v0.1.0`
 
 **Milestone 10 Quality Gates:**
-- [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
-- [ ] Tests pass: all unit/integration tests green (`pytest`)
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+- [x] Code review passed
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Tests pass: all unit/integration tests green (`pytest`)
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ### 10.6 SDK tests
 
@@ -91,11 +91,11 @@ demo library.
 **Success looks like:** root spans, nested spans, privacy defaults, and both
 adapters are covered by tests that catch regressions in trace shape and metadata.
 
-- [ ] Unit tests for root span creation
-- [ ] Unit tests for tool span creation
-- [ ] Unit tests for privacy defaults
-- [ ] Integration tests for LangGraph adapter
-- [ ] Integration tests for raw Python decorator
+- [x] Unit tests for root span creation
+- [x] Unit tests for tool span creation
+- [x] Unit tests for privacy defaults
+- [x] Integration tests for LangGraph adapter
+- [x] Integration tests for raw Python decorator
 
 ### 10.7 Analytics tests
 
@@ -107,11 +107,11 @@ anomalies are wrong, the UI can look polished while telling users the wrong stor
 **Success looks like:** summary rollups, anomaly detection, and persistence logic
 are all validated against seeded scenarios and expected outputs.
 
-- [ ] Unit tests for summary materialization
-- [ ] Unit tests for loop detector
-- [ ] Unit tests for retry detector
-- [ ] Unit tests for cost detector
-- [ ] Integration tests for Postgres persistence
+- [x] Unit tests for summary materialization
+- [x] Unit tests for loop detector
+- [x] Unit tests for retry detector
+- [x] Unit tests for cost detector
+- [x] Integration tests for Postgres persistence
 
 ### 10.8 API tests
 
@@ -123,10 +123,10 @@ Response shapes and filtering behavior should not drift silently.
 **Success looks like:** each major endpoint has tests for shape, filtering, and
 representative payloads for the core product views.
 
-- [ ] Test run timeline endpoint
-- [ ] Test fleet health endpoint
-- [ ] Test version compare endpoint
-- [ ] Test anomaly inbox endpoint
+- [x] Test run timeline endpoint
+- [x] Test fleet health endpoint
+- [x] Test version compare endpoint
+- [x] Test anomaly inbox endpoint
 
 ### 10.9 Web tests
 
@@ -138,9 +138,9 @@ evolves. Focus on the key interactions that express product value.
 **Success looks like:** the main pages render, key filters and navigation work,
 and at least one end-to-end UI flow can be exercised with confidence.
 
-- [ ] Render tests for key pages
-- [ ] Interaction tests for filters/navigation
-- [ ] End-to-end happy-path UI test if feasible
+- [x] Render tests for key pages
+- [x] Interaction tests for filters/navigation
+- [x] End-to-end happy-path UI test if feasible
 
 ### 10.10 Acceptance scenario checks
 
@@ -153,10 +153,10 @@ promised in the PRD.
 **Success looks like:** at least one automated or semi-automated check exists for
 each `v0.1.0` standard view using seeded scenarios.
 
-- [ ] Validate single bad run workflow
-- [ ] Validate anomaly drill-down workflow
-- [ ] Validate fleet triage workflow
-- [ ] Validate version compare workflow
+- [x] Validate single bad run workflow
+- [x] Validate anomaly drill-down workflow
+- [x] Validate fleet triage workflow
+- [x] Validate version compare workflow
 
 ### 10.11 Service readiness checks
 
@@ -169,11 +169,11 @@ release validation begins.
 **Success looks like:** SDK, analytics, API, web, and docs each have explicit
 readiness checks and no major service is assumed ready by association.
 
-- [ ] Confirm SDK readiness
-- [ ] Confirm analytics service readiness
-- [ ] Confirm API service readiness
-- [ ] Confirm web app readiness
-- [ ] Confirm docs/OSS readiness
+- [x] Confirm SDK readiness
+- [x] Confirm analytics service readiness
+- [x] Confirm API service readiness
+- [x] Confirm web app readiness
+- [x] Confirm docs/OSS readiness
 
 ---
 
