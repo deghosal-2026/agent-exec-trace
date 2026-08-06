@@ -62,6 +62,10 @@ from opentelemetry.trace import Span, SpanKind
 
 from agent_exec_trace.attrs import (
     GEN_AI_OPERATION_NAME,
+    GEN_AI_TOOL_NAME,
+    GEN_AI_TOOL_RESULT,
+    GEN_AI_RESPONSE_CONTENT,
+    GEN_AI_AGENT_OUTPUT,
     SPAN_KIND_PLAN,
     SPAN_KIND_TOOL,
 )
@@ -194,7 +198,7 @@ class _NodeCallbackHandler(BaseCallbackHandler):
                 kind=SpanKind.CLIENT,
                 attributes={
                     GEN_AI_OPERATION_NAME: SPAN_KIND_TOOL,
-                    "_et.tool": tool_name,
+                    GEN_AI_TOOL_NAME: tool_name,
                 },
             )
         else:
@@ -233,6 +237,13 @@ class _NodeCallbackHandler(BaseCallbackHandler):
         rid = str(kwargs.get("run_id", ""))
         span = self._spans.pop(rid, None)
         if span is not None:
+            # Capture tool result on tool spans. The outputs dict contains
+            # the node's return state — for tool nodes, this includes the
+            # tool's return value in various keys depending on the graph.
+            if outputs and isinstance(outputs, dict):
+                result_str = str(outputs.get("tool_result") or outputs.get("result") or outputs.get("output") or "")
+                if result_str:
+                    span.set_attribute(GEN_AI_TOOL_RESULT, result_str[:500])
             span.end()
 
     def on_chain_error(
@@ -356,11 +367,22 @@ class TracedGraph:
         else:
             cfg["callbacks"] = [handler]
 
-        with invoke_agent(ctx):
+        with invoke_agent(ctx) as root_span:
             # ``cast`` is safe: ``RunnableConfig`` is a ``TypedDict`` whose
             # ``callbacks`` field accepts ``BaseCallbackHandler`` instances; our
             # ``cfg`` dict is compatible at runtime even if mypy can't prove it.
             result = self._graph.invoke(input_state, config=cast(RunnableConfig, cfg), **kwargs)
+
+            # Capture agent output on the root span so empty_response and
+            # output quality detectors can find it. LangGraph returns a
+            # state dict — extract the most likely output field.
+            if isinstance(result, dict):
+                output = (result.get("response") or result.get("output")
+                          or result.get("answer") or result.get("outcome") or "")
+                if output:
+                    root_span.set_attribute(GEN_AI_RESPONSE_CONTENT, str(output)[:500])
+                    root_span.set_attribute(GEN_AI_AGENT_OUTPUT, str(output)[:500])
+
             return cast(dict[str, Any], result)
 
 

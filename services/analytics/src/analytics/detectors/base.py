@@ -180,7 +180,7 @@ class BaseDetector:
         """
         result: list[SpanNode] = []
         for node in spans:
-            if node.operation_name == "execute_tool":
+            if (node.operation_name == "execute_tool" or node.attributes.get("gen_ai.operation.name") == "execute_tool"):
                 result.append(node)
             result.extend(BaseDetector._walk_tool_spans(node.child_spans))
         return result
@@ -219,7 +219,7 @@ class BaseDetector:
         """
         tool_calls: list[str] = []
         for node in spans:
-            if node.operation_name == "execute_tool":
+            if (node.operation_name == "execute_tool" or node.attributes.get("gen_ai.operation.name") == "execute_tool"):
                 tool_name = str(node.attributes.get("gen_ai.tool.name", ""))
                 tool_calls.append(tool_name)
             tool_calls.extend(BaseDetector._walk_tool_names(node.child_spans))

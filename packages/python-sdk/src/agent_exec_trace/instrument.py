@@ -54,7 +54,7 @@ from contextlib import contextmanager
 from opentelemetry import trace
 from opentelemetry.trace import Span, SpanKind
 
-from agent_exec_trace.attrs import GEN_AI_OPERATION_NAME, SPAN_KIND_INVOKE_AGENT
+from agent_exec_trace.attrs import GEN_AI_OPERATION_NAME, GEN_AI_RESPONSE_CONTENT, GEN_AI_AGENT_OUTPUT, SPAN_KIND_INVOKE_AGENT
 from agent_exec_trace.context import RunContext
 from agent_exec_trace.tracer import get_tracer
 
@@ -118,3 +118,29 @@ def invoke_agent(
         # attributes on the root span before it ends -- useful for run-level
         # telemetry like total cost, loop count, or error markers.
         yield span
+
+
+def set_output(span: Span, output: str, *, redaction=None) -> None:
+    """Set the agent's final output on the root span.
+
+    This must be called before the ``invoke_agent`` context manager exits
+    so the empty_response and output quality detectors can find the output.
+
+    Args:
+        span: the root span from ``invoke_agent``.
+        output: the agent's final response text.
+        redaction: optional RedactionConfig to gate/truncate output capture.
+
+    Example::
+
+        with invoke_agent(ctx) as span:
+            result = agent.run(query)
+            set_output(span, result)
+    """
+    if redaction is not None:
+        redacted = redaction.apply(output, allowed=redaction.capture_prompts)
+        if redacted is None:
+            return
+        output = redacted
+    span.set_attribute(GEN_AI_RESPONSE_CONTENT, output)
+    span.set_attribute(GEN_AI_AGENT_OUTPUT, output)

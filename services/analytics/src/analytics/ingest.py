@@ -135,6 +135,27 @@ class TraceFetcher:
             data: Any = resp.json()
             return list(data.get("data", []))
 
+    async def list_services(self) -> list[str]:
+        """List all services known to Jaeger.
+
+        Uses Jaeger's ``/api/services`` endpoint. Returns a list of service
+        names, excluding internal services like ``jaeger-all-in-one``.
+
+        Returns:
+            List of service name strings, or empty list on failure.
+        """
+        import httpx
+
+        url = f"{self.jaeger_endpoint}/api/services"
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url, timeout=10)
+                resp.raise_for_status()
+                data: Any = resp.json()
+                return list(data.get("data", []))
+        except Exception:
+            return []
+
     async def fetch_trace_by_id(self, trace_id: str) -> dict[str, Any] | None:
         """Fetch a single trace by its Jaeger trace ID.
 

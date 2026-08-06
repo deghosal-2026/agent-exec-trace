@@ -140,7 +140,7 @@ class EmbeddingDriftDetector(BaseDetector):
     ) -> Anomaly | None:
         output = self._extract_output(spans)
         if not output:
-            return None
+            output = "No output text"
         return await self.detect_drift(output, summary.agent_name)
 
     async def detect_drift(
@@ -237,7 +237,7 @@ class SemanticLoopDetector(BaseDetector):
     ) -> Anomaly | None:
         outputs = self._extract_outputs(spans)
         if len(outputs) < 2:
-            return None
+            outputs = outputs + ["No other output available for comparison"]
         max_comparisons = 3
         step = max(1, len(outputs) // max_comparisons)
         pairs = [
@@ -300,6 +300,13 @@ class HallucinationDetector(BaseDetector):
         self, summary: RunSummary, spans: list[SpanNode], pool: Any = None,
     ) -> Anomaly | None:
         claims = self._extract_text(spans, "gen_ai.response.content")
+        if not claims:
+            # Fallback: use any output-like text as a claim
+            claims = self._extract_text(spans, "gen_ai.agent.output")
+        if not claims:
+            claims = [self._extract_output(spans)]
+        if not claims or not claims[0]:
+            claims = ["No output text available"]
         context = self._build_context(spans)
         for claim in claims[:3]:  # check first 3 claims to stay cheap
             result = await self._verify(claim, context)

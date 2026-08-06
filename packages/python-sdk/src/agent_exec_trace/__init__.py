@@ -96,7 +96,7 @@ Typical usage
     from agent_exec_trace.config import default_config
     from agent_exec_trace.tracer import configure_tracing
     from agent_exec_trace.context import RunContext
-    from agent_exec_trace.instrument import invoke_agent
+    from agent_exec_trace.instrument import invoke_agent, set_output
     from agent_exec_trace.spans import plan_span
 
     configure_tracing(default_config())   # once at startup

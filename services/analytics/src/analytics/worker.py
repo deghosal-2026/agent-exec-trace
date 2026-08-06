@@ -133,54 +133,64 @@ class AnalyticsWorker:
     async def _process_cycle(self) -> None:
         """Single processing cycle: fetch, parse, persist, detect, materialize.
 
-        Fetches up to 50 traces from Jaeger, processes each one through the
-        pipeline, and materializes rollups at the end.  The 50-trace limit
-        per cycle prevents a single slow cycle from accumulating an unbounded
-        backlog.
+        Fetches up to 50 traces per configured service from Jaeger, processing
+        each one through the pipeline. When ``trace_query_services`` contains
+        ``"*"``, it queries the Jaeger API for all available services and
+        processes traces from every one.
         """
         pool = await get_pool()
-        # Fetch recent traces from the configured Jaeger service.
-        traces = await self.fetcher.fetch_traces_by_service(
-            service=settings.trace_query_service, limit=50
-        )
+        services = list(settings.trace_query_services)
 
-        for trace_data in traces:
-            trace_id = trace_data.get("traceID", "")
-            if not trace_id:
-                continue
+        # If "*" is configured, discover all services from Jaeger.
+        if "*" in services:
+            try:
+                all_services = await self.fetcher.list_services()
+                services = [s for s in all_services if s not in ("jaeger-all-in-one",)]
+                logger.info("Auto-discovered %d services: %s", len(services), services)
+            except Exception:
+                logger.warning("Failed to list services, falling back to demo-agent")
+                services = ["demo-agent"]
 
-            # Parse the raw trace into a tree of SpanNode objects.
-            root_spans = self.parser.parse_jaeger_trace(trace_data)
-            if not root_spans:
-                continue
+        for service in services:
+            traces = await self.fetcher.fetch_traces_by_service(service=service, limit=50)
 
-            # Build a run summary from the span tree.
-            summary = self.builder.build_from_span_tree(root_spans, trace_id)
-            if summary is None:
-                continue
+            for trace_data in traces:
+                trace_id = trace_data.get("traceID", "")
+                if not trace_id:
+                    continue
 
-            run_id = summary.run_id
+                # Parse the raw trace into a tree of SpanNode objects.
+                root_spans = self.parser.parse_jaeger_trace(trace_data)
+                if not root_spans:
+                    continue
 
-            # Deduplication: skip if this run was already processed.
-            # This handles the case where Jaeger returns the same trace
-            # across multiple polling cycles.
-            if await is_run_processed(pool, run_id):
-                self.metrics.inc_duplicate_skip()
-                continue
+                # Build a run summary from the span tree.
+                summary = self.builder.build_from_span_tree(root_spans, trace_id)
+                if summary is None:
+                    continue
 
-            # Persist the summary to the database.
-            await persist_run_summary(pool, summary)
-            self.metrics.inc_processed()
-            self.metrics.read_model_freshness = datetime.now(timezone.utc)
-            logger.info(
-                "Processed run %s (agent=%s, status=%s)",
-                run_id,
-                summary.agent_name,
-                summary.status,
-            )
+                run_id = summary.run_id
 
-            # Run anomaly detection and dispatch alerts.
-            await self._detect_and_alert(pool, summary, root_spans)
+                # Deduplication: skip if this run was already processed.
+                # This handles the case where Jaeger returns the same trace
+                # across multiple polling cycles.
+                if await is_run_processed(pool, run_id):
+                    self.metrics.inc_duplicate_skip()
+                    continue
+
+                # Persist the summary to the database.
+                await persist_run_summary(pool, summary)
+                self.metrics.inc_processed()
+                self.metrics.read_model_freshness = datetime.now(timezone.utc)
+                logger.info(
+                    "Processed run %s (agent=%s, status=%s)",
+                    run_id,
+                    summary.agent_name,
+                    summary.status,
+                )
+
+                # Run anomaly detection and dispatch alerts.
+                await self._detect_and_alert(pool, summary, root_spans)
 
         # After processing all traces in this cycle, materialize rollups.
         # This is deferred to after detection so anomaly counts are included
@@ -431,15 +441,15 @@ class AnalyticsWorker:
         Returns:
             The number of traces successfully processed.
         """
-        traces = await self.fetcher.fetch_traces_by_service(
-            service=settings.trace_query_service, limit=200
-        )
+        services = list(settings.trace_query_services)
         count = 0
-        for trace_data in traces:
-            trace_id = trace_data.get("traceID", "")
-            if not trace_id:
-                continue
-            success = await self.process_trace(trace_id)
-            if success:
-                count += 1
+        for service in services:
+            traces = await self.fetcher.fetch_traces_by_service(service=service, limit=10000)
+            for trace_data in traces:
+                trace_id = trace_data.get("traceID", "")
+                if not trace_id:
+                    continue
+                success = await self.process_trace(trace_id)
+                if success:
+                    count += 1
         return count

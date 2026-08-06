@@ -108,6 +108,20 @@ GEN_AI_AGENT_WORKLOAD_TYPE = "gen_ai.agent.workload.type"
 # run.  Helps distinguish autonomous runs from guided / supervised runs.
 GEN_AI_AGENT_INTERVENTION_COUNT = "gen_ai.agent.intervention.count"
 
+# Tool call attributes. The analytics service's tool-family detectors and the
+# LLM hallucination detector key on these to identify which tool was called,
+# what arguments were passed, and what the tool returned.
+GEN_AI_TOOL_NAME = "gen_ai.tool.name"
+GEN_AI_TOOL_ARGS = "gen_ai.tool.args"
+GEN_AI_TOOL_RESULT = "gen_ai.tool.result"
+
+# Agent output attributes. The empty_response and output quality detectors key
+# on these to determine whether the agent produced meaningful output. The LLM
+# hallucination and semantic_loop detectors also use these as the agent's
+# claims to verify against tool results.
+GEN_AI_RESPONSE_CONTENT = "gen_ai.response.content"
+GEN_AI_AGENT_OUTPUT = "gen_ai.agent.output"
+
 # ---------------------------------------------------------------------------
 # Span operation names.
 # ---------------------------------------------------------------------------

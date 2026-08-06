@@ -70,6 +70,11 @@ from opentelemetry.trace import Span, SpanKind
 
 from agent_exec_trace.attrs import (
     GEN_AI_OPERATION_NAME,
+    GEN_AI_TOOL_NAME,
+    GEN_AI_TOOL_ARGS,
+    GEN_AI_TOOL_RESULT,
+    GEN_AI_RESPONSE_CONTENT,
+    GEN_AI_AGENT_OUTPUT,
     SPAN_KIND_MEMORY,
     SPAN_KIND_PLAN,
     SPAN_KIND_RETRIEVAL,
@@ -187,23 +192,25 @@ def execute_tool_span(
     attributes: dict[str, _Value] | None = None,
     redaction: RedactionConfig | None = None,
     tool_args: str | None = None,
+    tool_result: str | None = None,
     tracer: trace.Tracer | None = None,
 ) -> Iterator[Span]:
     """Create an ``execute_tool`` child span.
 
-    Represents one tool call. The span carries ``_et.tool`` (the tool identity) which
-    the loop/retry detectors and tool-usage rollups aggregate on.
+    Represents one tool call. The span carries ``gen_ai.tool.name`` (the tool identity)
+    which the loop/retry detectors and tool-usage rollups aggregate on, plus optional
+    ``gen_ai.tool.args`` and ``gen_ai.tool.result`` for the LLM hallucination detector.
 
-    Privacy note: ``tool_args`` is only written when the caller supplies a
-    ``redaction`` config AND that config opts tool args in (``capture_tool_args``).
-    Otherwise the args never reach the span, even in a "capture enabled" config -- the
-    per-field flag is what gates it (see :meth:`RedactionConfig.apply`).
+    Privacy note: ``tool_args`` and ``tool_result`` are only written when the caller
+    supplies a ``redaction`` config AND that config opts tool args in
+    (``capture_tool_args``). Otherwise the content never reaches the span.
 
     Args:
         tool_name: the tool being called (used as the span name).
         attributes: optional extra span attributes.
-        redaction: privacy config used to decide whether/how ``tool_args`` is stored.
+        redaction: privacy config used to decide whether/how ``tool_args``/``tool_result`` is stored.
         tool_args: raw tool arguments; captured only when redaction allows it.
+        tool_result: tool return value; captured only when redaction allows it.
         tracer: optional explicit tracer (tests).
 
     Yields:
@@ -215,29 +222,26 @@ def execute_tool_span(
 
         redact = RedactionConfig(mode=PrivacyMode.TRUNCATED, capture_tool_args=True)
 
-        with execute_tool_span(
-            "search_kb",
-            redaction=redact,
-            tool_args='{"query": "sensitive data"}',
-        ):
-            # Do the actual tool call
-            ...
+        with execute_tool_span("search_kb", redaction=redact, tool_args='{"q": "password"}') as span:
+            result = search("password")
+            span.set_attribute(GEN_AI_TOOL_RESULT, str(result))
     """
-    # Merge the tool identity into the attributes before starting the span.
-    # ``_et.tool`` is a stable key the analytics service uses for tool-usage rollups.
-    merged = {**(attributes or {}), "_et.tool": tool_name}
+    # Use gen_ai.tool.name (standard OTel semantic convention) instead of _et.tool.
+    merged = {**(attributes or {}), GEN_AI_TOOL_NAME: tool_name}
     span = _start_span(
         tool_name, kind=SpanKind.CLIENT, kind_name=SPAN_KIND_TOOL, attributes=merged, tracer=tracer
     )
 
-    # Guard: only attempt the write when both a redaction config and args are present.
-    # ``apply`` decides drop/truncate/hash based on mode + the capture_tool_args flag.
-    # If redaction is None, we simply skip -- no redaction config means don't write,
-    # which is the safe default.
+    # Capture tool args and result under standard gen_ai.* keys when redaction allows.
     if redaction is not None and tool_args is not None:
         redacted = redaction.apply(tool_args, allowed=redaction.capture_tool_args)
         if redacted is not None:
-            span.set_attribute("_et.tool_args", redacted)
+            span.set_attribute(GEN_AI_TOOL_ARGS, redacted)
+
+    if redaction is not None and tool_result is not None:
+        redacted = redaction.apply(tool_result, allowed=redaction.capture_tool_args)
+        if redacted is not None:
+            span.set_attribute(GEN_AI_TOOL_RESULT, redacted)
 
     with trace.use_span(span, end_on_exit=True):
         yield span
@@ -330,7 +334,7 @@ def memory_span(
     if redaction is not None and content is not None:
         redacted = redaction.apply(content, allowed=redaction.capture_memory)
         if redacted is not None:
-            span.set_attribute("_et.content", redacted)
+            span.set_attribute("gen_ai.memory.content", redacted)
 
     with trace.use_span(span, end_on_exit=True):
         yield span

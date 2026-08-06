@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     # --- Trace sources ---
     jaeger_endpoint: str = "http://localhost:16686"
     collector_endpoint: str = "http://localhost:4318"
-    trace_query_service: str = "demo-agent"
+    trace_query_services: tuple[str, ...] = ("demo-agent",)
 
     # --- Worker ---
     polling_interval_seconds: int = 30

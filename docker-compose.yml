@@ -86,6 +86,7 @@ services:
       ANALYTICS_JAEGER_ENDPOINT: http://jaeger:16686
       ANALYTICS_COLLECTOR_ENDPOINT: http://otel-collector:4318
       ANALYTICS_LOG_LEVEL: INFO
+      ANALYTICS_TRACE_QUERY_SERVICES: '["*"]'
     depends_on:
       postgres:
         condition: service_healthy
