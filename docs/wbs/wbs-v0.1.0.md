@@ -103,7 +103,7 @@ Suggested issue types for later GitHub conversion:
 | Milestone 10 | local stack/demo + service-level testing issues ✅ |
 | Milestone 11 | e2e Playwright testing and screenshot validation ✅ |
 | Milestone 12 | documentation/OSS readiness issues ✅ |
-| Milestone 13 | LLM validation on synthetic traces + GitHub agent SDK integration (13.1 ✅, 13.2 ⟳) |
+| Milestone 13 | LLM validation on synthetic traces + GitHub agent SDK integration ✅ |
 | Milestone 14 | release validation issues |
 
 ## Phased Issue Creation Strategy
