@@ -16,6 +16,94 @@ bugs and three SDK gaps were found and fixed. The LLM-augmented detection
 pipeline was validated on 200 LangGraph traces, finding +468 semantic
 anomalies beyond rule-based detection.
 
+### 1.1 Verdict Matrix
+
+| Question | Answer | Evidence |
+|---|---|---|
+| **Is the SDK working?** | ✅ Yes | 3 agents, 3 frameworks, valid OTel spans produced |
+| **Is SDK integration easy?** | ✅ Yes | <2 min per agent, 5 lines of code |
+| **Are detectors working?** | ✅ Yes (rule-based) / ⚠️ Partially (LLM) | 7 types, 679 anomalies (rule); 2 LLM types but 100% FP rate |
+| **Is E2E infra setup working?** | ✅ Yes (after 7 bug fixes) | Agent→OTLP→Collector→Jaeger→Analytics→Postgres→API→UI |
+| **Is the LLM working?** | ✅ Yes (technically) / ⚠️ No (meaningfully) | 4 calls, 100% JSON, 98% cache — but 100% false positive rate |
+
+### 1.2 Good News
+
+1. **SDK integration is real.** 3 agents instrumented in under 2 minutes each
+   across 3 frameworks. 5 lines of code per agent. The "instrument in minutes"
+   claim is validated.
+
+2. **Rule-based detectors work.** After fixing the attribute naming mismatch,
+   7 detector types fire correctly on LangGraph traces: loop (67), pattern_loop
+   (134), tool_error_rate (200), recovery_path (133), low_output (200). The
+   counts match expected behavior — loop fires on 67 loop-scenario traces,
+   pattern_loop on the subset with repeating A→B patterns.
+
+3. **Full pipeline is end-to-end viable.** Agent → OTLP → Collector → Jaeger
+   → Analytics auto-ingest → Postgres → API (port 8100) → React UI. All 7
+   agents visible in fleet view. Auto-discovery ingests from every Jaeger
+   service automatically.
+
+4. **LLM is technically working.** Qwen3.5-9B-MLX-4bit produces valid JSON,
+   thinking mode disabled works, 100% parse rate, 98% cache efficiency.
+   The LLM pipeline is sound — the issue is input quality, not model quality.
+
+### 1.3 Bad News
+
+1. **SDK doesn't capture content.** Spans have structure (tool names, timing,
+   parent-child) but no content (tool results, LLM responses, plan text).
+   This is the single biggest gap. Without `gen_ai.tool.result` and
+   `gen_ai.response.content`, LLM detectors are blind.
+
+2. **`@trace_agent` creates flat traces.** The easiest integration path
+   (5 lines, decorator) produces single-span traces. Only 3 of 35 detectors
+   can fire. Users who follow the quickstart get nearly zero detection value.
+
+3. **LLM detectors produce 100% false positives.** Both semantic_loop and
+   hallucination fire on every trace because 1-word outputs ("resolve",
+   "escalate") with no tool results look like degenerate behavior to the LLM.
+   The LLM is technically correct ("this output is unsupported by evidence")
+   but the result is noise, not signal.
+
+4. **7 bugs found in "done" milestones.** M3 OTLP validation was checked as
+   done but never tested end-to-end. Two cancelling bugs hid the problem.
+   The attribute naming mismatch between SDK and detectors was never caught
+   because synthetic traces used a different code path.
+
+### 1.4 Surprises
+
+1. **Cache amplification.** 4 LLM calls produced 400 anomalies. The in-memory
+   cache means identical traces are analyzed once and the answer is reused 200
+   times. This is extremely efficient but means one wrong answer propagates
+   everywhere. No way to tell which anomalies came from cache vs. fresh calls.
+
+2. **PydanticAI v1→v2 breaking change.** Every PydanticAI agent on GitHub
+   uses the old v1 API. The framework ecosystem is fragmented — agents
+   built 6 months ago don't run with current packages. This affects 6 of 8
+   target GitHub agents.
+
+3. **Detector pre-checks silently blocked LLM.** The original detector design
+   had pre-condition checks that returned `None` without calling the LLM
+   when content was thin. 1,200 detector attempts, 0 LLM calls. The
+   validation reported "0 LLM anomalies" with no indication the LLM was
+   never invoked. Silent failure, not graceful degradation.
+
+4. **Worker was hard-coded to one agent.** `trace_query_service = "demo-agent"`
+   meant the analytics worker only ingested traces from one specific agent.
+   Every other agent's traces were silently ignored. This is a fleet
+   monitoring showstopper that would have shipped undetected.
+
+### 1.5 Key Takeaway
+
+The SDK captures **what happened** (tool names, timing, order) but not
+**what was said** (tool results, LLM responses, plan text). Without content
+on spans, rule-based detectors miss tools entirely (attribute naming bug)
+and LLM detectors either don't fire at all (pre-check blocking) or fire on
+everything (100% false positive rate on thin content).
+
+**v0.2.0 has one job: close the content gap.** Capture tool results and
+agent output text on every span. Everything else — LLM quality, detector
+accuracy, false positive rates — depends on having content to analyze.
+
 ---
 
 ## 2. Agents Integrated
