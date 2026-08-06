@@ -10,11 +10,43 @@ span with run metadata, plus nested behavior spans mapped from node names.
 Node mapping:
   * ``planner`` -> ``plan`` span (``gen_ai.operation.name = plan``)
   * ``run_tool`` -> ``execute_tool`` span (tool name from state ``plan`` field)
-  * ``resolve`` / ``escalate`` -> generic child span
+  * ``resolve`` / ``escalate`` -> generic child span (no special operation name)
 
 This keeps LangGraph output structurally consistent with the raw Python adapter
 (same root shape, same metadata keys, sibling behavior spans), satisfying the
 Release Blocker in the WBS.
+
+========================================================
+How the adapter works
+========================================================
+1. ``trace_graph()`` wraps a ``CompiledStateGraph`` in a ``TracedGraph`` that stores
+   agent metadata (name, version, workload, model, provider).
+
+2. On each ``TracedGraph.invoke()`` call, the adapter:
+   a. Creates a fresh ``RunContext`` from the stored metadata.
+   b. Opens a root ``invoke_agent`` span via ``invoke_agent()``.
+   c. Registers a ``_NodeCallbackHandler`` as a LangChain callback that listens
+      for ``on_chain_start`` / ``on_chain_end`` / ``on_chain_error`` events.
+   d. For each event tagged ``graph:step:N`` with a known LangGraph node name,
+      opens a child behavior span under the root.
+
+3. The ``seq:step:N`` wrapper events (emitted by LangGraph's internal sequencing)
+   are silently ignored -- only ``graph:step:*`` events produce spans.
+
+========================================================
+Usage
+========================================================
+
+::
+
+    from agent_exec_trace.langgraph import trace_graph
+    from agent_exec_trace.tracer import configure_tracing, default_config
+
+    configure_tracing(default_config())
+
+    graph = build_graph()  # returns CompiledStateGraph
+    traced = trace_graph(graph, agent_name="request-triage", agent_version="v0.1.0")
+    result = traced.invoke({"messages": [{"role": "user", "content": "help"}]})
 """
 
 from __future__ import annotations
@@ -46,6 +78,13 @@ class _NodeCallbackHandler(BaseCallbackHandler):
     ``tags`` include a ``graph:step:N`` entry produce spans -- the ``seq:step:N``
     wrapper events are silently ignored (their run ids are never stored, so
     ``on_chain_end`` becomes a no-op).
+
+    Design notes:
+      * The handler is created per-``invoke()`` call (not per-graph) so spans from
+        different concurrent runs do not share state.
+      * Errors are recorded on the span UNTIL ``on_chain_error`` fires; the error
+        span is still popped from the map (ended after recording), so a subsequent
+        ``on_chain_end`` callback is harmless (map lookup returns None).
     """
 
     def __init__(
@@ -53,8 +92,17 @@ class _NodeCallbackHandler(BaseCallbackHandler):
         *,
         tracer: trace.Tracer | None = None,
     ) -> None:
+        """Initialize the callback handler with an optional tracer.
+
+        Args:
+            tracer: optional explicit tracer.  If ``None``, the handler calls
+                ``get_tracer()`` to obtain the active tracer at construction time.
+                Tests can inject a tracer bound to an in-memory provider.
+        """
         self._tracer = tracer or get_tracer()
         # ``_spans`` maps event run_id -> Span for the primary (graph:step) events.
+        # The dict is cleared entry-by-entry as spans end (via ``pop``) so a given
+        # run_id is never double-ended.
         self._spans: dict[str, Span] = {}
 
     @staticmethod
@@ -63,6 +111,13 @@ class _NodeCallbackHandler(BaseCallbackHandler):
 
         The node name lives in ``kwargs["metadata"]["langgraph_node"]`` when LangGraph
         dispatches a callback event for a specific node.
+
+        Args:
+            kwargs: the raw keyword arguments passed to the LangChain callback.
+
+        Returns:
+            The node name string (e.g. ``"planner"``, ``"run_tool"``), or ``None``
+            if the event is not associated with a specific node.
         """
         md = kwargs.get("metadata")
         if not isinstance(md, dict):
@@ -75,6 +130,14 @@ class _NodeCallbackHandler(BaseCallbackHandler):
 
         LangGraph emits both ``graph:step:N`` and ``seq:step:N`` events. Only the
         ``graph:step:*`` events represent real node boundaries that should produce spans.
+        The ``seq:step:*`` events represent LangGraph's internal sequencing and are
+        deliberately filtered out -- they would produce duplicate or misleading spans.
+
+        Args:
+            kwargs: the raw keyword arguments passed to the LangChain callback.
+
+        Returns:
+            ``True`` if at least one tag starts with ``"graph:step:"``.
         """
         tags = kwargs.get("tags")
         if not isinstance(tags, list | tuple):
@@ -87,11 +150,34 @@ class _NodeCallbackHandler(BaseCallbackHandler):
         inputs: dict[str, Any],
         **kwargs: Any,
     ) -> None:
+        """Open a behavior span when LangGraph starts executing a node.
+
+        Called by LangChain's callback system when a node begins execution.
+        Only creates a span if the event is a primary graph step with a known
+        node name.  Spans are stored keyed by ``run_id`` for later pairing with
+        ``on_chain_end`` / ``on_chain_error``.
+
+        Node-to-span mapping:
+          * ``"planner"`` -> ``SpanKind.INTERNAL`` span with operation ``"plan"``
+          * ``"run_tool"`` -> ``SpanKind.CLIENT`` span with operation ``"execute_tool"``
+            and a ``_et.tool`` attribute carrying the tool name from inputs.
+          * Everything else -> ``SpanKind.INTERNAL`` span (no special operation name).
+
+        Args:
+            serialized: LangChain serialized component metadata (unused).
+            inputs: the state dict passed to the node; checked for the ``"plan"``
+                field when the node is ``"run_tool"`` to extract the actual tool name.
+            **kwargs: forwarded by LangChain; must contain ``"run_id"`` and ``"tags"``.
+        """
+        # Guard: only process events that map to a known LangGraph node AND are
+        # primary graph steps (not internal seq:step wrappers).
         node = self._node_name(kwargs)
         if node is None or not self._is_primary_start(kwargs):
             return
 
         # Determine the span kind and name based on the node.
+        # The mapping is deliberately simple: we want predictable, queryable span
+        # names that correspond to the graph's structural vocabulary.
         if node == "planner":
             span = self._tracer.start_span(
                 node,
@@ -99,7 +185,9 @@ class _NodeCallbackHandler(BaseCallbackHandler):
                 attributes={GEN_AI_OPERATION_NAME: SPAN_KIND_PLAN},
             )
         elif node == "run_tool":
-            # The tool name is carried in the state's ``plan`` field.
+            # The tool name is carried in the state's ``plan`` field.  If the field
+            # is missing (unlikely but defensive), fall back to ``"run_tool"`` so we
+            # still get a span with a recognizable name.
             tool_name = (inputs or {}).get("plan", "run_tool")
             span = self._tracer.start_span(
                 tool_name,
@@ -110,12 +198,18 @@ class _NodeCallbackHandler(BaseCallbackHandler):
                 },
             )
         else:
-            # resolve / escalate -- generic child spans.
+            # ``resolve`` / ``escalate`` or any future node -- produce a generic
+            # child span so the timeline shows the node was visited, even without
+            # a recognized semantic classification.
             span = self._tracer.start_span(
                 node,
                 kind=SpanKind.INTERNAL,
             )
 
+        # Store the span keyed by run_id so ``on_chain_end`` knows which span to
+        # close.  We only store when ``run_id`` is non-empty; an empty run_id
+        # (unlikely but possible in edge-case callbacks) would never be looked up
+        # anyway, so omitting the store avoids a dangling span.
         rid = str(kwargs.get("run_id", ""))
         if rid:
             self._spans[rid] = span
@@ -125,6 +219,17 @@ class _NodeCallbackHandler(BaseCallbackHandler):
         outputs: dict[str, Any],
         **kwargs: Any,
     ) -> None:
+        """Close the behavior span when LangGraph finishes executing a node.
+
+        Looks up the span by ``run_id`` and calls ``span.end()``.  If the run_id
+        is not found in ``_spans`` (either because it wasn't stored -- a
+        ``seq:step`` wrapper event -- or because it was already popped by
+        ``on_chain_error``), this becomes a no-op.
+
+        Args:
+            outputs: the node's output state (unused by the handler).
+            **kwargs: forwarded by LangChain; must contain ``"run_id"``.
+        """
         rid = str(kwargs.get("run_id", ""))
         span = self._spans.pop(rid, None)
         if span is not None:
@@ -135,10 +240,24 @@ class _NodeCallbackHandler(BaseCallbackHandler):
         error: BaseException,
         **kwargs: Any,
     ) -> None:
+        """Record an error on the node's span and close it.
+
+        Looks up the span by ``run_id``, records the exception as both a span
+        event and a span status (``StatusCode.ERROR``), and pops the span from
+        the map so a subsequent ``on_chain_end`` callback is a harmless no-op.
+
+        Args:
+            error: the exception that caused the node to fail.
+            **kwargs: forwarded by LangChain; must contain ``"run_id"``.
+        """
         rid = str(kwargs.get("run_id", ""))
         span = self._spans.pop(rid, None)
         if span is not None:
+            # ``record_exception`` adds the exception details as a span event
+            # so the trace viewer can show which step failed and why.
             span.record_exception(error)
+            # Set the span status to ERROR so backend queries can filter on
+            # ``status_code == ERROR`` to find failing runs.
             span.set_status(trace.Status(trace.StatusCode.ERROR, str(error)))
             span.end()
 
@@ -150,6 +269,17 @@ class TracedGraph:
     metadata supplied at construction, attaches a callback handler that creates
     nested behavior spans for instrumented nodes, and returns the original graph's
     result.
+
+    The graph's original behavior is preserved -- all callbacks, recursion limits,
+    and state are the same.  The adapter only adds instrumentation.
+
+    Attributes:
+        _graph: the wrapped ``CompiledStateGraph`` instance.
+        _agent_name: agent identity for the root span.
+        _agent_version: optional version label.
+        _workload_type: optional workload classification.
+        _model: optional model name.
+        _provider: optional provider name.
     """
 
     def __init__(
@@ -162,6 +292,16 @@ class TracedGraph:
         model: str | None = None,
         provider: str | None = None,
     ) -> None:
+        """Wrap a compiled graph for tracing.
+
+        Args:
+            graph: a compiled ``CompiledStateGraph`` to instrument.
+            agent_name: agent identity attached to the root span of every run.
+            agent_version: optional version label.
+            workload_type: optional workload classification.
+            model: optional model name used by the run.
+            provider: optional provider name used by the run.
+        """
         self._graph = graph
         self._agent_name = agent_name
         self._agent_version = agent_version
@@ -177,6 +317,14 @@ class TracedGraph:
     ) -> dict[str, Any]:
         """Run the graph inside a root invoke_agent span.
 
+        Each call creates a fresh ``RunContext`` (new run id and start timestamp)
+        and a fresh ``_NodeCallbackHandler`` (separate span map) so concurrent
+        invocations are fully isolated.
+
+        The adapter merges its callback handler into any user-supplied callbacks
+        so existing callback-based instrumentation continues to work alongside
+        the OTel spans.
+
         Args:
             input_state: initial state passed to the LangGraph (can be a ``TypedDict``
                 or a plain dict).
@@ -187,6 +335,7 @@ class TracedGraph:
         Returns:
             The graph's final state (same type as ``graph.invoke()``).
         """
+        # Fresh context per invocation: each call is its own run.
         ctx = RunContext(
             agent_name=self._agent_name,
             agent_version=self._agent_version,
@@ -194,9 +343,12 @@ class TracedGraph:
             model=self._model,
             provider=self._provider,
         )
+        # Fresh handler per invocation: separate span map per concurrent call.
         handler = _NodeCallbackHandler()
 
         # Merge the adapter's callback handler with any user-supplied callbacks.
+        # The adapter's handler goes first so its spans are set up before user
+        # callbacks fire (user callbacks may want to access current span state).
         cfg: dict[str, Any] = dict(config or {})
         existing = cfg.get("callbacks")
         if existing:
@@ -205,6 +357,9 @@ class TracedGraph:
             cfg["callbacks"] = [handler]
 
         with invoke_agent(ctx):
+            # ``cast`` is safe: ``RunnableConfig`` is a ``TypedDict`` whose
+            # ``callbacks`` field accepts ``BaseCallbackHandler`` instances; our
+            # ``cfg`` dict is compatible at runtime even if mypy can't prove it.
             result = self._graph.invoke(input_state, config=cast(RunnableConfig, cfg), **kwargs)
             return cast(dict[str, Any], result)
 
@@ -236,6 +391,22 @@ def trace_graph(
 
     Returns:
         A ``TracedGraph`` wrapping the original graph.
+
+    Example::
+
+        from agent_exec_trace.langgraph import trace_graph
+        from agent_exec_trace.tracer import configure_tracing, default_config
+
+        configure_tracing(default_config())
+
+        traced = trace_graph(
+            graph,
+            agent_name="support-bot",
+            agent_version="v1.2.0",
+            model="gpt-4o",
+            provider="openai",
+        )
+        result = traced.invoke({"messages": [...]})
     """
     return TracedGraph(
         graph,

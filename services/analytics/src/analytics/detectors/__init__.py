@@ -1,9 +1,29 @@
 """Anomaly detection package — exports all 35 detectors and a factory function.
 
-Usage::
+The detectors are organized by domain:
+
+- **Tool execution** (``tool.py``): 8 detectors for tool call patterns, errors,
+  latency, timeouts, and redundancy.
+- **Cost & resource** (``cost.py``): 6 detectors for cost spikes, efficiency,
+  token explosions, and wasted calls.
+- **Runtime & completion** (``runtime.py``): 5 detectors for run duration,
+  step budgets, inactivity, and premature completion.
+- **Retry & recovery** (``retry.py``): 5 detectors for retry storms, systemic
+  failures, transient storms, cascading retries, and recovery paths.
+- **Interaction & control** (``interaction.py``): 4 detectors for human
+  interventions, escalations, approval latency, and rejections.
+- **Output quality** (``output.py``): 4 detectors for empty/low output,
+  indeterminate status, and output drift.
+- **Cross-run patterns** (``cross_run.py``): 3 detectors for anomaly
+  clustering, run frequency anomalies, and first-run heuristics.
+
+**Factory usage**::
 
     from analytics.detectors import create_all_detectors
     detectors = create_all_detectors()
+
+All detectors inherit from ``BaseDetector`` and expose a ``detect(summary, spans)``
+method (optionally async via ``detect_async``).
 """
 
 from __future__ import annotations
@@ -63,8 +83,12 @@ from analytics.detectors.tool import (
 def create_all_detectors() -> list[BaseDetector]:
     """Factory: instantiate all 35 detectors with default thresholds from settings.
 
+    Each detector reads its thresholds from ``settings.*`` environment
+    variables.  Detectors are instantiated without arguments so they pick
+    up the current configuration.
+
     Returns:
-        A list of detector instances ready to use.
+        A list of 35 detector instances, ordered by category.
     """
     return [
         # Tool execution (8)

@@ -1,9 +1,20 @@
 """Pydantic models for the analytics service's domain objects.
 
 Defines the data shapes used throughout the ingestion pipeline: run summaries,
-anomalies, fleet rollups, version cohorts, span trees, and raw traces.  All models
-inherit from ``pydantic.BaseModel`` for validation, serialization, and OpenAPI
-schema generation.
+anomalies, fleet rollups, version cohorts, span trees, and raw traces.  All
+models inherit from ``pydantic.BaseModel`` for validation, serialization, and
+OpenAPI schema generation.
+
+**Design decisions:**
+
+- **Auto-generated IDs**: ``Anomaly.id`` uses a hex UUID default factory so
+  each anomaly is uniquely identifiable without needing a database sequence.
+- **Datetime defaults**: ``detected_at`` defaults to UTC now at construction
+  time, capturing when the anomaly was *created in code*, not when it was
+  persisted to the database.
+- **Nested spans**: ``SpanNode`` uses recursive ``child_spans`` lists
+  (``ForwardRef`` handled by Pydantic with ``from __future__ import annotations``),
+  allowing arbitrary tree depth without a separate edge table.
 """
 
 from __future__ import annotations
@@ -19,8 +30,18 @@ class AnomalyType(str, Enum):
     """Enumeration of all anomaly types produced by the 35 rule-based + 6 LLM detectors.
 
     Each value matches the ``anomaly_type`` class attribute on its corresponding
-    detector.  Used by the API layer for validation and by the analytics worker for
-    per-detector toggles and metrics.
+    detector.  Used by the API layer for validation and by the analytics worker
+    for per-detector toggles (``settings.detector_disabled``) and metrics.
+
+    The values are organized by detector category:
+    - ``loop`` through ``redundant_tool_call``: Tool execution (8 types)
+    - ``cost_spike`` through ``wasted_tool_calls``: Cost & resource (6 types)
+    - ``run_duration`` through ``premature_completion``: Runtime (5 types)
+    - ``retry_storm`` through ``recovery_path``: Retry & recovery (5 types)
+    - ``intervention_frequency`` through ``intervention_rejection``: Interaction (4 types)
+    - ``empty_response`` through ``output_drift``: Output quality (4 types)
+    - ``anomaly_cluster`` through ``first_run_heuristic``: Cross-run patterns (3 types)
+    - ``semantic_loop`` through ``confusion_pattern``: LLM-augmented (5 types)
     """
 
     loop = "loop"
@@ -71,6 +92,13 @@ class RunSummary(BaseModel):
     Extracted from the root span of a trace tree.  Carries version and workload
     metadata for fleet-level grouping, plus cost, retry, and loop counters for
     anomaly detection.
+
+    Notes:
+        - ``run_id`` is the primary key for deduplication.
+        - ``agent_version`` and ``workload_type`` are optional because not all
+          trace sources include them.
+        - ``estimated_cost`` is optional because cost data depends on the
+          trace instrumentation depth.
     """
 
     run_id: str
@@ -94,9 +122,16 @@ class RunSummary(BaseModel):
 class Anomaly(BaseModel):
     """A detected anomaly on a single agent run.
 
-    ``id`` auto-generates as a hex UUID so each anomaly is uniquely identifiable
-    regardless of the detector that produced it.  ``detected_at`` defaults to
-    the current UTC time.
+    ``id`` auto-generates as a hex UUID so each anomaly is uniquely
+    identifiable regardless of the detector that produced it.
+    ``detected_at`` defaults to the current UTC time at object creation.
+
+    Notes:
+        - ``explanation`` is a human-readable sentence.  It is used in webhook
+          alerts, dashboards, and LLM triage classification.
+        - ``evidence`` is a free-form dict of detector-specific data
+          (thresholds crossed, raw values, ratios).  It is persisted as JSON
+          in the database.
     """
 
     id: str = Field(default_factory=lambda: uuid.uuid4().hex)
@@ -114,6 +149,13 @@ class FleetRollup(BaseModel):
 
     Materialized periodically by ``FleetRollupMaterializer`` to serve the fleet
     health dashboard without re-aggregating raw runs on every request.
+
+    Notes:
+        - ``period_start`` / ``period_end`` define the rolling time window
+          (typically 24 hours).
+        - ``avg_duration_ms`` and ``avg_cost`` are simple arithmetic means.
+        - ``anomaly_count`` is fetched from the ``anomalies`` table via a
+          correlated subquery.
     """
 
     agent_name: str
@@ -133,8 +175,12 @@ class FleetRollup(BaseModel):
 class VersionCohortSummary(BaseModel):
     """Pre-computed aggregate for a specific agent version cohort.
 
-    Used by the version comparison page to show side-by-side metrics and tool
-    usage deltas between two versions.
+    Used by the version comparison page to show side-by-side metrics and
+    tool usage deltas between two versions.
+
+    Notes:
+        - ``top_tools`` is a ``dict[str, int]`` mapping tool name to call count.
+        - Only rows with a non-null ``agent_version`` are included.
     """
 
     agent_name: str
@@ -154,9 +200,18 @@ class VersionCohortSummary(BaseModel):
 class SpanNode(BaseModel):
     """A single span in a trace tree, with parent-child relationships.
 
-    Represents one behavior span (plan, tool execution, retrieval, memory) with
-    timing, status, attributes, and nested child spans.  The tree structure is
-    built by ``TraceParser`` and consumed by the run-timeline API.
+    Represents one behavior span (plan, tool execution, retrieval, memory)
+    with timing, status, attributes, and nested child spans.  The tree
+    structure is built by ``TraceParser`` and consumed by the run-timeline
+    API and all anomaly detectors.
+
+    Notes:
+        - ``attributes`` is a free-form dict that carries OTel and agent-
+          specific metadata (tool name, arguments, results, token counts, etc.).
+        - ``child_spans`` is a recursive list — the tree depth is unlimited
+          but in practice agent traces rarely exceed 3-4 levels.
+        - ``duration_ms`` is pre-computed from ``start_time`` and ``end_time``
+          where available, but may be ``None`` for timestampless spans.
     """
 
     span_id: str
@@ -175,7 +230,7 @@ class RawTrace(BaseModel):
     """A raw trace as received from Jaeger, before parsing into span trees.
 
     Kept for reference / debugging; the pipeline primarily works with parsed
-    ``SpanNode`` trees.
+    ``SpanNode`` trees.  ``spans`` is a flat list before tree resolution.
     """
 
     trace_id: str

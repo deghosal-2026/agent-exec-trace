@@ -1,29 +1,79 @@
+/**
+ * Global stylesheet for the agent-exec-trace web dashboard (v0.1.0).
+ *
+ * ## Dependencies
+ * - Tailwind CSS v4 (imported via `@import "tailwindcss"`).
+ * - IBM Plex Sans (body font) and JetBrains Mono (code/monospace font).
+ *
+ * ## CSS Custom Properties (Design Tokens)
+ * Centralized color palette, border radii, and shadow definitions used across
+ * the application. These tokens feed into Tailwind utility classes as well as
+ * custom animations and component styles.
+ *
+ * ## Animations
+ * Six keyframe-based animations used for page transitions and UI feedback:
+ * - `fadeInUp` — cards and rows enter from below
+ * - `fadeIn` — simple opacity in
+ * - `pulseGlow` — accent glow pulse (unused in current build, reserved)
+ * - `slideInRight` — detail panels slide from right
+ * - `shimmer` — loading skeleton animation
+ * - `countUp` — number scale-in effect
+ *
+ * ## Stagger System
+ * CSS classes `.stagger-1` through `.stagger-10` provide incremental animation
+ * delays (50ms steps). Components apply these dynamically based on their index
+ * in a list, creating a cascading reveal effect.
+ *
+ * ## Accessibility
+ * - `prefers-reduced-motion` media query eliminates all animations when the
+ *   user has requested reduced motion.
+ * - Custom scrollbar styling for WebKit browsers.
+ * - Custom text selection color using the accent token.
+ */
+
 @import "tailwindcss";
 
+/* ═══ CSS Custom Properties (Design Tokens) ═══ */
+
 :root {
+  /* Sidebar colors */
   --color-sidebar: #0b1120;
   --color-sidebar-hover: #1e293b;
   --color-sidebar-active: #1e3a5f;
+
+  /* Brand accent */
   --color-accent: #3b82f6;
   --color-accent-glow: rgba(59, 130, 246, 0.15);
+
+  /* Semantic status colors */
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-critical: #ef4444;
   --color-info: #6366f1;
+
+  /* Surface and layout colors */
   --color-bg: #f1f5f9;
   --color-surface: #ffffff;
   --color-border: #e2e8f0;
+
+  /* Text colors */
   --color-text-primary: #0f172a;
   --color-text-secondary: #64748b;
   --color-text-muted: #94a3b8;
+
+  /* Border radii */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
+
+  /* Box shadows */
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
   --shadow-glow: 0 0 20px var(--color-accent-glow);
 }
+
+/* ═══ Base Styles ═══ */
 
 body {
   margin: 0;
@@ -34,64 +84,87 @@ body {
   color: var(--color-text-primary);
 }
 
+/* Monospace font stack for code blocks and data tables */
 code,
 .font-mono {
   font-family: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
 }
 
+/* ═══ Animations (Keyframes) ═══ */
+
+/** Cards and rows fade in from 12px below their final position. */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/** Simple opacity fade-in. */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
+/** Accent glow pulse (reserved for future use — e.g. live indicator). */
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 0 0 var(--color-accent-glow); }
   50% { box-shadow: 0 0 0 4px var(--color-accent-glow); }
 }
 
+/** Slide in from 8px to the right (detail panels, drawers). */
 @keyframes slideInRight {
   from { opacity: 0; transform: translateX(8px); }
   to { opacity: 1; transform: translateX(0); }
 }
 
+/** Shimmer loading effect: gradient sweep across the element. */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
+/** Scale-in with slight bounce for count/number animations. */
 @keyframes countUp {
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
 }
 
+/** Logo spin animation (reserved for future branding use). */
 @keyframes logoSpin {
   0% { transform: rotate(0deg) scale(1); }
   50% { transform: rotate(180deg) scale(1.1); }
   100% { transform: rotate(360deg) scale(1); }
 }
 
+/* ═══ Animation Utility Classes ═══ */
+
+/** Fade in and slide up; `opacity: 0` ensures the element is hidden before animation. */
 .animate-fade-in-up {
   animation: fadeInUp 0.5s ease-out forwards;
   opacity: 0;
 }
 
+/** Simple fade in; `opacity: 0` ensures the element is hidden before animation. */
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out forwards;
 }
 
+/** Slide in from the right. */
 .animate-slide-in {
   animation: slideInRight 0.3s ease-out forwards;
 }
 
+/** Scale-in count animation with cubic-bezier easing. */
 .animate-count-up {
   animation: countUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* ═══ Staggered Animation Delays ═══ */
+
+/**
+ * Stagger classes add incremental animation delay (50ms per step).
+ * Components apply these dynamically: `stagger-${Math.min(index + 1, 10)}`.
+ * Capped at 10 (500ms max delay) to keep the last items feeling responsive.
+ */
 .stagger-1 { animation-delay: 0.05s; }
 .stagger-2 { animation-delay: 0.1s; }
 .stagger-3 { animation-delay: 0.15s; }
@@ -103,12 +176,25 @@ code,
 .stagger-9 { animation-delay: 0.45s; }
 .stagger-10 { animation-delay: 0.5s; }
 
+/* ═══ Shimmer Loading Effect ═══ */
+
+/**
+ * Animated placeholder for loading states.
+ * Uses a linear gradient swept across a 200% background via the shimmer keyframe.
+ */
 .shimmer {
   background: linear-gradient(90deg, var(--color-border) 25%, #e8ecf1 50%, var(--color-border) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
+/* ═══ Accessibility ═══ */
+
+/**
+ * Respects the user's `prefers-reduced-motion` OS setting.
+ * When active, all animations and transitions are reduced to near-zero duration,
+ * making the interface static but fully functional.
+ */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -119,11 +205,17 @@ code,
   }
 }
 
+/* ═══ Scrollbar Styling (WebKit) ═══ */
+
+/** Thin, minimal scrollbar matching the slate color palette. */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
+/* ═══ Text Selection ═══ */
+
+/** Custom selection color using the accent blue. */
 ::selection {
   background: var(--color-accent);
   color: white;

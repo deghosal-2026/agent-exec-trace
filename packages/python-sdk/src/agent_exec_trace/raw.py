@@ -12,6 +12,39 @@ automatically -- no manual span plumbing required.
 
 This keeps raw-Python output structurally consistent with the LangGraph adapter
 (same root shape, same metadata keys), which is a Release Blocker in the WBS.
+
+========================================================
+How the decorator works
+========================================================
+1. ``trace_agent(agent_name, agent_version=..., ...)`` returns a decorator.
+
+2. The decorator wraps the target function in a wrapper that, on each call:
+   a. Creates a fresh ``RunContext`` (new run id, new start timestamp).
+   b. Opens a root ``invoke_agent`` span via ``invoke_agent()``.
+   c. Calls the original function inside the span context.
+   d. Returns the function's result unchanged; exceptions propagate naturally
+      after being recorded on the span by the context manager machinery.
+
+3. ``functools.wraps`` preserves the original function's name, docstring, and
+   signature so the decorated function is indistinguishable to callers.
+
+========================================================
+Usage
+========================================================
+
+::
+
+    from agent_exec_trace.raw import trace_agent
+    from agent_exec_trace.spans import plan_span, execute_tool_span
+
+    @trace_agent("my-agent", agent_version="v0.2.0")
+    def my_agent(request: str) -> str:
+        with plan_span("decide next action"):
+            with execute_tool_span("search"):
+                ...
+        return "done"
+
+    result = my_agent("help me with ...")  # traced automatically
 """
 
 from __future__ import annotations
@@ -24,6 +57,8 @@ from agent_exec_trace.context import RunContext
 from agent_exec_trace.instrument import invoke_agent
 
 # Bound so the decorator preserves the exact callable shape of the wrapped agent.
+# ``Callable[..., Any]`` accepts any arity and returns any type, so the decorated
+# function's type signature flows through unchanged.
 AgentFn = TypeVar("AgentFn", bound=Callable[..., Any])
 
 
@@ -60,9 +95,28 @@ def trace_agent(
 
     Returns:
         A decorator that wraps ``fn`` in a root ``invoke_agent`` span.
+
+    Example::
+
+        from agent_exec_trace.raw import trace_agent
+        from agent_exec_trace.spans import plan_span, execute_tool_span
+
+        @trace_agent(
+            "support-bot",
+            agent_version="v1.3.0",
+            model="gpt-4o",
+            provider="openai",
+        )
+        def handle_support(request: str) -> dict:
+            with plan_span("classify intent"):
+                ...
+            return {"response": "..."}
     """
 
     def decorator(fn: AgentFn) -> AgentFn:
+        # ``functools.wraps`` copies __name__, __doc__, __module__, __wrapped__,
+        # and the type annotations so the wrapper is transparent to callers and
+        # to introspection tools (mypy, pyright, Sphinx).
         @wraps(fn)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             # A fresh RunContext per call: each invocation is its own run with its
@@ -77,6 +131,9 @@ def trace_agent(
                 provider=provider,
             )
             with invoke_agent(ctx):
+                # The original function runs inside the root span context.  Any
+                # nested *_span() helpers called within the function automatically
+                # parent to this root via OTel's implicit context propagation.
                 return fn(*args, **kwargs)
 
         # ``functools.wraps`` preserves name/docstring/signature; the cast keeps

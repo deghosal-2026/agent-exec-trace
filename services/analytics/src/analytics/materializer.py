@@ -1,12 +1,27 @@
 """Materialized view builders for fleet rollups and version cohort summaries.
 
-Materializers run after the ingestion pipeline to aggregate raw run summaries into
-pre-computed views that serve the fleet health dashboard and version comparison page.
+Materializers run after the ingestion pipeline to aggregate raw run summaries
+into pre-computed views that serve the fleet health dashboard and version
+comparison page.
 
-  * ``FleetRollupMaterializer``: groups runs by agent/version/workload and computes
-    aggregate stats (success rate, average cost, anomaly count).
+  * ``FleetRollupMaterializer``: groups runs by agent/version/workload and
+    computes aggregate stats (success rate, average cost, anomaly count).
   * ``VersionCohortMaterializer``: groups runs by agent version and computes
     per-version aggregates for side-by-side comparison.
+
+**Design decisions:**
+
+- **Separate anomaly query**: Anomaly counts are fetched with a separate
+  query against the ``anomalies`` table, correlated via ``run_id``.  This
+  avoids a LEFT JOIN that could produce incorrect counts when no anomalies
+  exist (LEFT JOIN would produce NULL, requiring COALESCE).
+- **Dynamic WHERE clauses**: Both materializers build parameterized WHERE
+  clauses dynamically based on optional filters.  Parameter indices ($1, $2,
+  etc.) are tracked manually because asyncpg doesn't support named parameters.
+- **No transaction**: Materializers are invoked after each processing cycle.
+  If one cycle's materialization fails, the next cycle will re-materialize
+  the same windows.  This is intentional — materialized views are eventually
+  consistent and do not need atomicity.
 """
 
 from __future__ import annotations
@@ -25,8 +40,13 @@ class FleetRollupMaterializer:
     """Aggregate run summaries into fleet-level rollups grouped by agent/version/workload.
 
     Queries the ``run_summaries`` table, groups by the three dimensions, and
-    computes aggregated metrics.  Anomaly counts are fetched separately with a
-    correlated subquery against the ``anomalies`` table.
+    computes aggregated metrics.  Anomaly counts are fetched separately with
+    a correlated subquery against the ``anomalies`` table, avoiding the
+    pitfalls of a LEFT JOIN with potential NULLs.
+
+    **SQL strategy**: Uses COUNT(*) FILTER (WHERE ...) for conditional
+    aggregation, which is standard PostgreSQL and avoids multiple passes
+    over the same data.
     """
 
     async def materialize_fleet_rollups(
@@ -38,6 +58,11 @@ class FleetRollupMaterializer:
     ) -> int:
         """Build and persist fleet rollups from the run_summaries table.
 
+        Groups runs by (agent_name, agent_version, workload_type) and
+        computes: total_runs, success_count, error_count, loop_count,
+        avg_duration_ms, avg_cost.  Anomaly counts are fetched from the
+        ``anomalies`` table using a correlated subquery.
+
         Args:
             pool: asyncpg connection pool.
             agent_name: optional filter to a single agent.
@@ -46,11 +71,16 @@ class FleetRollupMaterializer:
 
         Returns:
             Number of rollup rows persisted.
+
+        Raises:
+            asyncpg.exceptions.PostgresError: on database errors.
         """
         now = datetime.now(timezone.utc)
         period_start = now
         period_end = now
 
+        # Build dynamic WHERE clause with parameterized values.
+        # Parameter indices are tracked manually ($1, $2, ...).
         conditions: list[str] = []
         params: list[object] = []
         idx = 1
@@ -65,6 +95,7 @@ class FleetRollupMaterializer:
             params.append(workload_type)
             idx += 1
 
+        # If no filters, WHERE TRUE selects all rows.
         where_clause = " AND ".join(conditions) if conditions else "TRUE"
 
         query = f"""
@@ -94,7 +125,9 @@ class FleetRollupMaterializer:
 
             # Anomaly count is fetched separately because anomalies are in a
             # different table.  We build a filtered query matching the same
-            # agent/version/workload dimensions.
+            # agent/version/workload dimensions.  Using correlated subqueries
+            # (run_id IN (SELECT ...)) to filter anomalies by workload and
+            # version without a direct column on the anomalies table.
             anomaly_count = 0
             if agent:
                 anom_params: list[object] = [agent]
@@ -146,8 +179,12 @@ class FleetRollupMaterializer:
 class VersionCohortMaterializer:
     """Aggregate run summaries into per-version cohort summaries.
 
-    Groups by ``agent_name`` and ``agent_version``, computing aggregate metrics
-    that the version comparison page displays side by side.
+    Groups by ``agent_name`` and ``agent_version``, computing aggregate
+    metrics that the version comparison page displays side by side.
+
+    **Design note**: The materializer only includes rows where
+    ``agent_version IS NOT NULL``, because un-versioned runs cannot be
+    meaningfully compared across versions.
     """
 
     async def materialize_version_cohorts(
@@ -157,13 +194,20 @@ class VersionCohortMaterializer:
     ) -> int:
         """Build and persist version cohort summaries from run_summaries.
 
+        Groups runs by (agent_name, agent_version) and computes aggregate
+        metrics.  Excludes rows with NULL agent_version.
+
         Args:
             pool: asyncpg connection pool.
             agent_name: optional filter to a single agent.
 
         Returns:
             Number of cohort rows persisted.
+
+        Raises:
+            asyncpg.exceptions.PostgresError: on database errors.
         """
+        # Build dynamic WHERE clause, same pattern as FleetRollupMaterializer.
         conditions: list[str] = []
         params: list[object] = []
         idx = 1
@@ -201,6 +245,9 @@ class VersionCohortMaterializer:
             agent = row["agent_name"]
             version = row["agent_version"]
 
+            # Fetch anomaly count from the anomalies table, correlated via
+            # run_id.  We need both agent_name and agent_version here because
+            # anomalies may not have agent_version directly.
             anomaly_count = 0
             if agent and version:
                 anomaly_count = await conn.fetchval(
@@ -222,7 +269,7 @@ class VersionCohortMaterializer:
                 avg_cost=row["avg_cost"],
                 total_tool_calls=row["total_tool_calls"],
                 total_retries=row["total_retries"],
-                top_tools=None,
+                top_tools=None,  # top_tools requires a separate query; left for future.
             )
             await persist_version_cohort(pool, cohort)
             count += 1

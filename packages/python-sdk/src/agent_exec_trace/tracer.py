@@ -18,6 +18,34 @@ would break the common need to reconfigure (e.g. between tests, or when a user s
 exporter config). Instead, this module keeps its own ``_provider`` reference and hands
 out tracers from it. This is a deliberate, documented divergence -- see the module
 docstring in the original spike -- chosen to keep the SDK testable and reconfigurable.
+
+========================================================
+Thread safety
+========================================================
+The ``_lock`` protects reads and writes to ``_provider``.  Configure and reset take
+the lock for the entire duration of their work (they modify ``_provider``); get_tracer
+only takes it long enough to read the reference, then releases it.  Span creation
+itself is lock-free -- OTel's tracer handles its own threading.
+
+========================================================
+Usage
+========================================================
+
+::
+
+    from agent_exec_trace.config import SDKConfig, default_config
+    from agent_exec_trace.tracer import configure_tracing, get_tracer, reset_tracing
+
+    # Once at startup:
+    configure_tracing(default_config())
+
+    # Anywhere later:
+    tracer = get_tracer()
+    with tracer.start_as_current_span("my-span"):
+        ...
+
+    # In test teardown:
+    reset_tracing()
 """
 
 from __future__ import annotations
@@ -31,12 +59,21 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 
 from agent_exec_trace.config import SDKConfig
 
+# ---------------------------------------------------------------------------
+# Module-level state
+# ---------------------------------------------------------------------------
+
 # Reference to the configured provider, plus a lock that guards reads/writes. The
 # lock makes configure/reset/get consistent even if a program configures tracing in
 # one thread while other threads start spans. Reads take the lock briefly to publish
 # the reference, then release it; span creation itself is lock-free.
 _provider: TracerProvider | None = None
 _lock = threading.Lock()
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 
 def configure_tracing(
@@ -65,6 +102,18 @@ def configure_tracing(
 
     Returns:
         The configured :class:`TracerProvider`.
+
+    Example::
+
+        from agent_exec_trace.config import default_config
+        from agent_exec_trace.tracer import configure_tracing
+
+        provider = configure_tracing(default_config())
+        # Provider is now available via get_tracer()
+
+        # Second call is a no-op:
+        provider2 = configure_tracing(default_config())
+        assert provider is provider2
     """
     global _provider
 
@@ -87,6 +136,9 @@ def configure_tracing(
         # A SpanProcessor is what actually ships finished spans to an exporter. The
         # default (console) gives free local visibility; tests inject in-memory.
         if processor is None:
+            # ``BatchSpanProcessor`` buffers spans and exports them in batches on a
+            # background thread for better throughput.  ``ConsoleSpanExporter`` writes
+            # to stdout/stderr -- useful during development.
             processor = BatchSpanProcessor(ConsoleSpanExporter())
         provider.add_span_processor(processor)
 
@@ -130,7 +182,19 @@ def configure_otlp_tracing(
 
     Raises:
         ImportError: if ``opentelemetry-exporter-otlp-proto-grpc`` is not installed.
+
+    Example::
+
+        from agent_exec_trace.config import SDKConfig
+        from agent_exec_trace.tracer import configure_otlp_tracing
+
+        cfg = SDKConfig(service_name="my-agent", otlp_endpoint="http://collector:4317")
+        configure_otlp_tracing(cfg)
+        # Traces now flow to the collector at http://collector:4317
     """
+    # Lazy-import the OTLP exporter so the core SDK has no gRPC dependency until
+    # this function is actually called.  The ``pip install agent-exec-trace[otlp]``
+    # extra brings in ``opentelemetry-exporter-otlp-proto-grpc``.
     try:
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
             OTLPSpanExporter,
@@ -141,9 +205,12 @@ def configure_otlp_tracing(
             'Install it with: pip install "agent-exec-trace[otlp]"'
         ) from exc
 
+    # Use caller-provided endpoint if given, otherwise fall back to config.
     target = endpoint or config.otlp_endpoint
     exporter = OTLPSpanExporter(endpoint=target)
     processor = BatchSpanProcessor(exporter)
+    # Delegate to ``configure_tracing`` which handles resource creation,
+    # idempotency, and attaching the processor.
     return configure_tracing(config, processor=processor, resource_attributes=resource_attributes)
 
 
@@ -160,11 +227,26 @@ def get_tracer(name: str = "agent_exec_trace") -> trace.Tracer:
 
     Returns:
         A :class:`~opentelemetry.trace.Tracer`.
+
+    Example::
+
+        from agent_exec_trace.tracer import get_tracer
+
+        tracer = get_tracer("my-custom-agent")
+        with tracer.start_as_current_span("custom-operation"):
+            ...
     """
     with _lock:
+        # Read the provider reference under the lock to avoid a torn read if
+        # another thread is calling ``configure_tracing`` or ``reset_tracing``.
         provider = _provider
     if provider is not None:
         return provider.get_tracer(name)
+    # Fallback to the OTel global tracer provider.  This path is taken when
+    # ``configure_tracing`` has not been called -- e.g. during early application
+    # startup or in test fixtures that don't configure the SDK.  The global
+    # tracer uses a NoopTracerProvider by default, so spans are created but
+    # not exported (harmless and cheap).
     return trace.get_tracer(name)
 
 
@@ -177,6 +259,17 @@ def reset_tracing() -> None:
     Primarily for test isolation: each test can start from a clean slate instead of
     inheriting a provider configured by a previous test. Not intended for use in
     production runtime code.
+
+    Example::
+
+        from agent_exec_trace.tracer import configure_tracing, reset_tracing
+
+        def test_something():
+            configure_tracing(test_config)
+            try:
+                ...
+            finally:
+                reset_tracing()
     """
     global _provider
 

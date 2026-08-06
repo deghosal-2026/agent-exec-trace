@@ -10,7 +10,16 @@ Provides a ``click``-based CLI with commands for:
   * ``download-traces``: download and convert agent traces from Hugging Face.
   * ``validate``: run all detectors against processed parquet traces and produce reports.
 
-Usage: ``python -m analytics.main run-worker``
+Usage: ``python -m analytics run-worker``
+
+**Design decisions:**
+
+- **Click groups**: All commands are registered on a Click group decorated
+  with ``@cli.command()``, which provides consistent help text and argument
+  parsing.
+- **Async bridge**: ``_run_async()`` wraps ``asyncio.run()`` to bridge
+  Click's synchronous command interface with the async implementation.
+  Every command handler that needs async calls ``_run_async``.
 """
 
 from __future__ import annotations
@@ -30,12 +39,19 @@ logger = logging.getLogger(__name__)
 
 @click.group()
 def cli() -> None:
+    """Analytics service CLI — trace ingestion and anomaly detection."""
     setup_logging()
 
 
 @cli.command()
 @click.option("--interval", default=None, type=int, help="Polling interval in seconds")
 def run_worker(interval: int | None) -> None:
+    """Run the continuous polling worker.
+
+    Fetches traces from Jaeger on a configurable interval, processes them
+    through the analytics pipeline, and detects anomalies.  Runs until
+    interrupted (Ctrl+C).
+    """
     if interval is not None:
         settings.polling_interval_seconds = interval
 
@@ -47,16 +63,32 @@ def run_worker(interval: int | None) -> None:
 @click.option("--end", required=True, help="End time (ISO format)")
 @click.option("--trace-id", default=None, help="Specific trace ID to reprocess")
 def reprocess(start: str, end: str, trace_id: str | None) -> None:
+    """Reprocess traces from Jaeger in a time range or a specific trace.
+
+    If ``--trace-id`` is provided, reprocess only that trace.  Otherwise,
+    fetch all recent traces and reprocess those that fall within the
+    given time range.
+    """
     _run_async(_reprocess_async(start, end, trace_id))
 
 
 @cli.command()
 def rebuild() -> None:
+    """Re-process every trace that exists in the database.
+
+    Iterates all known trace IDs from ``run_summaries``, re-fetches each
+    from Jaeger, and re-runs the full pipeline.  Useful after code changes
+    or schema migrations.
+    """
     _run_async(_rebuild_async())
 
 
 @cli.command()
 def health() -> None:
+    """Check database connectivity.
+
+    Prints "Health: OK" or "Health: FAILED" based on a ``SELECT 1`` probe.
+    """
     result = _run_async(_health_async())
     if result:
         click.echo("Health: OK")
@@ -130,13 +162,22 @@ def validate(
     max_files: int | None,
     max_traces: int | None,
 ) -> None:
-    """Run all detectors against processed traces and produce validation reports."""
+    """Run all detectors against processed traces and produce validation reports.
+
+    Loads parquet files from ``--input`` directory, reconstructs span trees,
+    runs all 35 rule-based detectors (and optionally 6 LLM detectors if
+    ``--llm-sample`` is set), and writes JSON reports to ``--output``.
+
+    The ``--diagnose`` flag produces a compatibility matrix showing which
+    detectors are eligible for each dataset based on field coverage.
+    """
 
     async def _run() -> None:
         from typing import Any
 
         from analytics.trace_pipeline.validator import Validator
 
+        # Optional: connect to PostgreSQL for baseline-dependent detectors.
         pool = None
         if db:
             try:
@@ -154,6 +195,7 @@ def validate(
             pool=pool, llm_batch=llm_batch, max_files=max_files, max_traces=max_traces,
         )
         if diagnose:
+            # Diagnose mode: produce compatibility report and exit.
             diag_report: dict[str, Any] = v.run_diagnose()
             click.echo("\n=== TRACE COMPATIBILITY DIAGNOSTIC ===")
             click.echo(f"Traces analyzed:     {diag_report.get('total_traces', 0)}")
@@ -169,6 +211,7 @@ def validate(
             report_dir = (Path(output_dir) / mode).resolve()
             click.echo(f"\nReport: {report_dir / 'compatibility_matrix.json'}")
             return
+        # Standard validation mode.
         report: dict[str, Any] = await v.run()
         total = int(report["traces_processed"])
         anomaly_count = int(report["anomaly_count"])
@@ -178,18 +221,21 @@ def validate(
         click.echo(f"Traces with anomalies: {report['traces_with_anomalies']}")
         click.echo(f"Anomalies found:      {anomaly_count}")
 
+        # Show top 10 detector types by anomaly count.
         by_type: dict[str, int] = report.get("anomaly_by_type", {})
         if by_type:
             click.echo("\nTop detectors:")
             for dt, cnt in list(by_type.items())[:10]:
                 click.echo(f"  {dt}: {cnt}")
 
+        # Show suspicious patterns (>50% fire rate — likely misconfigured).
         suspicious: dict[str, float] = report.get("suspicious_patterns", {})
         if suspicious:
             click.echo("\nSuspicious (>50% fire rate):")
             for dt, pct in suspicious.items():
                 click.echo(f"  {dt}: {pct}%")
 
+        # Show cross-detector correlation hotspots (top 5 co-fire pairs).
         corr: dict[str, Any] = report.get("cross_detector_correlation", {})
         top_pairs_raw = corr.get("top_co_fires", [])
         top_pairs: list[dict[str, Any]] = (
@@ -208,6 +254,7 @@ def validate(
         click.echo(f"Summary: {report_dir / 'summary.json'}")
 
         if llm_sample:
+            # Extract LLM-specific detector results for a dedicated section.
             llm_anomalies: dict[str, int] = {}
             for dt, cnt in by_type.items():
                 if dt in {
@@ -247,6 +294,10 @@ def materialize(
     workload_type: str | None,
     period_hours: int,
 ) -> None:
+    """Materialize fleet rollups and version cohort summaries.
+
+    Aggregates raw run summaries into pre-computed views for dashboards.
+    """
     _run_async(_materialize_async(agent_name, workload_type, period_hours))
 
 
@@ -274,7 +325,12 @@ def download_traces(
     dataset: tuple[str, ...],
     datasets_file: str | None,
 ) -> None:
-    """Download and convert agent traces from Hugging Face datasets."""
+    """Download and convert agent traces from Hugging Face datasets.
+
+    Streams datasets from Hugging Face, converts them to OTel-compatible
+    SpanNode format, validates, and saves as parquet.  Optionally feeds
+    them through the analytics pipeline with ``--ingest``.
+    """
     _run_async(
         _download_traces_async(
             target,
@@ -295,23 +351,29 @@ async def _download_traces_async(
     dataset: tuple[str, ...] = (),
     datasets_file: str | None = None,
 ) -> None:
+    """Async implementation of the download-traces command.
+
+    Handles dataset ID collection from both --dataset flags and --datasets-file,
+    deduplicates while preserving order, then runs the TracePipeline.
+    """
     from analytics.trace_pipeline.pipeline import TracePipeline
 
     pipeline = TracePipeline(output_dir=output_dir)
-    # Build dataset list if provided
+    # Build dataset ID list from --dataset flags and --datasets-file.
     dataset_ids: list[str] | None = None
     ids: list[str] = list(dataset)
     if datasets_file:
         try:
             from pathlib import Path
             lines = Path(datasets_file).read_text().splitlines()
+            # Skip empty lines and comments (lines starting with #).
             ids.extend(
                 [ln.strip() for ln in lines if ln.strip() and not ln.strip().startswith("#")]
             )
         except Exception as exc:
             click.echo(f"Warning: cannot read datasets file: {exc}", err=True)
     if ids:
-        # De-duplicate, preserve order
+        # De-duplicate while preserving order.
         seen: set[str] = set()
         ordered: list[str] = []
         for ds in ids:
@@ -333,8 +395,15 @@ async def _download_traces_async(
 def _run_async(coro: object) -> object:
     """Run an async coroutine in a synchronous CLI context.
 
-    Uses ``asyncio.run()`` under the hood.  The type ignore is required because
-    click's type system does not know about coroutines.
+    Uses ``asyncio.run()`` under the hood, which creates a new event loop,
+    runs the coroutine, and closes the loop.  The type ignore is required
+    because Click's type system does not know about coroutines.
+
+    Args:
+        coro: an awaitable coroutine object.
+
+    Returns:
+        The return value of the coroutine.
     """
     import asyncio as _asyncio
 
@@ -342,6 +411,11 @@ def _run_async(coro: object) -> object:
 
 
 async def _run_worker_async() -> None:
+    """Async implementation of the run-worker command.
+
+    Initializes the database, creates the schema, starts the worker, and
+    handles graceful shutdown on KeyboardInterrupt.
+    """
     from analytics.worker import AnalyticsWorker
 
     pool = await get_pool()
@@ -358,6 +432,11 @@ async def _run_worker_async() -> None:
 
 
 async def _reprocess_async(start: str, end: str, trace_id: str | None) -> None:
+    """Async implementation of the reprocess command.
+
+    Either reprocesses a single trace (if --trace-id is provided) or
+    all traces in the given time range.
+    """
     from analytics.worker import AnalyticsWorker
 
     pool = await get_pool()
@@ -383,6 +462,10 @@ async def _reprocess_async(start: str, end: str, trace_id: str | None) -> None:
 
 
 async def _rebuild_async() -> None:
+    """Async implementation of the rebuild command.
+
+    Re-processes every trace with a stored run summary.
+    """
     from analytics.worker import AnalyticsWorker
 
     pool = await get_pool()
@@ -397,6 +480,10 @@ async def _rebuild_async() -> None:
 
 
 async def _health_async() -> bool:
+    """Async implementation of the health check command.
+
+    Returns True if the database responds to SELECT 1.
+    """
     pool = await get_pool()
     return await health_check(pool)
 
@@ -406,6 +493,10 @@ async def _materialize_async(
     workload_type: str | None,
     period_hours: int,
 ) -> None:
+    """Async implementation of the materialize command.
+
+    Runs both fleet rollup and version cohort materialization.
+    """
     from analytics.materializer import FleetRollupMaterializer, VersionCohortMaterializer
 
     pool = await get_pool()

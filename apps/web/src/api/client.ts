@@ -1,11 +1,26 @@
-/** API client for the agent-exec-trace REST API.
+/**
+ * API client for the agent-exec-trace REST API.
  *
  * Provides typed methods for each API endpoint. The browser defaults to
  * relative `/api` requests so Vite's proxy works in local Docker and host-dev.
+ *
+ * ## Error Normalization Strategy
+ * - All responses are expected as JSON; non-JSON responses throw.
+ * - HTTP errors surface the server's `message` field or fall back to status text.
+ * - Response data is normalized on receipt so consumers receive consistent shapes
+ *   regardless of API version differences (e.g. `anomaly_id` vs `id`).
+ *
+ * ## Auth
+ * No authentication is currently required; the API is intended for internal/
+ * dashboard-facing consumption behind a reverse proxy.
  */
 
 const BASE_URL = import.meta.env.VITE_API_URL || "";
 
+/**
+ * Raw row shape from the fleet endpoint (database-level).
+ * The client normalizes this into {@link FleetGroup}.
+ */
 type FleetApiRow = {
   agent_name: string;
   agent_version: string;
@@ -16,10 +31,15 @@ type FleetApiRow = {
   anomaly_count: number;
 };
 
+/** Raw shape from GET /api/v1/fleet. */
 type FleetApiResponse = {
   data: { rows: FleetApiRow[] };
 };
 
+/**
+ * Raw response shape from GET /api/v1/runs/:runId.
+ * Normalized into {@link RunTimelineResponse} before reaching consumers.
+ */
 type TimelineApiResponse = {
   run: {
     run_id: string;
@@ -45,6 +65,10 @@ type TimelineApiResponse = {
   }>;
 };
 
+/**
+ * Raw paginated response shape from GET /api/v1/anomalies.
+ * Normalized into {@link AnomalyListResponse} before reaching consumers.
+ */
 type AnomaliesApiResponse = {
   data: { items: Array<{
     anomaly_id?: string;
@@ -61,6 +85,13 @@ type AnomaliesApiResponse = {
   meta: { total: number; page: number; page_size: number };
 };
 
+/**
+ * Singleton HTTP client encapsulating all API interactions.
+ *
+ * All public methods return normalized response shapes rather than raw
+ * server payloads, ensuring consumers (pages/hooks) receive consistent
+ * data regardless of backend version drift.
+ */
 class ApiClient {
   private baseUrl: string;
 
@@ -68,7 +99,18 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  /** Generic request handler with JSON parsing and error normalization. */
+  /**
+   * Generic request handler with JSON parsing and error normalization.
+   *
+   * @param path - API path relative to `baseUrl` (e.g. `/api/v1/fleet`)
+   * @param init - Optional fetch init overrides
+   * @returns Parsed JSON body typed as T
+   *
+   * ## Error handling
+   * - Non-2xx responses: attempts to read a `message` field from the JSON body;
+   *   falls back to `status`/`statusText`.
+   * - Non-JSON content types: throws with a preview of the first 80 characters.
+   */
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const res = await fetch(url, {
@@ -79,6 +121,7 @@ class ApiClient {
       },
     });
 
+    // Check for HTTP-level errors before attempting JSON parse
     const contentType = res.headers.get("content-type") ?? "";
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -88,6 +131,7 @@ class ApiClient {
       throw new Error(message);
     }
 
+    // Guard against HTML/proxy fallback responses (e.g. nginx 502 pages)
     if (!contentType.includes("application/json")) {
       const body = await res.text().catch(() => "");
       const preview = body.slice(0, 80).replace(/\s+/g, " ").trim();
@@ -99,7 +143,19 @@ class ApiClient {
     return res.json() as Promise<T>;
   }
 
-  /** Fetch the full timeline for a single run. */
+  /**
+   * Fetch the full timeline for a single run.
+   *
+   * @param runId - The run identifier (URL-encoded in path)
+   * @returns Normalized {@link RunTimelineResponse} with flattened run metadata,
+   *          loop counts derived from loop-type anomalies, and span/anomaly arrays.
+   *
+   * ## Response transformation
+   * - Flattens `data.run.*` and `data.summary.*` into a flat object.
+   * - Counts loop anomalies by filtering for `type === "loop"`.
+   * - Normalizes anomaly fields: coalesces `anomaly_id`/`id`, `type`/`anomaly_type`,
+   *   and `created_at`/`detected_at`.
+   */
   getRunTimeline(runId: string) {
     return this.request<TimelineApiResponse>(`/api/v1/runs/${encodeURIComponent(runId)}`).then((data) => ({
       run_id: data.run.run_id,
@@ -123,7 +179,21 @@ class ApiClient {
     }));
   }
 
-  /** Fetch fleet health rollups, optionally filtered. */
+  /**
+   * Fetch fleet health rollups, optionally filtered by agent, version, or workload.
+   *
+   * @param params - Optional filter parameters
+   * @param params.agent_name - Filter to a specific agent
+   * @param params.version - Filter to a specific version
+   * @param params.workload_type - Filter to a specific workload type
+   * @returns Normalized {@link FleetResponse} with derived `success_count` and `error_count`.
+   *
+   * ## Response transformation
+   * - Derives `success_count` = `round(run_count * success_rate)`.
+   * - Derives `error_count` = `run_count - success_count`.
+   * - Populates `loop_count` (0), `avg_duration_ms` (0) as defaults since the
+   *   fleet endpoint does not currently return them.
+   */
   getFleet(params?: {
     agent_name?: string;
     version?: string;
@@ -153,7 +223,15 @@ class ApiClient {
     }));
   }
 
-  /** Compare two version cohorts side by side. */
+  /**
+   * Compare two version cohorts side by side.
+   *
+   * @param params.version_a - First version label for comparison
+   * @param params.version_b - Second version label for comparison
+   * @param params.agent_name - Optional agent filter
+   * @returns Raw {@link CompareResponse} — this endpoint passes through without
+   *          normalization since the shape already matches the type definitions.
+   */
   getCompare(params: {
     agent_name?: string;
     version_a: string;
@@ -166,7 +244,23 @@ class ApiClient {
     );
   }
 
-  /** Fetch paginated anomalies, optionally filtered. */
+  /**
+   * Fetch paginated anomalies, optionally filtered by severity, type, or agent.
+   *
+   * @param params - Optional filter and pagination parameters
+   * @param params.severity - Filter by severity level (info/warning/critical)
+   * @param params.anomaly_type - Filter by anomaly type (loop, retry_storm, etc.)
+   * @param params.agent_name - Filter by agent name
+   * @param params.limit - Page size (default server-side)
+   * @param params.offset - Zero-based offset for pagination
+   * @returns Normalized {@link AnomalyListResponse} with resolved `offset` from page-based meta.
+   *
+   * ## Response transformation
+   * - Normalizes anomaly fields: coalesces `anomaly_id`/`id`, `type`/`anomaly_type`,
+   *   and `created_at`/`detected_at`.
+   * - Converts page-based pagination (`meta.page`) to offset-based (`meta.offset`)
+   *   so consumers can work with zero-based offsets consistently.
+   */
   getAnomalies(params?: {
     severity?: string;
     anomaly_type?: string;
@@ -197,7 +291,11 @@ class ApiClient {
     }));
   }
 
-  /** Check API health. */
+  /**
+   * Check API health.
+   *
+   * @returns `{ status: "ok" | string }` — used by monitoring or startup probes.
+   */
   getHealth() {
     return this.request<{ status: string }>("/api/v1/health");
   }
