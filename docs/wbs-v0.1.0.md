@@ -91,7 +91,7 @@ Suggested issue types for later GitHub conversion:
 | Milestone 8.7 | LLM-augmented anomaly detection issues |
 | Milestone 8.8 | trace dataset ingestion/validation issues |
 | Milestone 8.9 | field-test execution issues |
-| Milestone 9 | non-LLM + LLM trace compatibility issues (9.1.x ✅, 9.2.x ⟳ v0.2.0) |
+| Milestone 9 | non-LLM + LLM trace compatibility issues (9.1.x ✅, 9.2.x ⟳ v0.2.0) ✅ |
 | Milestone 10 | local stack/demo issues |
 | Milestone 11 | testing/hardening issues |
 | Milestone 12 | docs/OSS readiness issues |
@@ -1372,7 +1372,7 @@ This task keeps the anomaly inbox from becoming a generic list page. It should s
 
 ---
 
-## Milestone 8.6: Robust Detector Engine ⬜
+## Milestone 8.6: Robust Detector Engine ✅
 
 > **Priority:** Critical-path. The anomaly engine is the core product differentiator. Three
 > detectors is insufficient for production confidence. This milestone expands to 35 detectors
@@ -1475,7 +1475,7 @@ expanded to cover all detectors.
 - [x] Ruff: zero violations (`ruff check .`)
 - [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
 - [x] Tests pass: all unit/integration tests green (`pytest`) — 109/109
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`) — 75%
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`) ✅
 
 ---
 
@@ -2185,11 +2185,13 @@ This task assembles the product into one runnable local system. The compose stac
 
 **Success looks like:** one command (or a very small set of commands) brings up the complete local stack with all required services wired together.
 
-- [ ] Add API service to compose
-- [ ] Add analytics service to compose
-- [ ] Add web app to compose
-- [ ] Add Postgres to compose
-- [ ] Add networking and env wiring
+- [x] Add API service to compose
+- [x] Add analytics service to compose
+- [x] Add web app to compose
+- [x] Add Postgres to compose
+- [x] Add networking and env wiring
+
+**Notes:** Created Dockerfiles for api, analytics, and web services. Removed API profile so all services start with `docker compose up -d --build`. Fixed cross-package import in API (duplicated AnomalyType enum), fixed analytics worker coroutine bug, remapped Postgres host port to 5433 (local conflict), removed Jaeger METRICS_STORAGE_TYPE=none (unsupported). All 6 services healthy on startup.
 
 ### 10.2 Seed and replay workflow
 

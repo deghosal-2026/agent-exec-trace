@@ -15,12 +15,12 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from analytics.models import AnomalyType
 from asyncpg import Pool  # type: ignore[import-untyped]
 
 from api.models import (
     AnomalyInboxItem,
     AnomalyInfo,
+    AnomalyType,
     FleetRow,
     RunSummaryInfo,
     RunSummaryStats,

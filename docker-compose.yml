@@ -8,7 +8,6 @@ services:
       - "4317:4317"     # OTLP gRPC ingestion
     environment:
       - COLLECTOR_OTLP_ENABLED=true
-      - METRICS_STORAGE_TYPE=none  # disable metrics (traces-only)
 
   # OpenTelemetry Collector: optional intermediary for the collector-mediated
   # export path (3.4).  Configured to forward OTLP traces to Jaeger.
@@ -44,7 +43,7 @@ services:
   postgres:
     image: postgres:16
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: analytics
       POSTGRES_PASSWORD: analytics
@@ -75,7 +74,35 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    profiles: ["api"]
+
+  # Analytics worker: polling loop that fetches traces from Jaeger, runs
+  # all 35 detectors, persists anomalies, and materializes fleet rollups.
+  analytics:
+    build:
+      context: ./services/analytics
+      dockerfile: Dockerfile
+    environment:
+      ANALYTICS_DB_DSN: postgresql://analytics:analytics@postgres:5432/analytics
+      ANALYTICS_JAEGER_ENDPOINT: http://jaeger:16686
+      ANALYTICS_COLLECTOR_ENDPOINT: http://otel-collector:4318
+      ANALYTICS_LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+
+  # Web app: React + Vite frontend served in dev mode.
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://api:8000
+    depends_on:
+      - api
 
 volumes:
   pgdata:

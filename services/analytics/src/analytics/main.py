@@ -39,7 +39,7 @@ def run_worker(interval: int | None) -> None:
     if interval is not None:
         settings.polling_interval_seconds = interval
 
-    _run_async(_run_worker_async)
+    _run_async(_run_worker_async())
 
 
 @cli.command()

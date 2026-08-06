@@ -10,10 +10,67 @@ single response shape.
 from __future__ import annotations
 
 from datetime import datetime
+from enum import Enum
 from typing import Any
 
-from analytics.models import AnomalyType
 from pydantic import BaseModel, Field
+
+
+class AnomalyType(str, Enum):
+    """Enumeration of all anomaly types produced by the 35 rule-based + 6 LLM detectors.
+
+    IMPORTANT: This enum mirrors ``analytics.models.AnomalyType`` exactly.  It is
+    duplicated here (rather than imported) so that the API Docker image can be built
+    independently without pulling in the full analytics package.  If a new anomaly
+    type is added to the analytics service, this enum must be updated to match
+    (source of truth: ``services/analytics/src/analytics/models.py``).
+
+    Drift risk: if the analytics service introduces a new anomaly type and the API
+    is not updated, ``AnomalyType(str(db_value))`` will raise ``ValueError`` at
+    runtime.  This trade-off is accepted for v0.1.0; a shared ``types`` package
+    should replace this duplication in a future release.
+    """
+
+    loop = "loop"
+    pattern_loop = "pattern_loop"
+    argument_loop = "argument_loop"
+    tool_error_rate = "tool_error_rate"
+    specific_tool_error = "specific_tool_error"
+    tool_latency = "tool_latency"
+    tool_timeout = "tool_timeout"
+    redundant_tool_call = "redundant_tool_call"
+    cost_spike = "cost_spike"
+    cost_vs_baseline = "cost_vs_baseline"
+    cost_efficiency = "cost_efficiency"
+    token_explosion = "token_explosion"
+    per_tool_cost_spike = "per_tool_cost_spike"
+    wasted_tool_calls = "wasted_tool_calls"
+    run_duration = "run_duration"
+    max_step_hit = "max_step_hit"
+    step_efficiency = "step_efficiency"
+    inactivity = "inactivity"
+    premature_completion = "premature_completion"
+    retry_storm = "retry_storm"
+    systemic_retry = "systemic_retry"
+    transient_retry = "transient_retry"
+    cascading_retry = "cascading_retry"
+    recovery_path = "recovery_path"
+    intervention_frequency = "intervention_frequency"
+    escalation_rate = "escalation_rate"
+    approval_latency = "approval_latency"
+    intervention_rejection = "intervention_rejection"
+    empty_response = "empty_response"
+    low_output = "low_output"
+    indeterminate_status = "indeterminate_status"
+    output_drift = "output_drift"
+    anomaly_cluster = "anomaly_cluster"
+    run_frequency_anomaly = "run_frequency_anomaly"
+    first_run_heuristic = "first_run_heuristic"
+    semantic_loop = "semantic_loop"
+    hallucination = "hallucination"
+    goal_drift = "goal_drift"
+    quality_degradation = "quality_degradation"
+    confusion_pattern = "confusion_pattern"
 
 
 class RunSummaryInfo(BaseModel):
