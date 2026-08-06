@@ -72,11 +72,18 @@ agent-exec-trace/
 ├── deploy/                  # Compose configs, collector configs, local stack
 ├── examples/                # Demo agents and seeded scenarios
 ├── tests/                   # Cross-cutting / end-to-end tests
-├── docs/                    # PRD, architecture, spec, WBS, planning
+├── docs/                    # Architecture, design, field-test, WBS, reference
+│   ├── architecture/        # spec, architecture diagram, DB schema
+│   ├── design/              # PRD, agent designs, CLI plans, demo scenarios
+│   ├── field-test/          # field-test plan and reports
+│   ├── reference/           # developer setup guide
+│   └── wbs/                 # detailed WBS (4 parts + table of contents)
+
+For the complete work breakdown structure, see [docs/wbs/wbs-v0.1.0.md](docs/wbs/wbs-v0.1.0.md).
 └── Makefile                 # setup / lint / test / stack entrypoints
 ```
 
-See [docs/developer-setup.md](docs/developer-setup.md) for the developer onboarding flow.
+See [docs/reference/developer-setup.md](docs/reference/developer-setup.md) for the developer onboarding flow.
 
 Traces are stored at `data/traces/processed/` with a `manifest.json` index.
 
