@@ -440,27 +440,33 @@ This task makes the planning docs ready to turn into tracked work items. Since e
 > the LLM detector pipeline must be validated against synthetic traces, and the SDK
 > integration workflow must be proven against real OSS agents.
 
-### 13.1 LLM detector validation on 200 synthetic traces
+### 13.1 LLM detector validation on 100 synthetic traces ✅
 
-**Issue:** (new)
+**Issue:** [#112](https://github.com/deghosal-2026/agent-exec-trace/issues/112) — **CLOSED**
 
-**Context:** The 1M synthetic trace corpus already exists in `data/traces/synthetic/`.
+**Context:** The 1M synthetic trace corpus already exists in `data/traces2/synthetic/`.
 The LLM detectors (SemanticLoop, Hallucination, GoalDrift, QualityDegradation,
 ConfusionPattern, EmbeddingDrift) were built in M8.7 but never validated against
 a controlled sample. This task runs the rule-based pipeline first, then the LLM
-pipeline, and compares results.
+pipeline with two models (4B and 9B), and compares results.
 
-**Success looks like:** A single script generates a comparison report showing which
-LLM detectors fired vs. rule-based only, per-detector counts, and any new anomaly
-types found by LLM that rule-based detectors missed.
+**Success looks like:** A single script generates a 3-way comparison report
+showing which LLM detectors fired vs. rule-based only, per-detector counts,
+model quality tradeoffs, and paper-grade telemetry.
 
-- [ ] Create `scripts/m13/run-llm-validation.sh`: orchestrates the full pipeline
-- [ ] Step 1: Run `analytics validate --max-traces 200` on synthetic traces → output to `data/m13/without-llm/`
-- [ ] Step 2: Run `analytics validate --max-traces 200 --llm-sample 200` → output to `data/m13/with-llm/`
-- [ ] Step 3: Generate comparison report with per-detector diff counts
-- [ ] Step 4: Log LLM responses to `data/m13/llm-responses/` for quality audit
-- [ ] Verify LLM client reachability (MLX server status, model loaded)
-- [ ] Document findings in `docs/reference/m13-llm-validation-report.md`
+- [x] Create `scripts/m13/run-llm-validation.sh`: orchestrates the full 3-way pipeline
+- [x] Step 1: Run `analytics validate --max-traces 100` (no LLM) → output to `data/m13/no-llm/`
+- [x] Step 2: Run `analytics validate --max-traces 100 --llm-sample 100` (4B model) → `data/m13/llm-Qwen3.5-4B-4bit/`
+- [x] Step 3: Run `analytics validate --max-traces 100 --llm-sample 100` (9B model) → `data/m13/llm-Qwen3.5-9B-MLX-4bit/`
+- [x] Step 4: Generate 3-way comparison report with per-detector diff counts
+- [x] Log LLM responses + per-call telemetry (latency, tokens, cache, JSON parse, finish reason)
+- [x] Fix thinking-mode issue: `enable_thinking: False` in `extra_body` (0% → 99.4-100% JSON)
+- [x] Add per-call telemetry to `llm_client.py` (latency_ms, prompt_tokens, completion_tokens, finish_reason, cache_hit)
+- [x] Add telemetry summary to validator output (p50/p95/p99 latency, token totals, parse rate, cache rate)
+- [x] Run 25-trace pilot, save results to `docs/field-test/m13-results/25-traces/`
+- [x] Run 100-trace full experiment, save results to `docs/field-test/m13-results/100-traces/`
+- [x] Document findings in `docs/field-test/m13-100-trace-report.md`
+- [x] Test plan: `docs/field-test/synthetic-llm-validation-plan.md`
 
 ### 13.2 GitHub agent SDK integration
 

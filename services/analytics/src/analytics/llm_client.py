@@ -86,7 +86,16 @@ class LLMClient:
             "embed_calls": 0,
             "errors": 0,
             "total_latency_ms": 0.0,
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "json_parse_success": 0,
+            "json_parse_fail": 0,
         }
+        # Per-call telemetry records for paper-grade measurement.
+        self._telemetry: list[dict[str, Any]] = []
         # Recorded chat responses for audit/debugging.
         self._responses: list[dict[str, Any]] = []
         # Optional file path for JSONL response logging.
@@ -195,7 +204,9 @@ class LLMClient:
         # Cache key includes all inputs that could change the response.
         key = ("chat", prompt, system or "", max_tokens or self.max_tokens)
         if key in self._cache:
+            self._stats["cache_hits"] += 1
             return self._cache[key]  # type: ignore[no-any-return]
+        self._stats["cache_misses"] += 1
 
         start = time.monotonic()
         try:
@@ -207,8 +218,46 @@ class LLMClient:
                 model=self.chat_model,
                 messages=messages,
                 max_tokens=max_tokens or self.max_tokens,
+                extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
+            latency_ms = (time.monotonic() - start) * 1000.0
             content = resp.choices[0].message.content if resp.choices else None
+            finish_reason = resp.choices[0].finish_reason if resp.choices else None
+            usage = resp.usage
+            prompt_tokens = usage.prompt_tokens if usage else 0
+            completion_tokens = usage.completion_tokens if usage else 0
+            total_tokens = usage.total_tokens if usage else 0
+
+            # Update token stats.
+            self._stats["prompt_tokens"] += prompt_tokens
+            self._stats["completion_tokens"] += completion_tokens
+            self._stats["total_tokens"] += total_tokens
+
+            # Track JSON parse success for telemetry.
+            if content:
+                import json as _json_check
+                try:
+                    _json_check.loads(content)
+                    self._stats["json_parse_success"] += 1
+                except Exception:
+                    self._stats["json_parse_fail"] += 1
+
+            # Per-call telemetry record for paper-grade measurement.
+            telemetry_record = {
+                **self._trace_context,
+                "model": self.chat_model,
+                "latency_ms": round(latency_ms, 2),
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+                "finish_reason": finish_reason,
+                "prompt_chars": len(prompt),
+                "system_chars": len(system or ""),
+                "content_chars": len(content) if content else 0,
+                "cache_hit": False,
+            }
+            self._telemetry.append(telemetry_record)
+
             if not content:
                 self._record(start, "chat_calls")
                 return None
@@ -298,9 +347,50 @@ class LLMClient:
 
         Returns:
             Dict with keys: ``chat_calls``, ``embed_calls``, ``errors``,
-            ``total_latency_ms`` (all as floats).
+            ``total_latency_ms``, ``cache_hits``, ``cache_misses``,
+            ``prompt_tokens``, ``completion_tokens``, ``total_tokens``,
+            ``json_parse_success``, ``json_parse_fail`` (all as floats).
         """
         return dict(self._stats)
+
+    def telemetry(self) -> list[dict[str, Any]]:
+        """Return per-call telemetry records for paper-grade measurement.
+
+        Each record contains: trace_id, detector, model, latency_ms,
+        prompt_tokens, completion_tokens, total_tokens, finish_reason,
+        prompt_chars, system_chars, content_chars, cache_hit.
+
+        Returns:
+            List of per-call telemetry dicts.
+        """
+        return list(self._telemetry)
+
+    def telemetry_summary(self) -> dict[str, Any]:
+        """Aggregate telemetry into summary statistics for the paper.
+
+        Returns p50/p95/p99 latency, total tokens, cache rate, parse rate.
+        """
+        if not self._telemetry:
+            return {}
+        latencies = sorted(r["latency_ms"] for r in self._telemetry)
+        n = len(latencies)
+        return {
+            "total_calls": n,
+            "latency_ms_p50": latencies[n // 2],
+            "latency_ms_p95": latencies[int(n * 0.95)] if n >= 20 else max(latencies),
+            "latency_ms_p99": latencies[int(n * 0.99)] if n >= 100 else max(latencies),
+            "latency_ms_mean": round(sum(latencies) / n, 2),
+            "latency_ms_min": min(latencies),
+            "latency_ms_max": max(latencies),
+            "total_prompt_tokens": sum(r["prompt_tokens"] for r in self._telemetry),
+            "total_completion_tokens": sum(r["completion_tokens"] for r in self._telemetry),
+            "total_tokens": sum(r["total_tokens"] for r in self._telemetry),
+            "avg_prompt_chars": round(sum(r["prompt_chars"] for r in self._telemetry) / n, 1),
+            "avg_completion_chars": round(sum(r["content_chars"] for r in self._telemetry) / n, 1),
+            "finish_reasons": dict.fromkeys(r["finish_reason"] for r in self._telemetry),
+            "cache_hit_rate": self._stats["cache_hits"] / max(self._stats["cache_hits"] + self._stats["cache_misses"], 1),
+            "json_parse_rate": self._stats["json_parse_success"] / max(self._stats["json_parse_success"] + self._stats["json_parse_fail"], 1),
+        }
 
     def models(self) -> list[str] | None:
         """Return cached model list (populated after a successful availability check).

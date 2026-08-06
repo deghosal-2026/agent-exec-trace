@@ -58,8 +58,9 @@ class Validator:
         self.max_files = max_files
         self.max_traces = max_traces
         self._llm_detectors: list[BaseDetector] | None = None
+        self._llm_client: LLMClient | None = None
         if self.llm_sample:
-            self._llm_detectors = create_llm_detectors()
+            self._llm_client, self._llm_detectors = create_llm_detectors()
         self.detectors: list[BaseDetector] = create_all_detectors()
         self._mode_dir: Path | None = None
 
@@ -376,6 +377,16 @@ class Validator:
             "skipped_detectors": skipped,
             "detector_errors": detector_errors,
         }
+
+        # Add LLM telemetry to summary for paper-grade measurement.
+        if self._llm_client:
+            report["llm_stats"] = self._llm_client.stats()
+            report["llm_telemetry_summary"] = self._llm_client.telemetry_summary()
+            telemetry = self._llm_client.telemetry()
+            if telemetry:
+                (out_dir / "llm_telemetry.jsonl").write_text(
+                    "\n".join(json.dumps(r, default=str) for r in telemetry)
+                )
 
         (out_dir / "summary.json").write_text(
             json.dumps(report, indent=2, default=str)
@@ -870,9 +881,9 @@ def _is_awaitable(obj: Any) -> bool:
     return isinstance(obj, (asyncio.Future, asyncio.Task)) or hasattr(obj, "__await__")
 
 
-def create_llm_detectors() -> list[BaseDetector]:
+def create_llm_detectors() -> tuple[LLMClient, list[BaseDetector]]:
     client = LLMClient()
-    return [
+    return client, [
         EmbeddingDriftDetector(client),
         SemanticLoopDetector(client),
         HallucinationDetector(client),

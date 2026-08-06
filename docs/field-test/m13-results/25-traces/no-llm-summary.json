@@ -1,0 +1,228 @@
+{
+  "traces_processed": 25,
+  "traces_skipped_resume": 0,
+  "traces_with_anomalies": 24,
+  "anomaly_count": 117,
+  "anomaly_by_type": {
+    "inactivity": 24,
+    "tool_timeout": 16,
+    "wasted_tool_calls": 14,
+    "recovery_path": 13,
+    "specific_tool_error": 10,
+    "retry_storm": 10,
+    "low_output": 9,
+    "tool_latency": 6,
+    "loop": 5,
+    "max_step_hit": 5,
+    "cost_efficiency": 3,
+    "intervention_frequency": 2,
+    "pattern_loop": 0,
+    "step_efficiency": 0
+  },
+  "anomaly_by_severity": {
+    "critical": 63,
+    "warning": 57
+  },
+  "detector_fire_rate": {
+    "inactivity": 96.0,
+    "tool_timeout": 64.0,
+    "loop": 20.0,
+    "specific_tool_error": 40.0,
+    "wasted_tool_calls": 56.0,
+    "retry_storm": 40.0,
+    "recovery_path": 52.0,
+    "low_output": 36.0,
+    "pattern_loop": 0.0,
+    "step_efficiency": 0.0,
+    "cost_efficiency": 12.0,
+    "tool_latency": 24.0,
+    "max_step_hit": 20.0,
+    "intervention_frequency": 8.0
+  },
+  "suspicious_patterns": {
+    "inactivity": 96.0,
+    "tool_timeout": 64.0,
+    "wasted_tool_calls": 56.0,
+    "recovery_path": 52.0
+  },
+  "cross_detector_correlation": {
+    "top_co_fires": [
+      {
+        "pair": [
+          "tool_timeout",
+          "inactivity"
+        ],
+        "count": 16,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "inactivity",
+          "tool_timeout"
+        ],
+        "count": 16,
+        "pct": 66.7
+      },
+      {
+        "pair": [
+          "wasted_tool_calls",
+          "inactivity"
+        ],
+        "count": 14,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "inactivity",
+          "wasted_tool_calls"
+        ],
+        "count": 14,
+        "pct": 58.3
+      },
+      {
+        "pair": [
+          "wasted_tool_calls",
+          "recovery_path"
+        ],
+        "count": 13,
+        "pct": 92.9
+      },
+      {
+        "pair": [
+          "recovery_path",
+          "wasted_tool_calls"
+        ],
+        "count": 13,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "inactivity",
+          "recovery_path"
+        ],
+        "count": 13,
+        "pct": 54.2
+      },
+      {
+        "pair": [
+          "recovery_path",
+          "inactivity"
+        ],
+        "count": 13,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "tool_timeout",
+          "wasted_tool_calls"
+        ],
+        "count": 11,
+        "pct": 68.8
+      },
+      {
+        "pair": [
+          "wasted_tool_calls",
+          "tool_timeout"
+        ],
+        "count": 11,
+        "pct": 78.6
+      },
+      {
+        "pair": [
+          "tool_timeout",
+          "recovery_path"
+        ],
+        "count": 11,
+        "pct": 68.8
+      },
+      {
+        "pair": [
+          "recovery_path",
+          "tool_timeout"
+        ],
+        "count": 11,
+        "pct": 84.6
+      },
+      {
+        "pair": [
+          "specific_tool_error",
+          "inactivity"
+        ],
+        "count": 10,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "inactivity",
+          "specific_tool_error"
+        ],
+        "count": 10,
+        "pct": 41.7
+      },
+      {
+        "pair": [
+          "inactivity",
+          "retry_storm"
+        ],
+        "count": 10,
+        "pct": 41.7
+      },
+      {
+        "pair": [
+          "retry_storm",
+          "inactivity"
+        ],
+        "count": 10,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "specific_tool_error",
+          "tool_timeout"
+        ],
+        "count": 9,
+        "pct": 90.0
+      },
+      {
+        "pair": [
+          "tool_timeout",
+          "specific_tool_error"
+        ],
+        "count": 9,
+        "pct": 56.2
+      },
+      {
+        "pair": [
+          "inactivity",
+          "low_output"
+        ],
+        "count": 9,
+        "pct": 37.5
+      },
+      {
+        "pair": [
+          "low_output",
+          "inactivity"
+        ],
+        "count": 9,
+        "pct": 100.0
+      }
+    ],
+    "type_counts": {
+      "inactivity": 24,
+      "tool_timeout": 16,
+      "loop": 5,
+      "specific_tool_error": 10,
+      "wasted_tool_calls": 14,
+      "retry_storm": 10,
+      "recovery_path": 13,
+      "low_output": 9,
+      "cost_efficiency": 3,
+      "tool_latency": 6,
+      "max_step_hit": 5,
+      "intervention_frequency": 2
+    }
+  },
+  "skipped_detectors": {},
+  "detector_errors": {}
+}

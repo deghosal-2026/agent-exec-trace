@@ -1,0 +1,157 @@
+{
+  "traces_sampled": 25,
+  "no_llm_total": 117,
+  "llm_4b_total": 142,
+  "llm_9b_total": 153,
+  "no_llm_types": 12,
+  "llm_4b_types": 14,
+  "llm_9b_types": 14,
+  "llm_4b_only_types": 2,
+  "llm_9b_only_types": 2,
+  "per_detector": [
+    {
+      "anomaly_type": "confusion_pattern",
+      "no_llm": 0,
+      "llm_4b": 1,
+      "llm_9b": 12,
+      "delta_4b": 1,
+      "delta_9b": 12,
+      "category": "llm-only"
+    },
+    {
+      "anomaly_type": "cost_efficiency",
+      "no_llm": 3,
+      "llm_4b": 3,
+      "llm_9b": 3,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "hallucination",
+      "no_llm": 0,
+      "llm_4b": 24,
+      "llm_9b": 24,
+      "delta_4b": 24,
+      "delta_9b": 24,
+      "category": "llm-only"
+    },
+    {
+      "anomaly_type": "inactivity",
+      "no_llm": 24,
+      "llm_4b": 24,
+      "llm_9b": 24,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "intervention_frequency",
+      "no_llm": 2,
+      "llm_4b": 2,
+      "llm_9b": 2,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "loop",
+      "no_llm": 5,
+      "llm_4b": 5,
+      "llm_9b": 5,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "low_output",
+      "no_llm": 9,
+      "llm_4b": 9,
+      "llm_9b": 9,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "max_step_hit",
+      "no_llm": 5,
+      "llm_4b": 5,
+      "llm_9b": 5,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "pattern_loop",
+      "no_llm": 0,
+      "llm_4b": 0,
+      "llm_9b": 0,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "recovery_path",
+      "no_llm": 13,
+      "llm_4b": 13,
+      "llm_9b": 13,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "retry_storm",
+      "no_llm": 10,
+      "llm_4b": 10,
+      "llm_9b": 10,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "specific_tool_error",
+      "no_llm": 10,
+      "llm_4b": 10,
+      "llm_9b": 10,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "step_efficiency",
+      "no_llm": 0,
+      "llm_4b": 0,
+      "llm_9b": 0,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "tool_latency",
+      "no_llm": 6,
+      "llm_4b": 6,
+      "llm_9b": 6,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "tool_timeout",
+      "no_llm": 16,
+      "llm_4b": 16,
+      "llm_9b": 16,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    },
+    {
+      "anomaly_type": "wasted_tool_calls",
+      "no_llm": 14,
+      "llm_4b": 14,
+      "llm_9b": 14,
+      "delta_4b": 0,
+      "delta_9b": 0,
+      "category": "rule-based"
+    }
+  ]
+}

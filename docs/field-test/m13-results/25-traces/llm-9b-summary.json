@@ -1,0 +1,268 @@
+{
+  "traces_processed": 25,
+  "traces_skipped_resume": 0,
+  "traces_with_anomalies": 24,
+  "anomaly_count": 153,
+  "anomaly_by_type": {
+    "inactivity": 24,
+    "hallucination": 24,
+    "tool_timeout": 16,
+    "wasted_tool_calls": 14,
+    "recovery_path": 13,
+    "confusion_pattern": 12,
+    "specific_tool_error": 10,
+    "retry_storm": 10,
+    "low_output": 9,
+    "tool_latency": 6,
+    "loop": 5,
+    "max_step_hit": 5,
+    "cost_efficiency": 3,
+    "intervention_frequency": 2,
+    "pattern_loop": 0,
+    "step_efficiency": 0
+  },
+  "anomaly_by_severity": {
+    "critical": 87,
+    "warning": 69
+  },
+  "detector_fire_rate": {
+    "inactivity": 96.0,
+    "hallucination": 96.0,
+    "confusion_pattern": 48.0,
+    "tool_timeout": 64.0,
+    "loop": 20.0,
+    "specific_tool_error": 40.0,
+    "wasted_tool_calls": 56.0,
+    "retry_storm": 40.0,
+    "recovery_path": 52.0,
+    "low_output": 36.0,
+    "pattern_loop": 0.0,
+    "step_efficiency": 0.0,
+    "cost_efficiency": 12.0,
+    "tool_latency": 24.0,
+    "max_step_hit": 20.0,
+    "intervention_frequency": 8.0
+  },
+  "suspicious_patterns": {
+    "inactivity": 96.0,
+    "hallucination": 96.0,
+    "tool_timeout": 64.0,
+    "wasted_tool_calls": 56.0,
+    "recovery_path": 52.0
+  },
+  "cross_detector_correlation": {
+    "top_co_fires": [
+      {
+        "pair": [
+          "inactivity",
+          "hallucination"
+        ],
+        "count": 24,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "hallucination",
+          "inactivity"
+        ],
+        "count": 24,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "tool_timeout",
+          "inactivity"
+        ],
+        "count": 16,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "inactivity",
+          "tool_timeout"
+        ],
+        "count": 16,
+        "pct": 66.7
+      },
+      {
+        "pair": [
+          "tool_timeout",
+          "hallucination"
+        ],
+        "count": 16,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "hallucination",
+          "tool_timeout"
+        ],
+        "count": 16,
+        "pct": 66.7
+      },
+      {
+        "pair": [
+          "wasted_tool_calls",
+          "inactivity"
+        ],
+        "count": 14,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "inactivity",
+          "wasted_tool_calls"
+        ],
+        "count": 14,
+        "pct": 58.3
+      },
+      {
+        "pair": [
+          "wasted_tool_calls",
+          "hallucination"
+        ],
+        "count": 14,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "hallucination",
+          "wasted_tool_calls"
+        ],
+        "count": 14,
+        "pct": 58.3
+      },
+      {
+        "pair": [
+          "wasted_tool_calls",
+          "recovery_path"
+        ],
+        "count": 13,
+        "pct": 92.9
+      },
+      {
+        "pair": [
+          "recovery_path",
+          "wasted_tool_calls"
+        ],
+        "count": 13,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "inactivity",
+          "recovery_path"
+        ],
+        "count": 13,
+        "pct": 54.2
+      },
+      {
+        "pair": [
+          "recovery_path",
+          "inactivity"
+        ],
+        "count": 13,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "recovery_path",
+          "hallucination"
+        ],
+        "count": 13,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "hallucination",
+          "recovery_path"
+        ],
+        "count": 13,
+        "pct": 54.2
+      },
+      {
+        "pair": [
+          "inactivity",
+          "confusion_pattern"
+        ],
+        "count": 12,
+        "pct": 50.0
+      },
+      {
+        "pair": [
+          "confusion_pattern",
+          "inactivity"
+        ],
+        "count": 12,
+        "pct": 100.0
+      },
+      {
+        "pair": [
+          "hallucination",
+          "confusion_pattern"
+        ],
+        "count": 12,
+        "pct": 50.0
+      },
+      {
+        "pair": [
+          "confusion_pattern",
+          "hallucination"
+        ],
+        "count": 12,
+        "pct": 100.0
+      }
+    ],
+    "type_counts": {
+      "inactivity": 24,
+      "hallucination": 24,
+      "confusion_pattern": 12,
+      "tool_timeout": 16,
+      "loop": 5,
+      "specific_tool_error": 10,
+      "wasted_tool_calls": 14,
+      "retry_storm": 10,
+      "recovery_path": 13,
+      "low_output": 9,
+      "cost_efficiency": 3,
+      "tool_latency": 6,
+      "max_step_hit": 5,
+      "intervention_frequency": 2
+    }
+  },
+  "skipped_detectors": {},
+  "detector_errors": {},
+  "llm_stats": {
+    "chat_calls": 99,
+    "embed_calls": 18,
+    "errors": 0,
+    "total_latency_ms": 165827.7689950155,
+    "cache_hits": 38,
+    "cache_misses": 99,
+    "prompt_tokens": 11503,
+    "completion_tokens": 2803,
+    "total_tokens": 14306,
+    "json_parse_success": 98,
+    "json_parse_fail": 1
+  },
+  "llm_telemetry_summary": {
+    "total_calls": 99,
+    "latency_ms_p50": 1367.4,
+    "latency_ms_p95": 2581.07,
+    "latency_ms_p99": 6213.56,
+    "latency_ms_mean": 1671.61,
+    "latency_ms_min": 985.04,
+    "latency_ms_max": 6213.56,
+    "total_prompt_tokens": 11503,
+    "total_completion_tokens": 2803,
+    "total_tokens": 14306,
+    "avg_prompt_chars": 239.5,
+    "avg_completion_chars": 103.5,
+    "finish_reasons": {
+      "stop": null,
+      "length": null
+    },
+    "cache_hit_rate": 0.2773722627737226,
+    "json_parse_rate": 0.98989898989899
+  }
+}
