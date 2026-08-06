@@ -38,11 +38,14 @@ Root span entry point
     root shape is always consistent.
 
 Nested behavior span helpers
-----------------------------
+---------------------------
   * :func:`agent_exec_trace.spans.plan_span` --
     Open a ``plan`` child span (agent deciding what to do next).
+  * :func:`agent_exec_trace.spans.tool_span` --
+    Open an ``execute_tool`` child span with default redaction (TRUNCATED mode,
+    tool args captured).  Convenience wrapper requiring no redaction config.
   * :func:`agent_exec_trace.spans.execute_tool_span` --
-    Open an ``execute_tool`` child span (one tool call).
+    Open an ``execute_tool`` child span with explicit redaction control.
   * :func:`agent_exec_trace.spans.retrieval_span` --
     Open a ``retrieval`` child span (RAG / vector-search lookup).
   * :func:`agent_exec_trace.spans.memory_span` --
@@ -66,7 +69,9 @@ Configuration
     Frozen dataclass holding runtime settings (service name, OTLP endpoint,
     default agent metadata, redaction config).
   * :func:`agent_exec_trace.config.default_config` --
-    Convenience factory returning a safe-by-default ``SDKConfig``.
+    Convenience factory returning a ``SDKConfig`` with truncated content capture
+    (tool args enabled by default).  Use ``PrivacyMode.METADATA_ONLY`` if your
+    deployment requires zero content on spans.
 
 Semantic-convention attribute keys
 ----------------------------------

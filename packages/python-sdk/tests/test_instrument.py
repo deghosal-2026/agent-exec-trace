@@ -23,7 +23,8 @@ from agent_exec_trace.attrs import (
 )
 from agent_exec_trace.config import SDKConfig
 from agent_exec_trace.context import RunContext
-from agent_exec_trace.instrument import invoke_agent
+from agent_exec_trace.instrument import invoke_agent, set_output
+from agent_exec_trace.redact import PrivacyMode, RedactionConfig
 from agent_exec_trace.tracer import configure_tracing, reset_tracing
 
 
@@ -76,3 +77,36 @@ def test_invoke_agent_merges_extra_attributes() -> None:
     span = exporter.get_finished_spans()[0]
     assert span.attributes is not None
     assert span.attributes["gen_ai.agent.workload.type"] == "support"
+
+
+def test_set_output_stores_response_on_root() -> None:
+    exporter = _exporter()
+    ctx = RunContext(run_id="run-1", agent_name="triage")
+    with invoke_agent(ctx) as span:
+        set_output(span, "Task completed")
+    finished = exporter.get_finished_spans()[0]
+    assert finished.attributes is not None
+    assert finished.attributes["gen_ai.response.content"] == "Task completed"
+
+
+def test_set_output_with_redaction_truncates() -> None:
+    exporter = _exporter()
+    ctx = RunContext(run_id="run-1", agent_name="triage")
+    redact = RedactionConfig(mode=PrivacyMode.TRUNCATED, capture_prompts=True, truncate_at=10)
+    with invoke_agent(ctx) as span:
+        set_output(span, "very long output that exceeds cap", redaction=redact)
+    finished = exporter.get_finished_spans()[0]
+    assert finished.attributes is not None
+    output = str(finished.attributes["gen_ai.response.content"])
+    assert len(output) <= 10
+
+
+def test_set_output_with_metadata_only_drops_content() -> None:
+    exporter = _exporter()
+    ctx = RunContext(run_id="run-1", agent_name="triage")
+    redact = RedactionConfig(mode=PrivacyMode.METADATA_ONLY)
+    with invoke_agent(ctx) as span:
+        set_output(span, "sensitive data", redaction=redact)
+    finished = exporter.get_finished_spans()[0]
+    assert finished.attributes is not None
+    assert "gen_ai.response.content" not in finished.attributes

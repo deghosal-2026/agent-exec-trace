@@ -20,7 +20,7 @@ tree with correct OTel span semantics.  All tests use an in-memory span exporter
 
 4. **Tool mapping** (``test_instrumented_graph_maps_run_tool_to_tool_span``):
    The ``run_tool`` LangGraph node must produce spans with operation name
-   ``SPAN_KIND_TOOL`` and an ``_et.tool`` attribute with the tool name.
+   ``SPAN_KIND_TOOL`` and a ``gen_ai.tool.name`` attribute with the tool name.
 
 5. **Result pass-through** (``test_instrumented_graph_returns_result``):
    The instrumented graph must return the same result as the raw graph
@@ -174,7 +174,7 @@ def test_instrumented_graph_maps_run_tool_to_tool_span() -> None:
 
     Each tool span must:
         - Have SPAN_KIND_TOOL as its gen_ai operation attribute.
-        - Carry ``_et.tool`` with either "search_kb" or "lookup_account" (the
+        - Carry ``gen_ai.tool.name`` with either "search_kb" or "lookup_account" (the
           two tools used by the normal seed).
     """
     exporter = _exporter()
@@ -190,7 +190,7 @@ def test_instrumented_graph_maps_run_tool_to_tool_span() -> None:
     # Verify the first tool span carries the expected tool-name attribute.
     tool_attrs = tool_spans[0].attributes
     assert tool_attrs is not None
-    assert tool_attrs.get("_et.tool") in ("search_kb", "lookup_account")
+    assert tool_attrs.get("gen_ai.tool.name") in ("search_kb", "lookup_account")
 
 
 def test_instrumented_graph_returns_result() -> None:

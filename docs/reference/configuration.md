@@ -15,9 +15,9 @@ Web application.
 | SDK | `AET_DEFAULT_AGENT_NAME` | `unnamed_agent` | Fallback agent name |
 | SDK | `AET_DEFAULT_AGENT_VERSION` | *(none)* | Fallback agent version |
 | SDK | `AET_DEFAULT_WORKLOAD_TYPE` | *(none)* | Fallback workload classification |
-| SDK | `AET_REDACTION_MODE` | `metadata_only` | Privacy mode (`metadata_only`, `truncated`, `hashed`) |
+| SDK | `AET_REDACTION_MODE` | `truncated` | Privacy mode (`metadata_only`, `truncated`, `hashed`) |
 | SDK | `AET_CAPTURE_PROMPTS` | `false` | Capture model prompts |
-| SDK | `AET_CAPTURE_TOOL_ARGS` | `false` | Capture tool arguments |
+| SDK | `AET_CAPTURE_TOOL_ARGS` | `true` | Capture tool arguments |
 | SDK | `AET_CAPTURE_MEMORY` | `false` | Capture memory content |
 | SDK | `AET_HASH_SALT` | `""` | Salt for hashed content |
 | SDK | `AET_TRUNCATE_AT` | `512` | Max chars in truncated mode |
@@ -98,8 +98,15 @@ The recommended entry point is:
 from agent_exec_trace.config import SDKConfig, default_config
 from agent_exec_trace.tracer import configure_tracing
 
-# Safe-by-default (metadata-only privacy posture)
+# Truncated content capture with tool args enabled by default
 configure_tracing(default_config())
+
+# Switch to metadata-only for zero-content deployments
+cfg = SDKConfig(
+    service_name="my-agent",
+    redaction=RedactionConfig(mode=PrivacyMode.METADATA_ONLY),
+)
+configure_tracing(cfg)
 
 # Full control
 cfg = SDKConfig(
@@ -142,17 +149,17 @@ act as field-specific gates. Both must pass for content to be recorded.
 
 | Member | Value | Behavior |
 |---|---|---|
-| `METADATA_ONLY` | `"metadata_only"` | **Default.** No content ever written to spans. Structural telemetry (timings, counts, IDs) is still emitted. `apply()` returns `None` immediately. |
-| `TRUNCATED` | `"truncated"` | Content is kept but capped at `truncate_at` characters. A `"[...]"` marker is appended when truncation occurs so consumers can distinguish naturally-short values from cut-off ones. |
+| `METADATA_ONLY` | `"metadata_only"` | No content ever written to spans. Structural telemetry (timings, counts, IDs) is still emitted. `apply()` returns `None` immediately. Available for privacy-sensitive deployments. |
+| `TRUNCATED` | `"truncated"` | **Default.** Content is kept but capped at `truncate_at` characters. A `"[...]"` marker is appended when truncation occurs so consumers can distinguish naturally-short values from cut-off ones. Tool args are captured by default. |
 | `HASHED` | `"hashed"` | Content is replaced by a **salted** SHA-256 hex digest — deterministic, non-reversible, and useful for correlating repeated payloads in analytics without revealing the payload itself. |
 
 #### RedactionConfig Fields
 
 | Field | Env Var | Python Type | Default | Description |
 |---|---|---|---|---|
-| `mode` | `AET_REDACTION_MODE` | `PrivacyMode` | `METADATA_ONLY` | Overall privacy mode. |
+| `mode` | `AET_REDACTION_MODE` | `PrivacyMode` | `TRUNCATED` | Overall privacy mode. |
 | `capture_prompts` | `AET_CAPTURE_PROMPTS` | `bool` | `False` | When `True` AND mode is not metadata-only, model prompts are captured. |
-| `capture_tool_args` | `AET_CAPTURE_TOOL_ARGS` | `bool` | `False` | When `True` AND mode is not metadata-only, tool arguments are captured. |
+| `capture_tool_args` | `AET_CAPTURE_TOOL_ARGS` | `bool` | `True` | When `True` AND mode is not metadata-only, tool arguments are captured. |
 | `capture_memory` | `AET_CAPTURE_MEMORY` | `bool` | `False` | When `True` AND mode is not metadata-only, memory content is captured. |
 | `truncate_at` | `AET_TRUNCATE_AT` | `int` | `512` | Max characters (inclusive) kept in truncated mode. Values longer than this are sliced and the `"[...]"` marker is appended. |
 | `hash_salt` | `AET_HASH_SALT` | `str` | `""` | Salt prepended to values before hashing in hashed mode. Different salts produce different digests for the same plaintext. |

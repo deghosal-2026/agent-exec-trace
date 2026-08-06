@@ -31,8 +31,10 @@ from agent_exec_trace.spans import (
     execute_tool_span,
     memory_span,
     plan_span,
+    plan_span_simple,
     record_event,
     retrieval_span,
+    tool_span,
 )
 from agent_exec_trace.tracer import configure_tracing, reset_tracing
 
@@ -139,7 +141,7 @@ def test_tool_args_dropped_in_metadata_only_mode() -> None:
         pass
     span = next(s for s in exporter.get_finished_spans() if s.name == "search_kb")
     assert span.attributes is not None
-    assert "_et.tool_args" not in span.attributes
+    assert "gen_ai.tool.args" not in span.attributes
 
 
 def test_tool_args_dropped_when_field_not_opted_in() -> None:
@@ -147,7 +149,7 @@ def test_tool_args_dropped_when_field_not_opted_in() -> None:
     # must not be stored. Opting into prompts does NOT opt into tool args.
     exporter = _exporter()
     ctx = RunContext(run_id="run-1", agent_name="triage")
-    redaction = RedactionConfig(mode=PrivacyMode.TRUNCATED, capture_prompts=True)
+    redaction = RedactionConfig(mode=PrivacyMode.TRUNCATED, capture_prompts=True, capture_tool_args=False)
     with (
         invoke_agent(ctx),
         execute_tool_span("search_kb", redaction=redaction, tool_args="secret query"),
@@ -155,7 +157,7 @@ def test_tool_args_dropped_when_field_not_opted_in() -> None:
         pass
     span = next(s for s in exporter.get_finished_spans() if s.name == "search_kb")
     assert span.attributes is not None
-    assert "_et.tool_args" not in span.attributes
+    assert "gen_ai.tool.args" not in span.attributes
 
 
 def test_tool_args_captured_when_enabled() -> None:
@@ -171,7 +173,7 @@ def test_tool_args_captured_when_enabled() -> None:
         pass
     span = next(s for s in exporter.get_finished_spans() if s.name == "search_kb")
     assert span.attributes is not None
-    assert span.attributes["_et.tool_args"] == "secret query"
+    assert span.attributes["gen_ai.tool.args"] == "secret query"
 
 
 def test_memory_content_gated_by_capture_memory_flag() -> None:
@@ -187,7 +189,7 @@ def test_memory_content_gated_by_capture_memory_flag() -> None:
         pass
     span = next(s for s in exporter.get_finished_spans() if s.name == "set")
     assert span.attributes is not None
-    assert "_et.content" not in span.attributes
+    assert "gen_ai.memory.content" not in span.attributes
 
 
 def test_memory_content_captured_when_enabled() -> None:
@@ -203,7 +205,7 @@ def test_memory_content_captured_when_enabled() -> None:
         pass
     span = next(s for s in exporter.get_finished_spans() if s.name == "set")
     assert span.attributes is not None
-    assert span.attributes["_et.content"] == "plain memory"
+    assert span.attributes["gen_ai.memory.content"] == "plain memory"
 
 
 def test_record_event_attaches_event() -> None:
@@ -218,3 +220,50 @@ def test_record_event_attaches_event() -> None:
     assert root.events[0].name == "anomaly_hint"
     assert root.events[0].attributes is not None
     assert root.events[0].attributes["code"] == "loop"
+
+
+def test_tool_span_creates_tool_span_with_default_redaction() -> None:
+    exporter = _exporter()
+    ctx = RunContext(run_id="run-1", agent_name="triage")
+    with invoke_agent(ctx), tool_span("search_kb", tool_input='{"q": "test"}'):
+        pass
+    span = next(s for s in exporter.get_finished_spans() if s.name == "search_kb")
+    assert span.attributes is not None
+    assert span.attributes["gen_ai.tool.name"] == "search_kb"
+    assert span.attributes["gen_ai.operation.name"] == "execute_tool"
+    assert span.attributes["gen_ai.tool.args"] is not None
+
+
+def test_tool_span_parents_to_root() -> None:
+    exporter = _exporter()
+    ctx = RunContext(run_id="run-1", agent_name="triage")
+    with invoke_agent(ctx) as root, tool_span("lookup"):
+        pass
+    span = next(s for s in exporter.get_finished_spans() if s.name == "lookup")
+    assert span.parent is not None
+    assert span.parent.span_id == root.context.span_id
+
+
+def test_tool_span_with_result_captures_output() -> None:
+    exporter = _exporter()
+    ctx = RunContext(run_id="run-1", agent_name="triage")
+    redaction = RedactionConfig(mode=PrivacyMode.TRUNCATED, capture_tool_args=True)
+    with (
+        invoke_agent(ctx),
+        execute_tool_span("search", redaction=redaction, tool_args="query", tool_result="found"),
+    ):
+        pass
+    span = next(s for s in exporter.get_finished_spans() if s.name == "search")
+    assert span.attributes is not None
+    assert span.attributes["gen_ai.tool.args"] == "query"
+    assert span.attributes["gen_ai.tool.result"] == "found"
+
+
+def test_plan_span_simple_creates_plan_span() -> None:
+    exporter = _exporter()
+    ctx = RunContext(run_id="run-1", agent_name="triage")
+    with invoke_agent(ctx), plan_span_simple("decide"):
+        pass
+    span = next(s for s in exporter.get_finished_spans() if s.name == "decide")
+    assert span.attributes is not None
+    assert span.attributes["gen_ai.operation.name"] == "plan"

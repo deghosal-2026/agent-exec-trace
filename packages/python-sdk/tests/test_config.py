@@ -1,8 +1,8 @@
 """Tests for SDK configuration defaults.
 
-Guards the safe-by-default trust posture (``default_config`` is metadata-only) and
-the documented field defaults, so a refactor can't silently change what users get
-out of the box.
+Guards the default trust posture (``default_config`` is truncated with tool args
+enabled) and the documented field defaults, so a refactor can't silently change
+what users get out of the box.
 """
 
 from __future__ import annotations
@@ -11,12 +11,13 @@ from agent_exec_trace.config import SDKConfig, default_config
 from agent_exec_trace.redact import PrivacyMode
 
 
-def test_default_config_is_metadata_only() -> None:
-    # The SDK's out-of-the-box posture must never capture content: mode is
-    # METADATA_ONLY and no capture flags are enabled.
+def test_default_config_is_truncated_with_tool_args() -> None:
+    # The SDK's out-of-the-box posture captures tool args in truncated mode
+    # so detectors have content to analyze without additional configuration.
     cfg = default_config()
-    assert cfg.redaction.mode is PrivacyMode.METADATA_ONLY
-    assert cfg.redaction.captures_content is False
+    assert cfg.redaction.mode is PrivacyMode.TRUNCATED
+    assert cfg.redaction.capture_tool_args is True
+    assert cfg.redaction.captures_content is True
 
 
 def test_config_defaults() -> None:

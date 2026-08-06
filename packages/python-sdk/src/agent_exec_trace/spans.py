@@ -371,3 +371,80 @@ def record_event(span: Span, name: str, attributes: dict[str, _Value] | None = N
         span.add_event(name, attributes)
     else:
         span.add_event(name)
+
+
+# ---------------------------------------------------------------------------
+# Convenience wrappers — auto-derive redaction from default config
+# ---------------------------------------------------------------------------
+
+@contextmanager
+def tool_span(
+    name: str,
+    *,
+    tool_input: str | None = None,
+    attributes: dict[str, _Value] | None = None,
+    tracer: trace.Tracer | None = None,
+) -> Iterator[Span]:
+    """Create an ``execute_tool`` child span with default redaction.
+
+    Convenience wrapper around :func:`execute_tool_span` that auto-derives the
+    redaction config from ``default_config()`` so users don't need to manually
+    create a ``RedactionConfig``.  Uses TRUNCATED mode with tool args enabled.
+
+    Args:
+        name: the tool being called (used as the span name).
+        tool_input: optional JSON-serializable input; captured as gen_ai.tool.args.
+        attributes: optional extra span attributes.
+        tracer: optional explicit tracer (tests).
+
+    Yields:
+        The ``execute_tool`` :class:`~opentelemetry.trace.Span`.
+
+    Example::
+
+        from agent_exec_trace.spans import tool_span
+
+        @trace_agent("my-agent")
+        def my_agent(query: str) -> str:
+            with plan_span("decide"):
+                ...
+            with tool_span("search_kb", tool_input=json.dumps({"q": query})):
+                results = search(query)
+            return str(results)
+    """
+    # Lazy import to avoid circular dependency at module load time.
+    from agent_exec_trace.config import default_config
+
+    redact = default_config().redaction
+    with execute_tool_span(
+        name,
+        redaction=redact,
+        tool_args=tool_input,
+        attributes=attributes,
+        tracer=tracer,
+    ) as span:
+        yield span
+
+
+@contextmanager
+def plan_span_simple(
+    description: str,
+    *,
+    attributes: dict[str, _Value] | None = None,
+    tracer: trace.Tracer | None = None,
+) -> Iterator[Span]:
+    """Create a ``plan`` child span (alias for internal use).
+
+    Drop-in convenience wrapper around :func:`plan_span` for consistency with
+    :func:`tool_span`.  Both follow the same naming pattern.
+
+    Args:
+        description: human-readable plan description.
+        attributes: optional extra span attributes.
+        tracer: optional explicit tracer (tests).
+
+    Yields:
+        The ``plan`` :class:`~opentelemetry.trace.Span`.
+    """
+    with plan_span(description, attributes=attributes, tracer=tracer) as span:
+        yield span

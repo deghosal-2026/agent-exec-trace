@@ -116,6 +116,12 @@ def health() -> None:
     help="Sample N traces and include LLM detectors",
 )
 @click.option(
+    "--llm-no-cache",
+    is_flag=True,
+    default=False,
+    help="Bypass LLM response cache (force fresh analysis)",
+)
+@click.option(
     "--llm-batch",
     default=25,
     type=int,
@@ -155,6 +161,7 @@ def validate(
     input_dir: str,
     output_dir: str,
     llm_sample: int | None,
+    llm_no_cache: bool,
     llm_batch: int,
     resume: bool,
     diagnose: bool,
@@ -193,6 +200,7 @@ def validate(
             input_dir=input_dir, output_dir=output_dir,
             llm_sample=llm_sample, resume=resume, diagnose=diagnose,
             pool=pool, llm_batch=llm_batch, max_files=max_files, max_traces=max_traces,
+            llm_no_cache=llm_no_cache,
         )
         if diagnose:
             # Diagnose mode: produce compatibility report and exit.

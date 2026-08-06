@@ -82,3 +82,21 @@ def test_reset_tracing_shuts_down_provider() -> None:
     spans = exporter.get_finished_spans()
     assert len(spans) == 1
     assert spans[0].name == "post-reset"
+
+
+def test_configure_tracing_with_resource_attributes() -> None:
+    exporter = InMemorySpanExporter()
+    configure_tracing(
+        SDKConfig(service_name="custom-svc"),
+        processor=SimpleSpanProcessor(exporter),
+        resource_attributes={"env": "test", "version": "1.0"},
+    )
+    tracer = get_tracer("test")
+    with tracer.start_as_current_span("with-resource"):
+        pass
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    attrs = spans[0].resource.attributes
+    assert attrs["service.name"] == "custom-svc"
+    assert attrs["env"] == "test"
+    assert attrs["version"] == "1.0"

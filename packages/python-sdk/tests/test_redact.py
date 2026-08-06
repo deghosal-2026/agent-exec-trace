@@ -67,9 +67,10 @@ def test_hashed_is_deterministic_and_not_plaintext() -> None:
 
 def test_captures_content_flag() -> None:
     # captures_content is a single summary flag: true only when some field is opted
-    # in under a mode that can store content.
-    assert not RedactionConfig().captures_content
-    assert not RedactionConfig(mode=PrivacyMode.TRUNCATED).captures_content
+    # in under a mode that can store content. The default config (TRUNCATED +
+    # capture_tool_args=True) returns True.
+    assert RedactionConfig().captures_content
+    assert not RedactionConfig(mode=PrivacyMode.METADATA_ONLY, capture_tool_args=True).captures_content
     assert RedactionConfig(
         mode=PrivacyMode.TRUNCATED, capture_prompts=True
     ).captures_content

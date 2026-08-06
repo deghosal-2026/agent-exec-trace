@@ -22,7 +22,7 @@ Usage
     from agent_exec_trace.config import SDKConfig, default_config
     from agent_exec_trace.tracer import configure_tracing
 
-    # Safe-by-default (metadata-only privacy posture)
+    # Safe-by-default (truncated content capture with tool args enabled)
     configure_tracing(default_config())
 
     # Full control
@@ -99,14 +99,14 @@ class SDKConfig:
 
 
 def default_config() -> SDKConfig:
-    """Return the safe-by-default configuration.
+    """Return the default configuration.
 
-    Explicitly pins ``PrivacyMode.METADATA_ONLY`` rather than relying on the dataclass
-    default so the trust posture is obvious at the call site and cannot silently drift
-    if the class default ever changes.
+    Pins ``PrivacyMode.TRUNCATED`` with ``capture_tool_args=True`` so detectors
+    have content to analyze out of the box.  The ``METADATA_ONLY`` mode is
+    available for deployments that require zero content on spans.
 
     Returns:
-        An ``SDKConfig`` with metadata-only redaction (no content leaks by default).
+        An ``SDKConfig`` with truncated content capture (tool args enabled).
 
     Example::
 
@@ -116,5 +116,5 @@ def default_config() -> SDKConfig:
         configure_tracing(default_config())
     """
     return SDKConfig(
-        redaction=RedactionConfig(mode=PrivacyMode.METADATA_ONLY),
+        redaction=RedactionConfig(mode=PrivacyMode.TRUNCATED, capture_tool_args=True),
     )

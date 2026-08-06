@@ -501,7 +501,115 @@ detectors identify meaningful anomalies, and the full pipeline is verified end-t
 
 ## Milestone 14: Release Validation
 
-### 14.1 Release criteria check
+### 14.1 v0.2.0 priority items — from M13 real-agent findings
+
+> **Context:** M13.2 real-agent integration surfaced 6 items deferred to v0.2.0.
+> Items 1, 2, 4, 5, 6 are captured here as priority follow-ups. Item 3
+> (CI smoke test) is excluded as it belongs in CI/infra, not the SDK/detection
+> domain.
+
+#### 14.1.1 SDK default to TRUNCATED mode
+
+**Source:** M13 report §6.2 item 1
+
+**Context:** The SDK defaults to `METADATA_ONLY` — spans have structure (tool names,
+timing, parent-child) but no content. M13.2 proved that content capture is
+essential: hallucination false positives dropped 34% after content was added,
+and tool-family detectors began firing correctly. The current default is
+dangerous because users who follow the quickstart get nearly zero detection value.
+
+**Success looks like:** New SDK users get content capture out of the box without
+additional configuration. The `METADATA_ONLY` mode remains available for
+privacy-sensitive deployments.
+
+- [ ] Change SDK default capture mode from `METADATA_ONLY` to `TRUNCATED`
+- [ ] Update quickstart docs to reflect new default
+- [ ] Add privacy/configuration doc explaining how to switch back to `METADATA_ONLY`
+- [ ] Verify all existing tests pass with new default
+- [ ] Update field-test report to note default change
+
+#### 14.1.2 Auto-instrumentation for `@trace_agent` flat traces
+
+**Source:** M13 report §6.2 item 2
+
+**Context:** The `@trace_agent` decorator is the easiest integration path (5 lines)
+but produces single-span traces. Only 3 of 35 detectors fire on flat traces.
+Users who follow the quickstart get a trace but almost no anomaly detection.
+LangGraph's `TracedGraph` already captures content-rich multi-span traces;
+raw Python and PydanticAI agents need equivalent auto-instrumentation.
+
+**Success looks like:** `@trace_agent` on LangChain/LangGraph agents automatically
+wraps tool calls as nested spans, and raw Python agents can opt into
+auto-instrumentation with minimal code changes.
+
+- [ ] Design auto-instrumentation strategy for LangChain/LangGraph tool calls
+- [ ] Implement nested span wrapping for `@trace_agent` LangChain agents
+- [ ] Add `tool_span()` context manager for raw Python agents
+- [ ] Update PydanticAI adapter to capture per-turn spans
+- [ ] Verify flat-trace agents produce multi-span traces after instrumentation
+- [ ] Verify all 35 detectors have content to analyze on auto-instrumented traces
+
+#### 14.1.3 LLM cache audit trail
+
+**Source:** M13 report §6.2 item 4
+
+**Context:** M13.2 found 85% cache hit rate on LLM calls. Identical traces are
+analyzed once and the answer is reused. This is efficient but creates a blind
+spot: one wrong LLM answer propagates to all identical traces with no way to
+distinguish cached vs. fresh analysis in the anomaly evidence.
+
+**Success looks like:** Anomalies tagged with `cache_hit: true/false` in their
+evidence payload, and a `--llm-no-cache` flag allows operators to force fresh
+LLM analysis on demand.
+
+- [ ] Add `cache_hit` boolean to LLM anomaly evidence payloads
+- [ ] Expose `cache_hit` in anomaly inbox UI tooltip/details
+- [ ] Add `--llm-no-cache` flag to analytics validate CLI
+- [ ] Add `llm_no_cache` config option to analytics worker
+- [ ] Document cache behavior and audit trail in anomaly explanation docs
+- [ ] Verify cache vs. fresh anomalies are distinguishable in all views
+
+#### 14.1.4 Centralized attribute contract test
+
+**Source:** M13 report §6.2 item 5
+
+**Context:** M13.2 found attribute naming mismatches between SDK (`_et.tool`) and
+detectors (`gen_ai.tool.name`) were never caught because synthetic traces used
+a different code path than real SDK traces. The two bugs cancelled each other
+out during development. A single contract test would have caught this at CI time.
+
+**Success looks like:** An integration test sends SDK-produced traces through
+the full pipeline and asserts every detector type fires at least once. This
+prevents attribute contract regressions across SDK and detector codebases.
+
+- [ ] Define attribute contract: which gen_ai attributes each detector depends on
+- [ ] Write integration test: instrument → trace → ingest → detect → assert all detectors fire
+- [ ] Add contract test to CI pipeline (blocking on failure)
+- [ ] Document attribute contract in SDK developer docs
+- [ ] Verify contract test catches attribute renaming regressions
+
+#### 14.1.5 PydanticAI v1 compatibility shim
+
+**Source:** M13 report §6.2 item 6
+
+**Context:** PydanticAI v2 introduced breaking changes. Every PydanticAI agent
+found on GitHub uses the v1 API (6 of 8 target agents in M13.2 could not run).
+The v0.1.0 adapter only supports v2, blocking adoption for the existing
+PydanticAI ecosystem.
+
+**Success looks like:** The SDK provides a compatibility shim allowing PydanticAI
+v1 agents to be instrumented without code changes, or version-pinned install
+instructions for both v1 and v2.
+
+- [ ] Research PydanticAI v1 → v2 migration surface
+- [ ] Implement v1 adapter shim or document version-pinned install
+- [ ] Test against existing v1 agents from GitHub
+- [ ] Document PydanticAI v1/v2 compatibility in SDK docs
+- [ ] Verify v1-instrumented agents produce valid OTel traces
+
+---
+
+### 14.2 Release criteria check
 
 This task maps the implementation back to the PRD promises. The release should not be considered complete because components exist; it is complete when the core operator outcomes are visibly true.
 
@@ -514,7 +622,7 @@ This task maps the implementation back to the PRD promises. The release should n
 - [ ] Confirm version compare works end-to-end
 - [ ] Confirm the need for a separate field-test plan is documented and tracked as a required follow-on before stronger production confidence claims
 
-### 14.1.1 Demo acceptance verification
+### 14.2.1 Demo acceptance verification
 
 This task explicitly checks the demo acceptance bar instead of assuming it is implied by other validations. Since demo-first is a design choice, the release should prove the demo is actually strong.
 
@@ -526,7 +634,7 @@ This task explicitly checks the demo acceptance bar instead of assuming it is im
 - [ ] Validate one fleet grouping demo
 - [ ] Validate one version compare demo
 
-### 14.2 Final packaging
+### 14.3 Final packaging
 
 This task makes sure the repo is coherent as a releasable OSS artifact. The main concern is that docs, commands, package layout, and stack orchestration all agree with reality.
 
@@ -537,7 +645,7 @@ This task makes sure the repo is coherent as a releasable OSS artifact. The main
 - [ ] Confirm docs match actual commands and paths
 - [ ] Confirm repo structure is reflected in README
 
-### 14.3 Launch prep
+### 14.4 Launch prep
 
 This task prepares the project to be shown and evaluated as a real OSS release. It is about making the first external impression legible and honest.
 
@@ -547,7 +655,7 @@ This task prepares the project to be shown and evaluated as a real OSS release. 
 - [ ] Prepare initial issues for `v0.2.0`
 - [ ] Prepare known limitations doc for `v0.1.0`
 
-### 14.4 Post-release follow-on tracking
+### 14.5 Post-release follow-on tracking
 
 This task prevents `v0.1.0` from ending with undocumented next steps. It should capture the immediate follow-ons that are already known from the PRD and WBS.
 

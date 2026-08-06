@@ -249,14 +249,10 @@ class _NodeCallbackHandler(BaseCallbackHandler):
             if outputs and isinstance(outputs, dict):
                 output_str = str(outputs)[:500]
                 if node == "run_tool":
-                    # Tool node: capture the full return state as tool result.
                     span.set_attribute(GEN_AI_TOOL_RESULT, output_str)
                 elif node == "planner":
-                    # Planner node: capture the plan/reasoning content.
                     span.set_attribute("gen_ai.plan.content", output_str)
-                # All nodes: capture generic output for detectors.
-                # All nodes: capture generic output for detectors.
-                    span.set_attribute("gen_ai.node.output", output_str)
+                span.set_attribute("gen_ai.node.output", output_str)
             span.end()
 
     def on_chain_error(

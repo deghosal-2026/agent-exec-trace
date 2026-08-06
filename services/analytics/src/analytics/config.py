@@ -85,6 +85,7 @@ class Settings(BaseSettings):
     llm_chat_model: str = "Qwen3.5-9B-MLX-4bit"
     llm_embed_model: str = "all-MiniLM-L6-v2"
     llm_timeout_seconds: float = 30.0
+    llm_no_cache: bool = False
 
     # --- Tool execution detector thresholds ---
     # Why these values?  A 4-tool pattern repeating twice is a strong signal

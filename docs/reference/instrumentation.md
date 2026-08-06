@@ -178,8 +178,8 @@ outputs, and plan details appear in traces.
 
 | Mode | What's captured | Use case |
 |---|---|---|
-| **Metadata-only** (default) | Span names, tool names, durations, outcomes. No payload content. | Production: maximum safety. |
-| **Truncated** | First 256 characters of tool I/O and plan text. | Development: partial context. |
+| **Truncated** (default) | First 512 characters of tool I/O and plan text. | Production: partial context for detection. |
+| **Metadata-only** | Span names, tool names, durations, outcomes. No payload content. | Production: maximum privacy, no content on spans. |
 | **Hashed** | SHA-256 hash of content for integrity checks without exposing payload. | Audit: verify content hasn't changed. |
 | **Full** | Complete tool inputs, outputs, and plan details. | Debugging: full trace fidelity. |
 
@@ -195,9 +195,9 @@ config = Config(
 )
 ```
 
-The default `Metadata-only` mode means traces show *what tools were called* and
-*how long they took*, but not *what data passed through them*. This is the safe
-default for production workloads.
+The default `Truncated` mode captures the first 512 characters of tool arguments
+and results so detectors have signal to analyze. Switch to `Metadata-only` for
+deployments that require zero content on spans:
 
 ## Configuration surface
 
@@ -213,7 +213,7 @@ config = Config(
     workload_type="support",
     otlp_endpoint="http://localhost:4317",
     otlp_insecure=True,
-    privacy_mode=PrivacyMode.METADATA_ONLY,
+    privacy_mode=PrivacyMode.TRUNCATED,
     service_name="agent-exec-trace",
 
     # Version dimensions (optional, enables richer compare views)

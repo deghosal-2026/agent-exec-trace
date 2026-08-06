@@ -4,9 +4,12 @@
 Why this module exists
 ========================================================
 Traces can carry sensitive content: prompts, tool arguments, retrieved text, and
-memory contents. The product's locked privacy posture (see architecture-v0.1.0.md)
-is **metadata-only by default** -- we keep structural signal (span names, timings,
-counts, cost, IDs) while keeping the sensitive payloads out of the telemetry path.
+memory contents. The product's default privacy posture is **truncated content capture**
+with tool args enabled -- we keep content capped at a character limit so detectors
+can analyze meaningful signal while sensitive payloads are never stored in full.
+The ``METADATA_ONLY`` mode remains available for deployments that require zero
+content on spans: it keeps structural signal (span names, timings, counts, cost,
+IDs) while keeping the sensitive payloads out of the telemetry path.
 
 This module is the trust boundary for that guarantee. Any code that wants to write
 sensitive content onto a span must funnel the value through :meth:`RedactionConfig.apply`,
@@ -16,12 +19,14 @@ value is dropped, truncated, or hashed before it ever reaches the span.
 ========================================================
 Privacy modes explained
 ========================================================
-* **METADATA_ONLY** (default): No content ever written.  The safest mode.
+* **METADATA_ONLY**: No content ever written.  The safest mode.  Available for
+  privacy-sensitive deployments that do not need content-based detection.
   Structural telemetry (timings, counts, IDs) is still emitted.
 
-* **TRUNCATED**: Content is kept but capped at ``truncate_at`` characters.
+* **TRUNCATED** (default): Content is kept but capped at ``truncate_at`` characters.
   A ``[...]`` marker is appended when truncation occurs so consumers can
-  distinguish naturally-short values from cut-off ones.
+  distinguish naturally-short values from cut-off ones.  Tool args are
+  captured by default under this mode so detectors have signal to work with.
 
 * **HASHED**: Content is replaced by a **salted** SHA-256 hex digest.  The
   hash is deterministic (same input + same salt = same digest), non-reversible,
@@ -113,7 +118,7 @@ class RedactionConfig:
     run / adapter reads from a single shared config.
 
     Attributes:
-        mode: overall privacy mode. Defaults to :data:`PrivacyMode.METADATA_ONLY`.
+        mode: overall privacy mode. Defaults to :data:`PrivacyMode.TRUNCATED`.
         capture_prompts: capture model prompts when mode is not metadata-only.
         capture_tool_args: capture tool arguments when mode is not metadata-only.
         capture_memory: capture memory content when mode is not metadata-only.
@@ -133,9 +138,9 @@ class RedactionConfig:
         # result is at most 256 characters (including "[...]" if truncated)
     """
 
-    mode: PrivacyMode = PrivacyMode.METADATA_ONLY
+    mode: PrivacyMode = PrivacyMode.TRUNCATED
     capture_prompts: bool = False
-    capture_tool_args: bool = False
+    capture_tool_args: bool = True
     capture_memory: bool = False
     truncate_at: int = 512
     hash_salt: str = ""

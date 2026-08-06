@@ -102,6 +102,10 @@ class LLMClient:
         self._response_log: str | None = None
         # Trace context for associating LLM calls with traces and detectors.
         self._trace_context: dict[str, str] = {}
+        # Whether the most recent chat() call was served from cache.
+        self.last_cache_hit: bool = False
+        # When True, the in-memory cache is bypassed entirely.
+        self.no_cache: bool = False
 
     def set_response_log(self, path: str) -> None:
         """Enable JSONL logging of all chat responses to the given file path.
@@ -203,9 +207,27 @@ class LLMClient:
 
         # Cache key includes all inputs that could change the response.
         key = ("chat", prompt, system or "", max_tokens or self.max_tokens)
-        if key in self._cache:
+        if not self.no_cache and key in self._cache:
             self._stats["cache_hits"] += 1
-            return self._cache[key]  # type: ignore[no-any-return]
+            self.last_cache_hit = True
+            cached = self._cache[key]
+            # Record cache-hit telemetry for audit trail.
+            cache_record = {
+                **self._trace_context,
+                "model": self.chat_model,
+                "latency_ms": 0.0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "finish_reason": "cache",
+                "prompt_chars": len(prompt),
+                "system_chars": len(system or ""),
+                "content_chars": len(cached) if isinstance(cached, str) else 0,
+                "cache_hit": True,
+            }
+            self._telemetry.append(cache_record)
+            return cached  # type: ignore[no-any-return]
+        self.last_cache_hit = False
         self._stats["cache_misses"] += 1
 
         start = time.monotonic()

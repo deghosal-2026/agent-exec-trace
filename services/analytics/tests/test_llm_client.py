@@ -177,6 +177,85 @@ class TestCaching:
         await client.chat("q", system="b")
         assert calls["n"] == 2
 
+    @pytest.mark.asyncio
+    async def test_cache_hit_telemetry(self) -> None:
+        calls = {"n": 0}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            calls["n"] += 1
+            return httpx.Response(
+                200,
+                json={
+                    "choices": [{"message": {"role": "assistant", "content": "cached"}}],
+                    "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+                },
+            )
+
+        client = _make_client(handler)
+        await client.chat("test telemetry")
+        await client.chat("test telemetry")
+        telemetry = client.telemetry()
+        assert len(telemetry) == 2
+        assert telemetry[0]["cache_hit"] is False
+        assert telemetry[0]["latency_ms"] >= 0
+        assert telemetry[1]["cache_hit"] is True
+        assert telemetry[1]["latency_ms"] == 0.0
+        assert telemetry[1]["finish_reason"] == "cache"
+        assert calls["n"] == 1
+
+    @pytest.mark.asyncio
+    async def test_last_cache_hit_tracks_state(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "choices": [{"message": {"role": "assistant", "content": "fresh"}}],
+                },
+            )
+
+        client = _make_client(handler)
+        await client.chat("first call")
+        assert client.last_cache_hit is False
+        await client.chat("first call")
+        assert client.last_cache_hit is True
+
+    @pytest.mark.asyncio
+    async def test_no_cache_bypasses_cache(self) -> None:
+        calls = {"n": 0}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            calls["n"] += 1
+            return httpx.Response(
+                200,
+                json={
+                    "choices": [{"message": {"role": "assistant", "content": "ok"}}],
+                },
+            )
+
+        client = _make_client(handler)
+        await client.chat("repeat me")
+        client.no_cache = True
+        await client.chat("repeat me")
+        assert calls["n"] == 2
+        assert client.last_cache_hit is False
+
+    @pytest.mark.asyncio
+    async def test_cache_hit_updates_stats(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "choices": [{"message": {"role": "assistant", "content": "a"}}],
+                },
+            )
+
+        client = _make_client(handler)
+        await client.chat("stats test")
+        await client.chat("stats test")
+        stats = client.stats()
+        assert stats["cache_hits"] == 1
+        assert stats["cache_misses"] == 1
+
 
 class TestLatencyTracking:
     @pytest.mark.asyncio

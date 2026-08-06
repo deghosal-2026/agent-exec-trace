@@ -313,7 +313,7 @@ async def test_validator_includes_llm_detectors_when_sample_enabled(
 ) -> None:
     monkeypatch.setattr(
         "analytics.trace_pipeline.validator.create_llm_detectors",
-        lambda: [_FakeLLMDetector()],
+        lambda **_: (None, [_FakeLLMDetector()]),
     )
 
     with tempfile.TemporaryDirectory() as out_dir:

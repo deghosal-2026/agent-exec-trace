@@ -47,6 +47,7 @@ class Validator:
         llm_batch: int = 25,
         max_files: int | None = None,
         max_traces: int | None = None,
+        llm_no_cache: bool = False,
     ) -> None:
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
@@ -57,10 +58,11 @@ class Validator:
         self.llm_batch = llm_batch
         self.max_files = max_files
         self.max_traces = max_traces
+        self.llm_no_cache = llm_no_cache
         self._llm_detectors: list[BaseDetector] | None = None
         self._llm_client: LLMClient | None = None
         if self.llm_sample:
-            self._llm_client, self._llm_detectors = create_llm_detectors()
+            self._llm_client, self._llm_detectors = create_llm_detectors(no_cache=llm_no_cache)
         self.detectors: list[BaseDetector] = create_all_detectors()
         self._mode_dir: Path | None = None
 
@@ -881,8 +883,10 @@ def _is_awaitable(obj: Any) -> bool:
     return isinstance(obj, (asyncio.Future, asyncio.Task)) or hasattr(obj, "__await__")
 
 
-def create_llm_detectors() -> tuple[LLMClient, list[BaseDetector]]:
+def create_llm_detectors(no_cache: bool = False) -> tuple[LLMClient, list[BaseDetector]]:
     client = LLMClient()
+    if no_cache:
+        client.no_cache = True
     return client, [
         EmbeddingDriftDetector(client),
         SemanticLoopDetector(client),

@@ -42,7 +42,16 @@ from analytics.worker import AnalyticsWorker
 
 def _noop_client() -> Any:
     from analytics.llm_client import LLMClient
-    return LLMClient()
+
+    # Ensure the client cannot make real HTTP calls: pass an http_client
+    # backed by a transport that always returns 503 so chat() returns None.
+    import httpx
+    transport = httpx.MockTransport(lambda _: httpx.Response(503, json={}))
+    return LLMClient(
+        base_url="http://noop.test/v1",
+        api_key="noop",
+        http_client=httpx.AsyncClient(transport=transport),
+    )
 
 
 class TestModels:
@@ -274,7 +283,7 @@ class TestConfig:
     def test_defaults(self) -> None:
         assert settings.polling_interval_seconds == 30
         assert settings.log_level == "INFO"
-        assert settings.trace_query_service == "demo-agent"
+        assert settings.trace_query_services == ("demo-agent",)
 
     def test_db_dsn_default(self) -> None:
         assert "postgresql" in settings.db_dsn

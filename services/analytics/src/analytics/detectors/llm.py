@@ -266,7 +266,7 @@ class SemanticLoopDetector(BaseDetector):
                         f"Semantically identical output repeated "
                         f"({parsed.get('similarity')})"
                     ),
-                    evidence={"similarity": parsed.get("similarity")},
+                    evidence={"similarity": parsed.get("similarity"), "cache_hit": self._client.last_cache_hit},
                 )
         except (json.JSONDecodeError, ValueError, KeyError):
             pass
@@ -331,7 +331,7 @@ class HallucinationDetector(BaseDetector):
                         f"Hallucination: {claim} "
                         f"(evidence: {parsed.get('evidence', 'none')})"
                     ),
-                    evidence={"claim": claim, "evidence": parsed.get("evidence")},
+                    evidence={"claim": claim, "evidence": parsed.get("evidence"), "cache_hit": self._client.last_cache_hit},
                 )
         except (json.JSONDecodeError, ValueError, KeyError):
             pass
@@ -389,7 +389,7 @@ class GoalDriftDetector(BaseDetector):
                     anomaly_type=self.anomaly_type,
                     severity="warning",
                     explanation=f"Goal drift: {parsed.get('note', 'diverged from intent')}",
-                    evidence=parsed,
+                    evidence={**parsed, "cache_hit": self._client.last_cache_hit},
                 )
         except (json.JSONDecodeError, ValueError, KeyError):
             pass
@@ -452,7 +452,7 @@ class QualityDegradationDetector(BaseDetector):
                     anomaly_type=self.anomaly_type,
                     severity="warning",
                     explanation=f"Quality degradation: {parsed.get('note', '')}",
-                    evidence=parsed,
+                    evidence={**parsed, "cache_hit": self._client.last_cache_hit},
                 )
         except (json.JSONDecodeError, ValueError, KeyError):
             pass
@@ -518,7 +518,7 @@ class ConfusionPatternDetector(BaseDetector):
                         f"Confusion: "
                         f"{parsed.get('explanation', 'plan-execution mismatch')}"
                     ),
-                    evidence=parsed,
+                    evidence={**parsed, "cache_hit": self._client.last_cache_hit},
                 )
         except (json.JSONDecodeError, ValueError, KeyError):
             pass
