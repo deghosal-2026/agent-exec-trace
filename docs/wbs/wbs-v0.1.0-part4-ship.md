@@ -508,9 +508,9 @@ detectors identify meaningful anomalies, and the full pipeline is verified end-t
 > (CI smoke test) is excluded as it belongs in CI/infra, not the SDK/detection
 > domain.
 
-#### 14.1.1 SDK default to TRUNCATED mode
+#### 14.1.1 SDK default to TRUNCATED mode ✅
 
-**Source:** M13 report §6.2 item 1
+**Source:** M13 report §6.2 item 1 — **Issue:** [#114](https://github.com/deghosal-2026/agent-exec-trace/issues/114) — **CLOSED**
 
 **Context:** The SDK defaults to `METADATA_ONLY` — spans have structure (tool names,
 timing, parent-child) but no content. M13.2 proved that content capture is
@@ -522,15 +522,15 @@ dangerous because users who follow the quickstart get nearly zero detection valu
 additional configuration. The `METADATA_ONLY` mode remains available for
 privacy-sensitive deployments.
 
-- [ ] Change SDK default capture mode from `METADATA_ONLY` to `TRUNCATED`
-- [ ] Update quickstart docs to reflect new default
-- [ ] Add privacy/configuration doc explaining how to switch back to `METADATA_ONLY`
-- [ ] Verify all existing tests pass with new default
-- [ ] Update field-test report to note default change
+- [x] Change SDK default capture mode from `METADATA_ONLY` to `TRUNCATED`
+- [x] Update quickstart docs to reflect new default
+- [x] Add privacy/configuration doc explaining how to switch back to `METADATA_ONLY`
+- [x] Verify all existing tests pass with new default
+- [x] Update field-test report to note default change
 
-#### 14.1.2 Auto-instrumentation for `@trace_agent` flat traces
+#### 14.1.2 Auto-instrumentation for `@trace_agent` flat traces ✅
 
-**Source:** M13 report §6.2 item 2
+**Source:** M13 report §6.2 item 2 — **Issue:** [#115](https://github.com/deghosal-2026/agent-exec-trace/issues/115) — **CLOSED**
 
 **Context:** The `@trace_agent` decorator is the easiest integration path (5 lines)
 but produces single-span traces. Only 3 of 35 detectors fire on flat traces.
@@ -542,16 +542,16 @@ raw Python and PydanticAI agents need equivalent auto-instrumentation.
 wraps tool calls as nested spans, and raw Python agents can opt into
 auto-instrumentation with minimal code changes.
 
-- [ ] Design auto-instrumentation strategy for LangChain/LangGraph tool calls
-- [ ] Implement nested span wrapping for `@trace_agent` LangChain agents
-- [ ] Add `tool_span()` context manager for raw Python agents
-- [ ] Update PydanticAI adapter to capture per-turn spans
-- [ ] Verify flat-trace agents produce multi-span traces after instrumentation
-- [ ] Verify all 35 detectors have content to analyze on auto-instrumented traces
+- [x] Design auto-instrumentation strategy for LangChain/LangGraph tool calls
+- [x] Implement nested span wrapping for `@trace_agent` LangChain agents
+- [x] Add `tool_span()` context manager for raw Python agents
+- [x] Update PydanticAI adapter to capture per-turn spans
+- [x] Verify flat-trace agents produce multi-span traces after instrumentation
+- [x] Verify all 35 detectors have content to analyze on auto-instrumented traces
 
-#### 14.1.3 LLM cache audit trail
+#### 14.1.3 LLM cache audit trail ✅
 
-**Source:** M13 report §6.2 item 4
+**Source:** M13 report §6.2 item 4 — **Issue:** [#116](https://github.com/deghosal-2026/agent-exec-trace/issues/116) — **CLOSED**
 
 **Context:** M13.2 found 85% cache hit rate on LLM calls. Identical traces are
 analyzed once and the answer is reused. This is efficient but creates a blind
@@ -562,16 +562,16 @@ distinguish cached vs. fresh analysis in the anomaly evidence.
 evidence payload, and a `--llm-no-cache` flag allows operators to force fresh
 LLM analysis on demand.
 
-- [ ] Add `cache_hit` boolean to LLM anomaly evidence payloads
-- [ ] Expose `cache_hit` in anomaly inbox UI tooltip/details
-- [ ] Add `--llm-no-cache` flag to analytics validate CLI
-- [ ] Add `llm_no_cache` config option to analytics worker
-- [ ] Document cache behavior and audit trail in anomaly explanation docs
-- [ ] Verify cache vs. fresh anomalies are distinguishable in all views
+- [x] Add `cache_hit` boolean to LLM anomaly evidence payloads
+- [x] Expose `cache_hit` in anomaly inbox UI tooltip/details
+- [x] Add `--llm-no-cache` flag to analytics validate CLI
+- [x] Add `llm_no_cache` config option to analytics worker
+- [x] Document cache behavior and audit trail in anomaly explanation docs
+- [x] Verify cache vs. fresh anomalies are distinguishable in all views
 
-#### 14.1.4 Centralized attribute contract test
+#### 14.1.4 Centralized attribute contract test ✅
 
-**Source:** M13 report §6.2 item 5
+**Source:** M13 report §6.2 item 5 — **Issue:** [#117](https://github.com/deghosal-2026/agent-exec-trace/issues/117) — **CLOSED**
 
 **Context:** M13.2 found attribute naming mismatches between SDK (`_et.tool`) and
 detectors (`gen_ai.tool.name`) were never caught because synthetic traces used
@@ -582,15 +582,15 @@ out during development. A single contract test would have caught this at CI time
 the full pipeline and asserts every detector type fires at least once. This
 prevents attribute contract regressions across SDK and detector codebases.
 
-- [ ] Define attribute contract: which gen_ai attributes each detector depends on
-- [ ] Write integration test: instrument → trace → ingest → detect → assert all detectors fire
-- [ ] Add contract test to CI pipeline (blocking on failure)
-- [ ] Document attribute contract in SDK developer docs
-- [ ] Verify contract test catches attribute renaming regressions
+- [x] Define attribute contract: which gen_ai attributes each detector depends on
+- [x] Write integration test: instrument → trace → ingest → detect → assert all detectors fire
+- [x] Add contract test to CI pipeline (blocking on failure)
+- [x] Document attribute contract in SDK developer docs
+- [x] Verify contract test catches attribute renaming regressions
 
-#### 14.1.5 PydanticAI v1 compatibility shim
+#### 14.1.5 PydanticAI v1 compatibility shim ✅
 
-**Source:** M13 report §6.2 item 6
+**Source:** M13 report §6.2 item 6 — **Issue:** [#118](https://github.com/deghosal-2026/agent-exec-trace/issues/118) — **CLOSED**
 
 **Context:** PydanticAI v2 introduced breaking changes. Every PydanticAI agent
 found on GitHub uses the v1 API (6 of 8 target agents in M13.2 could not run).
@@ -601,11 +601,11 @@ PydanticAI ecosystem.
 v1 agents to be instrumented without code changes, or version-pinned install
 instructions for both v1 and v2.
 
-- [ ] Research PydanticAI v1 → v2 migration surface
-- [ ] Implement v1 adapter shim or document version-pinned install
-- [ ] Test against existing v1 agents from GitHub
-- [ ] Document PydanticAI v1/v2 compatibility in SDK docs
-- [ ] Verify v1-instrumented agents produce valid OTel traces
+- [x] Research PydanticAI v1 → v2 migration surface
+- [x] Implement v1 adapter shim or document version-pinned install
+- [x] Test against existing v1 agents from GitHub
+- [x] Document PydanticAI v1/v2 compatibility in SDK docs
+- [x] Verify v1-instrumented agents produce valid OTel traces
 
 ---
 
