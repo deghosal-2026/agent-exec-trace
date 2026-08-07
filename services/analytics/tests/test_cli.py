@@ -118,9 +118,12 @@ class TestReprocess:
                 cli,
                 [
                     "reprocess",
-                    "--start", "2025-01-01T00:00:00",
-                    "--end", "2025-01-02T00:00:00",
-                    "--trace-id", "abc123",
+                    "--start",
+                    "2025-01-01T00:00:00",
+                    "--end",
+                    "2025-01-02T00:00:00",
+                    "--trace-id",
+                    "abc123",
                 ],
             )
             assert result.exit_code == 0
@@ -142,9 +145,12 @@ class TestReprocess:
                 cli,
                 [
                     "reprocess",
-                    "--start", "2025-01-01T00:00:00",
-                    "--end", "2025-01-02T00:00:00",
-                    "--trace-id", "nonexistent",
+                    "--start",
+                    "2025-01-01T00:00:00",
+                    "--end",
+                    "2025-01-02T00:00:00",
+                    "--trace-id",
+                    "nonexistent",
                 ],
             )
             assert result.exit_code == 0
@@ -369,7 +375,9 @@ class TestValidate:
 
         with (
             patch("analytics.trace_pipeline.validator.Validator", return_value=mock_validator),
-            patch("analytics.main.get_pool", AsyncMock(side_effect=RuntimeError("connection refused"))),
+            patch(
+                "analytics.main.get_pool", AsyncMock(side_effect=RuntimeError("connection refused"))
+            ),
         ):
             result = runner.invoke(cli, ["validate", "--db"])
             assert result.exit_code == 0
@@ -674,9 +682,12 @@ class TestMaterialize:
                 cli,
                 [
                     "materialize",
-                    "--agent-name", "test-agent",
-                    "--workload-type", "batch",
-                    "--period-hours", "6",
+                    "--agent-name",
+                    "test-agent",
+                    "--workload-type",
+                    "batch",
+                    "--period-hours",
+                    "6",
                 ],
             )
             assert result.exit_code == 0
@@ -755,9 +766,7 @@ class TestDownloadTraces:
         )
 
         with patch("analytics.trace_pipeline.pipeline.TracePipeline", return_value=mock_pipeline):
-            result = runner.invoke(
-                cli, ["download-traces", "--output-dir", "custom/output"]
-            )
+            result = runner.invoke(cli, ["download-traces", "--output-dir", "custom/output"])
             assert result.exit_code == 0
 
     def test_with_batch_size_option(self) -> None:
@@ -791,8 +800,10 @@ class TestDownloadTraces:
                 cli,
                 [
                     "download-traces",
-                    "--dataset", "dataset-a",
-                    "--dataset", "dataset-b",
+                    "--dataset",
+                    "dataset-a",
+                    "--dataset",
+                    "dataset-b",
                 ],
             )
             assert result.exit_code == 0
@@ -815,9 +826,7 @@ class TestDownloadTraces:
                 return_value="dataset-1\n# comment\ndataset-2\n\n",
             ),
         ):
-            result = runner.invoke(
-                cli, ["download-traces", "--datasets-file", "datasets.txt"]
-            )
+            result = runner.invoke(cli, ["download-traces", "--datasets-file", "datasets.txt"])
             assert result.exit_code == 0
 
     def test_with_datasets_file_not_found(self) -> None:
@@ -832,9 +841,7 @@ class TestDownloadTraces:
         )
 
         with patch("analytics.trace_pipeline.pipeline.TracePipeline", return_value=mock_pipeline):
-            result = runner.invoke(
-                cli, ["download-traces", "--datasets-file", "nonexistent.txt"]
-            )
+            result = runner.invoke(cli, ["download-traces", "--datasets-file", "nonexistent.txt"])
             assert result.exit_code == 0
             assert "Warning" in result.output
 
@@ -854,12 +861,17 @@ class TestDownloadTraces:
                 cli,
                 [
                     "download-traces",
-                    "--target", "200",
+                    "--target",
+                    "200",
                     "--ingest",
-                    "--output-dir", "data/test-traces",
-                    "--batch-size", "8",
-                    "--dataset", "ds1",
-                    "--dataset", "ds2",
+                    "--output-dir",
+                    "data/test-traces",
+                    "--batch-size",
+                    "8",
+                    "--dataset",
+                    "ds1",
+                    "--dataset",
+                    "ds2",
                 ],
             )
             assert result.exit_code == 0

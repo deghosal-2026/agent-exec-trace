@@ -52,8 +52,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from agent_exec_trace.config import SDKConfig, default_config
-from agent_exec_trace.raw import trace_agent
+from agent_exec_trace.config import SDKConfig
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +63,9 @@ logger = logging.getLogger(__name__)
 try:
     import pydantic_ai
 
-    _PYDANTICAI_VERSION = pydantic_ai.__version__ if hasattr(pydantic_ai, "__version__") else "unknown"
+    _PYDANTICAI_VERSION: str | None = (
+        pydantic_ai.__version__ if hasattr(pydantic_ai, "__version__") else "unknown"
+    )
 except ImportError:
     _PYDANTICAI_VERSION = None
 

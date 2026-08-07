@@ -61,12 +61,12 @@ from opentelemetry import trace
 from opentelemetry.trace import Span, SpanKind
 
 from agent_exec_trace.attrs import (
-    GEN_AI_OPERATION_NAME,
-    GEN_AI_TOOL_NAME,
-    GEN_AI_TOOL_ARGS,
-    GEN_AI_TOOL_RESULT,
-    GEN_AI_RESPONSE_CONTENT,
     GEN_AI_AGENT_OUTPUT,
+    GEN_AI_OPERATION_NAME,
+    GEN_AI_RESPONSE_CONTENT,
+    GEN_AI_TOOL_ARGS,
+    GEN_AI_TOOL_NAME,
+    GEN_AI_TOOL_RESULT,
     SPAN_KIND_PLAN,
     SPAN_KIND_TOOL,
 )
@@ -386,8 +386,13 @@ class TracedGraph:
             # output quality detectors can find it. LangGraph returns a
             # state dict — extract the most likely output field.
             if isinstance(result, dict):
-                output = (result.get("response") or result.get("output")
-                          or result.get("answer") or result.get("outcome") or "")
+                output = (
+                    result.get("response")
+                    or result.get("output")
+                    or result.get("answer")
+                    or result.get("outcome")
+                    or ""
+                )
                 if output:
                     root_span.set_attribute(GEN_AI_RESPONSE_CONTENT, str(output)[:500])
                     root_span.set_attribute(GEN_AI_AGENT_OUTPUT, str(output)[:500])

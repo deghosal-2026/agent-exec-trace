@@ -10,18 +10,18 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
 from analytics.detectors import create_all_detectors
 from analytics.detectors.base import BaseDetector
-from analytics.models import Anomaly, RunSummary, SpanNode
-
+from analytics.models import RunSummary, SpanNode
 
 # ---------------------------------------------------------------------------
 # Minimal helpers — kept inline so the test file is self-contained.
 # ---------------------------------------------------------------------------
+
 
 class _Acquire:
     def __init__(self, conn: Any) -> None:
@@ -73,8 +73,8 @@ def _root(children: list[SpanNode], *, op: str = "invoke_agent") -> list[SpanNod
 
 
 def _tool(span_id: str, name: str, **attrs: Any) -> SpanNode:
-    status: str | None = attrs.pop("status", None)  # type: ignore[assignment]
-    duration_ms: int | None = attrs.pop("duration_ms", None)  # type: ignore[assignment]
+    status: str | None = attrs.pop("status", None)
+    duration_ms: int | None = attrs.pop("duration_ms", None)
     attributes: dict[str, object] = {"gen_ai.tool.name": name}
     attributes.update(attrs)
     return SpanNode(
@@ -127,10 +127,12 @@ class TestAnomalyClusterDetector:
 
         d = AnomalyClusterDetector(min_anomaly_types=5)
         conn = AsyncMock()
-        conn.fetch = AsyncMock(return_value=[
-            {"anomaly_type": "loop"},
-            {"anomaly_type": "retry_storm"},
-        ])
+        conn.fetch = AsyncMock(
+            return_value=[
+                {"anomaly_type": "loop"},
+                {"anomaly_type": "retry_storm"},
+            ]
+        )
         pool = _Pool(conn)
         assert await d.detect_async(_summary(), [], pool=pool) is None
 
@@ -483,41 +485,50 @@ class TestApprovalLatencyDetector:
         from analytics.detectors.interaction import ApprovalLatencyDetector
 
         d = ApprovalLatencyDetector(max_seconds=60.0)
-        spans = _root([
-            SpanNode(span_id="s1", trace_id="t", operation_name="execute_tool"),
-        ])
+        spans = _root(
+            [
+                SpanNode(span_id="s1", trace_id="t", operation_name="execute_tool"),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_slowest_below_threshold_returns_none(self) -> None:
         from analytics.detectors.interaction import ApprovalLatencyDetector
 
         d = ApprovalLatencyDetector(max_seconds=60.0)
-        spans = _root([
-            SpanNode(
-                span_id="h1", trace_id="t",
-                operation_name="await_approval",
-                duration_ms=30000,
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="h1",
+                    trace_id="t",
+                    operation_name="await_approval",
+                    duration_ms=30000,
+                ),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_nested_intervention_spans(self) -> None:
         from analytics.detectors.interaction import ApprovalLatencyDetector
 
         d = ApprovalLatencyDetector(max_seconds=30.0)
-        spans = _root([
-            SpanNode(
-                span_id="outer", trace_id="t",
-                operation_name="plan",
-                child_spans=[
-                    SpanNode(
-                        span_id="inner", trace_id="t",
-                        operation_name="await_approval",
-                        duration_ms=45000,
-                    ),
-                ],
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="outer",
+                    trace_id="t",
+                    operation_name="plan",
+                    child_spans=[
+                        SpanNode(
+                            span_id="inner",
+                            trace_id="t",
+                            operation_name="await_approval",
+                            duration_ms=45000,
+                        ),
+                    ],
+                ),
+            ]
+        )
         result = d.detect(_summary(), spans)
         assert result is not None
         assert result.anomaly_type == "approval_latency"
@@ -526,13 +537,16 @@ class TestApprovalLatencyDetector:
         from analytics.detectors.interaction import ApprovalLatencyDetector
 
         d = ApprovalLatencyDetector(max_seconds=10.0)
-        spans = _root([
-            SpanNode(
-                span_id="h1", trace_id="t",
-                operation_name="human_intervention",
-                duration_ms=20000,
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="h1",
+                    trace_id="t",
+                    operation_name="human_intervention",
+                    duration_ms=20000,
+                ),
+            ]
+        )
         result = d.detect(_summary(), spans)
         assert result is not None
 
@@ -540,13 +554,16 @@ class TestApprovalLatencyDetector:
         from analytics.detectors.interaction import ApprovalLatencyDetector
 
         d = ApprovalLatencyDetector(max_seconds=5.0)
-        spans = _root([
-            SpanNode(
-                span_id="h1", trace_id="t",
-                operation_name="ask_user",
-                duration_ms=10000,
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="h1",
+                    trace_id="t",
+                    operation_name="ask_user",
+                    duration_ms=10000,
+                ),
+            ]
+        )
         result = d.detect(_summary(), spans)
         assert result is not None
 
@@ -554,18 +571,22 @@ class TestApprovalLatencyDetector:
         from analytics.detectors.interaction import ApprovalLatencyDetector
 
         d = ApprovalLatencyDetector(max_seconds=10.0)
-        spans = _root([
-            SpanNode(
-                span_id="h1", trace_id="t",
-                operation_name="await_approval",
-                duration_ms=5000,
-            ),
-            SpanNode(
-                span_id="h2", trace_id="t",
-                operation_name="human_intervention",
-                duration_ms=25000,
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="h1",
+                    trace_id="t",
+                    operation_name="await_approval",
+                    duration_ms=5000,
+                ),
+                SpanNode(
+                    span_id="h2",
+                    trace_id="t",
+                    operation_name="human_intervention",
+                    duration_ms=25000,
+                ),
+            ]
+        )
         result = d.detect(_summary(), spans)
         assert result is not None
         assert result.evidence is not None
@@ -585,11 +606,13 @@ class TestInterventionRejectionDetector:
 
         d = InterventionRejectionDetector(threshold=1)
         s = _summary(total_interventions=2)
-        spans = _root([
-            SpanNode(span_id="h1", trace_id="t", operation_name="human_intervention"),
-            SpanNode(span_id="r1", trace_id="t", operation_name="retry_fix"),
-            SpanNode(span_id="h2", trace_id="t", operation_name="ask_user"),
-        ])
+        spans = _root(
+            [
+                SpanNode(span_id="h1", trace_id="t", operation_name="human_intervention"),
+                SpanNode(span_id="r1", trace_id="t", operation_name="retry_fix"),
+                SpanNode(span_id="h2", trace_id="t", operation_name="ask_user"),
+            ]
+        )
         result = d.detect(s, spans)
         assert result is not None
         assert result.anomaly_type == "intervention_rejection"
@@ -599,15 +622,18 @@ class TestInterventionRejectionDetector:
 
         d = InterventionRejectionDetector(threshold=1)
         s = _summary(total_interventions=2)
-        spans = _root([
-            SpanNode(span_id="h1", trace_id="t", operation_name="human_intervention"),
-            SpanNode(
-                span_id="r1", trace_id="t",
-                operation_name="some_operation",
-                attributes={"gen_ai.retry.count": 1},
-            ),
-            SpanNode(span_id="h2", trace_id="t", operation_name="ask_user"),
-        ])
+        spans = _root(
+            [
+                SpanNode(span_id="h1", trace_id="t", operation_name="human_intervention"),
+                SpanNode(
+                    span_id="r1",
+                    trace_id="t",
+                    operation_name="some_operation",
+                    attributes={"gen_ai.retry.count": 1},
+                ),
+                SpanNode(span_id="h2", trace_id="t", operation_name="ask_user"),
+            ]
+        )
         result = d.detect(s, spans)
         assert result is not None
 
@@ -616,11 +642,13 @@ class TestInterventionRejectionDetector:
 
         d = InterventionRejectionDetector(threshold=3)
         s = _summary(total_interventions=4)
-        spans = _root([
-            SpanNode(span_id="h1", trace_id="t", operation_name="human_intervention"),
-            SpanNode(span_id="r1", trace_id="t", operation_name="retry_1"),
-            SpanNode(span_id="h2", trace_id="t", operation_name="ask_user"),
-        ])
+        spans = _root(
+            [
+                SpanNode(span_id="h1", trace_id="t", operation_name="human_intervention"),
+                SpanNode(span_id="r1", trace_id="t", operation_name="retry_1"),
+                SpanNode(span_id="h2", trace_id="t", operation_name="ask_user"),
+            ]
+        )
         assert d.detect(s, spans) is None
 
 
@@ -641,26 +669,32 @@ class TestEmptyResponseDetector:
         from analytics.detectors.output import EmptyResponseDetector
 
         d = EmptyResponseDetector()
-        spans = _root([
-            SpanNode(
-                span_id="s1", trace_id="t",
-                operation_name="invoke_agent",
-                attributes={"gen_ai.response.content": "Hello world"},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s1",
+                    trace_id="t",
+                    operation_name="invoke_agent",
+                    attributes={"gen_ai.response.content": "Hello world"},
+                ),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_whitespace_only_output_fires(self) -> None:
         from analytics.detectors.output import EmptyResponseDetector
 
         d = EmptyResponseDetector()
-        spans = _root([
-            SpanNode(
-                span_id="s1", trace_id="t",
-                operation_name="invoke_agent",
-                attributes={"gen_ai.response.content": "   \n\t  "},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s1",
+                    trace_id="t",
+                    operation_name="invoke_agent",
+                    attributes={"gen_ai.response.content": "   \n\t  "},
+                ),
+            ]
+        )
         result = d.detect(_summary(), spans)
         assert result is not None
         assert result.anomaly_type == "empty_response"
@@ -677,39 +711,48 @@ class TestLowOutputDetector:
         from analytics.detectors.output import LowOutputDetector
 
         d = LowOutputDetector(min_chars=50)
-        spans = _root([
-            SpanNode(
-                span_id="s1", trace_id="t",
-                operation_name="invoke_agent",
-                attributes={},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s1",
+                    trace_id="t",
+                    operation_name="invoke_agent",
+                    attributes={},
+                ),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_at_or_above_threshold_returns_none(self) -> None:
         from analytics.detectors.output import LowOutputDetector
 
         d = LowOutputDetector(min_chars=50)
-        spans = _root([
-            SpanNode(
-                span_id="s1", trace_id="t",
-                operation_name="invoke_agent",
-                attributes={"gen_ai.response.content": "A" * 50},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s1",
+                    trace_id="t",
+                    operation_name="invoke_agent",
+                    attributes={"gen_ai.response.content": "A" * 50},
+                ),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_very_short_output_fires_critical(self) -> None:
         from analytics.detectors.output import LowOutputDetector
 
         d = LowOutputDetector(min_chars=100)
-        spans = _root([
-            SpanNode(
-                span_id="s1", trace_id="t",
-                operation_name="invoke_agent",
-                attributes={"gen_ai.response.content": "Hi"},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s1",
+                    trace_id="t",
+                    operation_name="invoke_agent",
+                    attributes={"gen_ai.response.content": "Hi"},
+                ),
+            ]
+        )
         result = d.detect(_summary(), spans)
         assert result is not None
         assert result.severity == "critical"
@@ -789,9 +832,11 @@ class TestOutputDriftDetector:
         from analytics.detectors.output import OutputDriftDetector
 
         d = OutputDriftDetector(deviation_multiplier=2.0)
-        spans = _root([
-            SpanNode(span_id="s", trace_id="t", operation_name="step"),
-        ])
+        spans = _root(
+            [
+                SpanNode(span_id="s", trace_id="t", operation_name="step"),
+            ]
+        )
         assert await d.detect_async(_summary(), spans, pool=None) is None
 
     @pytest.mark.asyncio
@@ -799,13 +844,16 @@ class TestOutputDriftDetector:
         from analytics.detectors.output import OutputDriftDetector
 
         d = OutputDriftDetector(deviation_multiplier=2.0)
-        spans = _root([
-            SpanNode(
-                span_id="s", trace_id="t",
-                operation_name="invoke_agent",
-                attributes={"gen_ai.response.content": "Long enough output text here"},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s",
+                    trace_id="t",
+                    operation_name="invoke_agent",
+                    attributes={"gen_ai.response.content": "Long enough output text here"},
+                ),
+            ]
+        )
         assert await d.detect_async(_summary(), spans, pool=None) is None
 
     @pytest.mark.asyncio
@@ -813,13 +861,16 @@ class TestOutputDriftDetector:
         from analytics.detectors.output import OutputDriftDetector
 
         d = OutputDriftDetector(deviation_multiplier=2.0)
-        spans = _root([
-            SpanNode(
-                span_id="s", trace_id="t",
-                operation_name="invoke_agent",
-                attributes={"gen_ai.response.content": "some output"},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s",
+                    trace_id="t",
+                    operation_name="invoke_agent",
+                    attributes={"gen_ai.response.content": "some output"},
+                ),
+            ]
+        )
         assert await d.detect_async(_summary(), spans, pool=_BadPool()) is None
 
     @pytest.mark.asyncio
@@ -827,13 +878,16 @@ class TestOutputDriftDetector:
         from analytics.detectors.output import OutputDriftDetector
 
         d = OutputDriftDetector(deviation_multiplier=2.0)
-        spans = _root([
-            SpanNode(
-                span_id="s", trace_id="t",
-                operation_name="invoke_agent",
-                attributes={"gen_ai.response.content": "some output here"},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s",
+                    trace_id="t",
+                    operation_name="invoke_agent",
+                    attributes={"gen_ai.response.content": "some output here"},
+                ),
+            ]
+        )
         conn = AsyncMock()
         conn.fetchrow = AsyncMock(return_value=None)
         pool = _Pool(conn)
@@ -844,13 +898,16 @@ class TestOutputDriftDetector:
         from analytics.detectors.output import OutputDriftDetector
 
         d = OutputDriftDetector(deviation_multiplier=2.0)
-        spans = _root([
-            SpanNode(
-                span_id="s", trace_id="t",
-                operation_name="invoke_agent",
-                attributes={"gen_ai.response.content": "some output"},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s",
+                    trace_id="t",
+                    operation_name="invoke_agent",
+                    attributes={"gen_ai.response.content": "some output"},
+                ),
+            ]
+        )
         conn = AsyncMock()
         conn.fetchrow = AsyncMock(return_value={"avg_len": 0})
         pool = _Pool(conn)
@@ -861,13 +918,16 @@ class TestOutputDriftDetector:
         from analytics.detectors.output import OutputDriftDetector
 
         d = OutputDriftDetector(deviation_multiplier=3.0)
-        spans = _root([
-            SpanNode(
-                span_id="s", trace_id="t",
-                operation_name="invoke_agent",
-                attributes={"gen_ai.response.content": "a" * 100},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s",
+                    trace_id="t",
+                    operation_name="invoke_agent",
+                    attributes={"gen_ai.response.content": "a" * 100},
+                ),
+            ]
+        )
         conn = AsyncMock()
         conn.fetchrow = AsyncMock(return_value={"avg_len": 10.0})
         pool = _Pool(conn)
@@ -881,13 +941,16 @@ class TestOutputDriftDetector:
         from analytics.detectors.output import OutputDriftDetector
 
         d = OutputDriftDetector(deviation_multiplier=3.0)
-        spans = _root([
-            SpanNode(
-                span_id="s", trace_id="t",
-                operation_name="invoke_agent",
-                attributes={"gen_ai.response.content": "hi"},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s",
+                    trace_id="t",
+                    operation_name="invoke_agent",
+                    attributes={"gen_ai.response.content": "hi"},
+                ),
+            ]
+        )
         conn = AsyncMock()
         conn.fetchrow = AsyncMock(return_value={"avg_len": 100.0})
         pool = _Pool(conn)
@@ -900,13 +963,16 @@ class TestOutputDriftDetector:
         from analytics.detectors.output import OutputDriftDetector
 
         d = OutputDriftDetector(deviation_multiplier=3.0)
-        spans = _root([
-            SpanNode(
-                span_id="s", trace_id="t",
-                operation_name="invoke_agent",
-                attributes={"gen_ai.response.content": "a" * 50},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s",
+                    trace_id="t",
+                    operation_name="invoke_agent",
+                    attributes={"gen_ai.response.content": "a" * 50},
+                ),
+            ]
+        )
         conn = AsyncMock()
         conn.fetchrow = AsyncMock(return_value={"avg_len": 40.0})
         pool = _Pool(conn)
@@ -1166,7 +1232,8 @@ class TestInactivityDetector:
         spans = [
             SpanNode(span_id="s1", trace_id="t", operation_name="step", start_time=now),
             SpanNode(
-                span_id="s2", trace_id="t",
+                span_id="s2",
+                trace_id="t",
                 operation_name="step",
                 start_time=now + timedelta(seconds=2),
             ),
@@ -1181,7 +1248,8 @@ class TestInactivityDetector:
         spans = [
             SpanNode(span_id="s1", trace_id="t", operation_name="step", start_time=now),
             SpanNode(
-                span_id="s2", trace_id="t",
+                span_id="s2",
+                trace_id="t",
                 operation_name="step",
                 start_time=now + timedelta(seconds=5),
             ),
@@ -1199,7 +1267,8 @@ class TestInactivityDetector:
             SpanNode(span_id="s1", trace_id="t", operation_name="step", start_time=None),
             SpanNode(span_id="s2", trace_id="t", operation_name="step", start_time=now),
             SpanNode(
-                span_id="s3", trace_id="t",
+                span_id="s3",
+                trace_id="t",
                 operation_name="step",
                 start_time=now + timedelta(seconds=5),
             ),
@@ -1213,13 +1282,16 @@ class TestPrematureCompletionDetector:
         from analytics.detectors.runtime import PrematureCompletionDetector
 
         d = PrematureCompletionDetector()
-        spans = _root([
-            SpanNode(
-                span_id="e1", trace_id="t",
-                operation_name="execute_tool",
-                status="error",
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="e1",
+                    trace_id="t",
+                    operation_name="execute_tool",
+                    status="error",
+                ),
+            ]
+        )
         s = _summary(status="error")
         result = d.detect(s, spans)
         assert result is None
@@ -1228,10 +1300,12 @@ class TestPrematureCompletionDetector:
         from analytics.detectors.runtime import PrematureCompletionDetector
 
         d = PrematureCompletionDetector()
-        spans = _root([
-            SpanNode(span_id="s1", trace_id="t", operation_name="step"),
-            SpanNode(span_id="plan1", trace_id="t", operation_name="plan"),
-        ])
+        spans = _root(
+            [
+                SpanNode(span_id="s1", trace_id="t", operation_name="step"),
+                SpanNode(span_id="plan1", trace_id="t", operation_name="plan"),
+            ]
+        )
         s = _summary(status="incomplete")
         result = d.detect(s, spans)
         assert result is not None
@@ -1241,14 +1315,17 @@ class TestPrematureCompletionDetector:
         from analytics.detectors.runtime import PrematureCompletionDetector
 
         d = PrematureCompletionDetector()
-        spans = _root([
-            SpanNode(
-                span_id="s1", trace_id="t",
-                operation_name="step",
-                attributes={"gen_ai.response.content": "some output"},
-            ),
-            SpanNode(span_id="plan1", trace_id="t", operation_name="plan"),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s1",
+                    trace_id="t",
+                    operation_name="step",
+                    attributes={"gen_ai.response.content": "some output"},
+                ),
+                SpanNode(span_id="plan1", trace_id="t", operation_name="plan"),
+            ]
+        )
         s = _summary(status="incomplete")
         assert d.detect(s, spans) is None
 
@@ -1256,15 +1333,18 @@ class TestPrematureCompletionDetector:
         from analytics.detectors.runtime import PrematureCompletionDetector
 
         d = PrematureCompletionDetector()
-        spans = _root([
-            SpanNode(span_id="s1", trace_id="t", operation_name="step"),
-            SpanNode(
-                span_id="t1", trace_id="t",
-                operation_name="execute_tool",
-                status="success",
-            ),
-            SpanNode(span_id="plan1", trace_id="t", operation_name="plan"),
-        ])
+        spans = _root(
+            [
+                SpanNode(span_id="s1", trace_id="t", operation_name="step"),
+                SpanNode(
+                    span_id="t1",
+                    trace_id="t",
+                    operation_name="execute_tool",
+                    status="success",
+                ),
+                SpanNode(span_id="plan1", trace_id="t", operation_name="plan"),
+            ]
+        )
         s = _summary(status="incomplete")
         assert d.detect(s, spans) is None
 
@@ -1272,9 +1352,11 @@ class TestPrematureCompletionDetector:
         from analytics.detectors.runtime import PrematureCompletionDetector
 
         d = PrematureCompletionDetector()
-        spans = _root([
-            SpanNode(span_id="clean", trace_id="t", operation_name="step", status="ok"),
-        ])
+        spans = _root(
+            [
+                SpanNode(span_id="clean", trace_id="t", operation_name="step", status="ok"),
+            ]
+        )
         s = _summary(status="error")
         result = d.detect(s, spans)
         assert result is not None
@@ -1283,13 +1365,16 @@ class TestPrematureCompletionDetector:
         from analytics.detectors.runtime import PrematureCompletionDetector
 
         d = PrematureCompletionDetector()
-        spans = _root([
-            SpanNode(
-                span_id="s1", trace_id="t",
-                operation_name="step",
-                attributes={"gen_ai.response.content": "output here"},
-            ),
-        ])
+        spans = _root(
+            [
+                SpanNode(
+                    span_id="s1",
+                    trace_id="t",
+                    operation_name="step",
+                    attributes={"gen_ai.response.content": "output here"},
+                ),
+            ]
+        )
         s = _summary(status="success")
         assert d.detect(s, spans) is None
 
@@ -1304,28 +1389,32 @@ class TestLoopDetectorPollingReset:
         from analytics.detectors.tool import LoopDetector
 
         d = LoopDetector(threshold=3, polling_tool_allowlist=["check_status"])
-        spans = _root([
-            _tool("s1", "search"),
-            _tool("s2", "search"),
-            _tool("s3", "check_status"),
-            _tool("s4", "search"),
-            _tool("s5", "search"),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "search"),
+                _tool("s2", "search"),
+                _tool("s3", "check_status"),
+                _tool("s4", "search"),
+                _tool("s5", "search"),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_polling_tools_tracked_in_evidence(self) -> None:
         from analytics.detectors.tool import LoopDetector
 
         d = LoopDetector(threshold=2, polling_tool_allowlist=["check_status"])
-        spans = _root([
-            _tool("s1", "search"),
-            _tool("s2", "search"),
-            _tool("s3", "search"),
-            _tool("s4", "check_status"),
-            _tool("s5", "search"),
-            _tool("s6", "search"),
-            _tool("s7", "search"),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "search"),
+                _tool("s2", "search"),
+                _tool("s3", "search"),
+                _tool("s4", "check_status"),
+                _tool("s5", "search"),
+                _tool("s6", "search"),
+                _tool("s7", "search"),
+            ]
+        )
         result = d.detect(_summary(), spans)
         assert result is not None
         assert result.evidence is not None
@@ -1337,23 +1426,32 @@ class TestPatternLoopDetectorEdge:
         from analytics.detectors.tool import PatternLoopDetector
 
         d = PatternLoopDetector(window_size=4)
-        spans = _root([
-            _tool("s1", "A"), _tool("s2", "B"),
-            _tool("s3", "A"), _tool("s4", "B"),
-            _tool("s5", "A"), _tool("s6", "B"),
-            _tool("s7", "C"),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "A"),
+                _tool("s2", "B"),
+                _tool("s3", "A"),
+                _tool("s4", "B"),
+                _tool("s5", "A"),
+                _tool("s6", "B"),
+                _tool("s7", "C"),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_polling_tools_filtered_out(self) -> None:
         from analytics.detectors.tool import PatternLoopDetector
 
         d = PatternLoopDetector(window_size=2, polling_tool_allowlist=["poll"])
-        spans = _root([
-            _tool("s1", "A"), _tool("s2", "B"),
-            _tool("s3", "poll"),
-            _tool("s4", "A"), _tool("s5", "B"),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "A"),
+                _tool("s2", "B"),
+                _tool("s3", "poll"),
+                _tool("s4", "A"),
+                _tool("s5", "B"),
+            ]
+        )
         result = d.detect(_summary(), spans)
         assert result is not None
         assert result.anomaly_type == "pattern_loop"
@@ -1364,23 +1462,27 @@ class TestArgumentLoopDetectorEdge:
         from analytics.detectors.tool import ArgumentLoopDetector
 
         d = ArgumentLoopDetector(threshold=3)
-        spans = _root([
-            _tool("s1", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
-            _tool("s2", "search"),
-            _tool("s3", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
+                _tool("s2", "search"),
+                _tool("s3", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_dict_arguments_normalized(self) -> None:
         from analytics.detectors.tool import ArgumentLoopDetector
 
         d = ArgumentLoopDetector(threshold=3)
-        spans = _root([
-            _tool("s1", "search", **{"gen_ai.tool.arguments": {"b": 2, "a": 1}}),
-            _tool("s2", "search", **{"gen_ai.tool.arguments": {"a": 1, "b": 2}}),
-            _tool("s3", "search", **{"gen_ai.tool.arguments": {"b": 2, "a": 1}}),
-            _tool("s4", "search", **{"gen_ai.tool.arguments": {"a": 1, "b": 2}}),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "search", **{"gen_ai.tool.arguments": {"b": 2, "a": 1}}),
+                _tool("s2", "search", **{"gen_ai.tool.arguments": {"a": 1, "b": 2}}),
+                _tool("s3", "search", **{"gen_ai.tool.arguments": {"b": 2, "a": 1}}),
+                _tool("s4", "search", **{"gen_ai.tool.arguments": {"a": 1, "b": 2}}),
+            ]
+        )
         # Detector serializes dict args with sort_keys=True, so all 4 produce
         # the same key: {"a": 1, "b": 2}
         result = d.detect(_summary(), spans)
@@ -1391,36 +1493,42 @@ class TestArgumentLoopDetectorEdge:
         from analytics.detectors.tool import ArgumentLoopDetector
 
         d = ArgumentLoopDetector(threshold=3)
-        spans = _root([
-            _tool("s1", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
-            _tool("s2", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
-            _tool("s3", "search", **{"gen_ai.tool.arguments": object()}),
-            _tool("s4", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
+                _tool("s2", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
+                _tool("s3", "search", **{"gen_ai.tool.arguments": object()}),
+                _tool("s4", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_polling_tool_resets_argument_streak(self) -> None:
         from analytics.detectors.tool import ArgumentLoopDetector
 
         d = ArgumentLoopDetector(threshold=3, polling_tool_allowlist=["poll_status"])
-        spans = _root([
-            _tool("s1", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
-            _tool("s2", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
-            _tool("s3", "poll_status"),
-            _tool("s4", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
-            _tool("s5", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
+                _tool("s2", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
+                _tool("s3", "poll_status"),
+                _tool("s4", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
+                _tool("s5", "search", **{"gen_ai.tool.arguments": '{"q":"x"}'}),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_uses_gen_ai_tool_args_attribute(self) -> None:
         from analytics.detectors.tool import ArgumentLoopDetector
 
         d = ArgumentLoopDetector(threshold=3)
-        spans = _root([
-            _tool("s1", "search", **{"gen_ai.tool.args": '{"q":"x"}'}),
-            _tool("s2", "search", **{"gen_ai.tool.args": '{"q":"x"}'}),
-            _tool("s3", "search", **{"gen_ai.tool.args": '{"q":"x"}'}),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "search", **{"gen_ai.tool.args": '{"q":"x"}'}),
+                _tool("s2", "search", **{"gen_ai.tool.args": '{"q":"x"}'}),
+                _tool("s3", "search", **{"gen_ai.tool.args": '{"q":"x"}'}),
+            ]
+        )
         result = d.detect(_summary(), spans)
         assert result is not None
 
@@ -1441,11 +1549,13 @@ class TestSpecificToolErrorDetectorEdge:
         from analytics.detectors.tool import SpecificToolErrorDetector
 
         d = SpecificToolErrorDetector(threshold_pct=10.0)
-        spans = _root([
-            _tool("s1", "rare_tool", status="error"),
-            _tool("s2", "common_tool", status="ok"),
-            _tool("s3", "common_tool", status="ok"),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "rare_tool", status="error"),
+                _tool("s2", "common_tool", status="ok"),
+                _tool("s3", "common_tool", status="ok"),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
 
@@ -1454,19 +1564,23 @@ class TestToolLatencyDetectorEdge:
         from analytics.detectors.tool import ToolLatencyDetector
 
         d = ToolLatencyDetector(multiplier=2.0)
-        spans = _root([
-            _tool("s1", "unique", duration_ms=100),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "unique", duration_ms=100),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_average_zero_skipped(self) -> None:
         from analytics.detectors.tool import ToolLatencyDetector
 
         d = ToolLatencyDetector(multiplier=2.0)
-        spans = _root([
-            _tool("s1", "tool_a", duration_ms=0),
-            _tool("s2", "tool_a", duration_ms=0),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "tool_a", duration_ms=0),
+                _tool("s2", "tool_a", duration_ms=0),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
 
@@ -1482,11 +1596,17 @@ class TestRedundantToolCallDetectorEdge:
         from analytics.detectors.tool import RedundantToolCallDetector
 
         d = RedundantToolCallDetector(threshold=3)
-        spans = _root([
-            _tool("s1", "search", **{"gen_ai.tool.arguments": "x", "gen_ai.tool.result": "same"}),
-            _tool("s2", "search", **{"gen_ai.tool.result": "same"}),
-            _tool("s3", "search", **{"gen_ai.tool.arguments": "x", "gen_ai.tool.result": "same"}),
-        ])
+        spans = _root(
+            [
+                _tool(
+                    "s1", "search", **{"gen_ai.tool.arguments": "x", "gen_ai.tool.result": "same"}
+                ),
+                _tool("s2", "search", **{"gen_ai.tool.result": "same"}),
+                _tool(
+                    "s3", "search", **{"gen_ai.tool.arguments": "x", "gen_ai.tool.result": "same"}
+                ),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_non_serializable_result_uses_str(self) -> None:
@@ -1497,20 +1617,34 @@ class TestRedundantToolCallDetectorEdge:
                 return "BadResult()"
 
         d = RedundantToolCallDetector(threshold=3)
-        spans = _root([
-            _tool("s1", "search", **{
-                "gen_ai.tool.arguments": '{"q":"x"}',
-                "gen_ai.tool.result": BadResult(),
-            }),
-            _tool("s2", "search", **{
-                "gen_ai.tool.arguments": '{"q":"x"}',
-                "gen_ai.tool.result": BadResult(),
-            }),
-            _tool("s3", "search", **{
-                "gen_ai.tool.arguments": '{"q":"x"}',
-                "gen_ai.tool.result": BadResult(),
-            }),
-        ])
+        spans = _root(
+            [
+                _tool(
+                    "s1",
+                    "search",
+                    **{
+                        "gen_ai.tool.arguments": '{"q":"x"}',
+                        "gen_ai.tool.result": BadResult(),
+                    },
+                ),
+                _tool(
+                    "s2",
+                    "search",
+                    **{
+                        "gen_ai.tool.arguments": '{"q":"x"}',
+                        "gen_ai.tool.result": BadResult(),
+                    },
+                ),
+                _tool(
+                    "s3",
+                    "search",
+                    **{
+                        "gen_ai.tool.arguments": '{"q":"x"}',
+                        "gen_ai.tool.result": BadResult(),
+                    },
+                ),
+            ]
+        )
         result = d.detect(_summary(), spans)
         assert result is not None
 
@@ -1518,20 +1652,34 @@ class TestRedundantToolCallDetectorEdge:
         from analytics.detectors.tool import RedundantToolCallDetector
 
         d = RedundantToolCallDetector(threshold=3)
-        spans = _root([
-            _tool("s1", "search", **{
-                "gen_ai.tool.arguments": "x",
-                "gen_ai.tool.result": {"status": "ok", "count": 1},
-            }),
-            _tool("s2", "search", **{
-                "gen_ai.tool.arguments": "x",
-                "gen_ai.tool.result": {"count": 1, "status": "ok"},
-            }),
-            _tool("s3", "search", **{
-                "gen_ai.tool.arguments": "x",
-                "gen_ai.tool.result": {"status": "ok", "count": 1},
-            }),
-        ])
+        spans = _root(
+            [
+                _tool(
+                    "s1",
+                    "search",
+                    **{
+                        "gen_ai.tool.arguments": "x",
+                        "gen_ai.tool.result": {"status": "ok", "count": 1},
+                    },
+                ),
+                _tool(
+                    "s2",
+                    "search",
+                    **{
+                        "gen_ai.tool.arguments": "x",
+                        "gen_ai.tool.result": {"count": 1, "status": "ok"},
+                    },
+                ),
+                _tool(
+                    "s3",
+                    "search",
+                    **{
+                        "gen_ai.tool.arguments": "x",
+                        "gen_ai.tool.result": {"status": "ok", "count": 1},
+                    },
+                ),
+            ]
+        )
         result = d.detect(_summary(), spans)
         assert result is not None
         assert result.anomaly_type == "redundant_tool_call"
@@ -1734,10 +1882,18 @@ class TestTokenExplosionDetectorEdge:
 
         d = TokenExplosionDetector(growth_multiplier=2.0)
         spans = [
-            SpanNode(span_id="s1", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 10}),
-            SpanNode(span_id="s2", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 10}),
+            SpanNode(
+                span_id="s1",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 10},
+            ),
+            SpanNode(
+                span_id="s2",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 10},
+            ),
         ]
         assert d.detect(_summary(), spans) is None
 
@@ -1748,10 +1904,18 @@ class TestTokenExplosionDetectorEdge:
         spans = [
             SpanNode(span_id="s1", trace_id="t", operation_name="step"),
             SpanNode(span_id="s2", trace_id="t", operation_name="step"),
-            SpanNode(span_id="s3", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 100}),
-            SpanNode(span_id="s4", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 100}),
+            SpanNode(
+                span_id="s3",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 100},
+            ),
+            SpanNode(
+                span_id="s4",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 100},
+            ),
         ]
         assert d.detect(_summary(), spans) is None
 
@@ -1760,10 +1924,18 @@ class TestTokenExplosionDetectorEdge:
 
         d = TokenExplosionDetector(growth_multiplier=2.0)
         spans = [
-            SpanNode(span_id="s1", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 100}),
-            SpanNode(span_id="s2", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 100}),
+            SpanNode(
+                span_id="s1",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 100},
+            ),
+            SpanNode(
+                span_id="s2",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 100},
+            ),
             SpanNode(span_id="s3", trace_id="t", operation_name="step"),
             SpanNode(span_id="s4", trace_id="t", operation_name="step"),
         ]
@@ -1774,14 +1946,30 @@ class TestTokenExplosionDetectorEdge:
 
         d = TokenExplosionDetector(growth_multiplier=2.0)
         spans = [
-            SpanNode(span_id="s1", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 0}),
-            SpanNode(span_id="s2", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 0}),
-            SpanNode(span_id="s3", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 100}),
-            SpanNode(span_id="s4", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 100}),
+            SpanNode(
+                span_id="s1",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 0},
+            ),
+            SpanNode(
+                span_id="s2",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 0},
+            ),
+            SpanNode(
+                span_id="s3",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 100},
+            ),
+            SpanNode(
+                span_id="s4",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 100},
+            ),
         ]
         assert d.detect(_summary(), spans) is None
 
@@ -1790,14 +1978,30 @@ class TestTokenExplosionDetectorEdge:
 
         d = TokenExplosionDetector(growth_multiplier=3.0)
         spans = [
-            SpanNode(span_id="s1", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 50}),
-            SpanNode(span_id="s2", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 50}),
-            SpanNode(span_id="s3", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 80}),
-            SpanNode(span_id="s4", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": 80}),
+            SpanNode(
+                span_id="s1",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 50},
+            ),
+            SpanNode(
+                span_id="s2",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 50},
+            ),
+            SpanNode(
+                span_id="s3",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 80},
+            ),
+            SpanNode(
+                span_id="s4",
+                trace_id="t",
+                operation_name="step",
+                attributes={"gen_ai.usage.prompt_tokens": 80},
+            ),
         ]
         assert d.detect(_summary(), spans) is None
 
@@ -1806,18 +2010,42 @@ class TestTokenExplosionDetectorEdge:
 
         d = TokenExplosionDetector(growth_multiplier=2.0)
         spans = [
-            SpanNode(span_id="s1", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": "10",
-                                 "gen_ai.usage.completion_tokens": "5"}),
-            SpanNode(span_id="s2", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": "10",
-                                 "gen_ai.usage.completion_tokens": "5"}),
-            SpanNode(span_id="s3", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": "100",
-                                 "gen_ai.usage.completion_tokens": "50"}),
-            SpanNode(span_id="s4", trace_id="t", operation_name="step",
-                     attributes={"gen_ai.usage.prompt_tokens": "100",
-                                 "gen_ai.usage.completion_tokens": "50"}),
+            SpanNode(
+                span_id="s1",
+                trace_id="t",
+                operation_name="step",
+                attributes={
+                    "gen_ai.usage.prompt_tokens": "10",
+                    "gen_ai.usage.completion_tokens": "5",
+                },
+            ),
+            SpanNode(
+                span_id="s2",
+                trace_id="t",
+                operation_name="step",
+                attributes={
+                    "gen_ai.usage.prompt_tokens": "10",
+                    "gen_ai.usage.completion_tokens": "5",
+                },
+            ),
+            SpanNode(
+                span_id="s3",
+                trace_id="t",
+                operation_name="step",
+                attributes={
+                    "gen_ai.usage.prompt_tokens": "100",
+                    "gen_ai.usage.completion_tokens": "50",
+                },
+            ),
+            SpanNode(
+                span_id="s4",
+                trace_id="t",
+                operation_name="step",
+                attributes={
+                    "gen_ai.usage.prompt_tokens": "100",
+                    "gen_ai.usage.completion_tokens": "50",
+                },
+            ),
         ]
         result = d.detect(_summary(), spans)
         assert result is not None
@@ -1852,11 +2080,13 @@ class TestPerToolCostSpikeDetectorEdge:
 
         d = PerToolCostSpikeDetector(multiplier=2.0)
         s = _summary(estimated_cost=10.0)
-        spans = _root([
-            _tool("s1", "A"),
-            _tool("s2", "B"),
-            _tool("s3", "B"),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "A"),
+                _tool("s2", "B"),
+                _tool("s3", "B"),
+            ]
+        )
         assert d.detect(s, spans) is None
 
     def test_count_below_3_skipped(self) -> None:
@@ -1864,13 +2094,15 @@ class TestPerToolCostSpikeDetectorEdge:
 
         d = PerToolCostSpikeDetector(multiplier=2.0)
         s = _summary(estimated_cost=10.0)
-        spans = _root([
-            _tool("s1", "A"),
-            _tool("s2", "A"),
-            _tool("s3", "B"),
-            _tool("s4", "B"),
-            _tool("s5", "B"),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "A"),
+                _tool("s2", "A"),
+                _tool("s3", "B"),
+                _tool("s4", "B"),
+                _tool("s5", "B"),
+            ]
+        )
         # tool A: share=2/5=0.4 (below 0.5), tool B: share=3/5=0.6, count=3, dominance=1.5 < 2.0
         assert d.detect(s, spans) is None
 
@@ -1879,12 +2111,14 @@ class TestPerToolCostSpikeDetectorEdge:
 
         d = PerToolCostSpikeDetector(multiplier=4.0)
         s = _summary(estimated_cost=10.0)
-        spans = _root([
-            _tool("s1", "search"),
-            _tool("s2", "search"),
-            _tool("s3", "search"),
-            _tool("s4", "other"),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "search"),
+                _tool("s2", "search"),
+                _tool("s3", "search"),
+                _tool("s4", "other"),
+            ]
+        )
         # share=3/4=0.75, count=3, dominance=0.75/0.25=3.0 < 4.0
         assert d.detect(s, spans) is None
 
@@ -1894,43 +2128,51 @@ class TestWastedToolCallsDetectorEdge:
         from analytics.detectors.cost import WastedToolCallsDetector
 
         d = WastedToolCallsDetector(threshold=3)
-        spans = _root([
-            _tool("s1", "A", **{"gen_ai.tool.result": "same"}),
-            _tool("s2", "B", **{"gen_ai.tool.result": "same"}),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "A", **{"gen_ai.tool.result": "same"}),
+                _tool("s2", "B", **{"gen_ai.tool.result": "same"}),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_only_one_tool_type_no_anomaly(self) -> None:
         from analytics.detectors.cost import WastedToolCallsDetector
 
         d = WastedToolCallsDetector(threshold=3)
-        spans = _root([
-            _tool("s1", "search", **{"gen_ai.tool.result": "same"}),
-            _tool("s2", "search", **{"gen_ai.tool.result": "same"}),
-            _tool("s3", "search", **{"gen_ai.tool.result": "same"}),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "search", **{"gen_ai.tool.result": "same"}),
+                _tool("s2", "search", **{"gen_ai.tool.result": "same"}),
+                _tool("s3", "search", **{"gen_ai.tool.result": "same"}),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_no_matching_results_returns_none(self) -> None:
         from analytics.detectors.cost import WastedToolCallsDetector
 
         d = WastedToolCallsDetector(threshold=3)
-        spans = _root([
-            _tool("s1", "search", **{"gen_ai.tool.result": "a"}),
-            _tool("s2", "lookup", **{"gen_ai.tool.result": "b"}),
-            _tool("s3", "fetch", **{"gen_ai.tool.result": "c"}),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "search", **{"gen_ai.tool.result": "a"}),
+                _tool("s2", "lookup", **{"gen_ai.tool.result": "b"}),
+                _tool("s3", "fetch", **{"gen_ai.tool.result": "c"}),
+            ]
+        )
         assert d.detect(_summary(), spans) is None
 
     def test_dict_result_serialization(self) -> None:
         from analytics.detectors.cost import WastedToolCallsDetector
 
         d = WastedToolCallsDetector(threshold=3)
-        spans = _root([
-            _tool("s1", "search", **{"gen_ai.tool.result": {"err": "timeout"}}),
-            _tool("s2", "lookup", **{"gen_ai.tool.result": {"err": "timeout"}}),
-            _tool("s3", "fetch", **{"gen_ai.tool.result": {"err": "timeout"}}),
-        ])
+        spans = _root(
+            [
+                _tool("s1", "search", **{"gen_ai.tool.result": {"err": "timeout"}}),
+                _tool("s2", "lookup", **{"gen_ai.tool.result": {"err": "timeout"}}),
+                _tool("s3", "fetch", **{"gen_ai.tool.result": {"err": "timeout"}}),
+            ]
+        )
         result = d.detect(_summary(), spans)
         assert result is not None
         assert result.anomaly_type == "wasted_tool_calls"
@@ -1946,16 +2188,36 @@ class TestDetectorGapsCoverageSmoke:
 
     def test_all_detectors_from_target_modules_registered(self) -> None:
         expected_types = {
-            "anomaly_cluster", "run_frequency_anomaly", "first_run_heuristic",
-            "intervention_frequency", "escalation_rate", "approval_latency",
+            "anomaly_cluster",
+            "run_frequency_anomaly",
+            "first_run_heuristic",
+            "intervention_frequency",
+            "escalation_rate",
+            "approval_latency",
             "intervention_rejection",
-            "empty_response", "low_output", "indeterminate_status", "output_drift",
-            "run_duration", "max_step_hit", "step_efficiency", "inactivity",
+            "empty_response",
+            "low_output",
+            "indeterminate_status",
+            "output_drift",
+            "run_duration",
+            "max_step_hit",
+            "step_efficiency",
+            "inactivity",
             "premature_completion",
-            "loop", "pattern_loop", "argument_loop", "tool_error_rate",
-            "specific_tool_error", "tool_latency", "tool_timeout", "redundant_tool_call",
-            "cost_spike", "cost_vs_baseline", "cost_efficiency", "token_explosion",
-            "per_tool_cost_spike", "wasted_tool_calls",
+            "loop",
+            "pattern_loop",
+            "argument_loop",
+            "tool_error_rate",
+            "specific_tool_error",
+            "tool_latency",
+            "tool_timeout",
+            "redundant_tool_call",
+            "cost_spike",
+            "cost_vs_baseline",
+            "cost_efficiency",
+            "token_explosion",
+            "per_tool_cost_spike",
+            "wasted_tool_calls",
         }
         detectors = create_all_detectors()
         factory_types = {d.anomaly_type for d in detectors}

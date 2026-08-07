@@ -59,9 +59,7 @@ class AnomalyClusterDetector(BaseDetector):
     anomaly_type = "anomaly_cluster"
 
     def __init__(self, min_anomaly_types: int | None = None) -> None:
-        self.min_anomaly_types = (
-            min_anomaly_types or settings.detector_anomaly_cluster_min_types
-        )
+        self.min_anomaly_types = min_anomaly_types or settings.detector_anomaly_cluster_min_types
 
     def detect(self, summary: RunSummary, spans: list[SpanNode]) -> Anomaly | None:
         # Sync path returns None — this detector requires a database pool.
@@ -166,9 +164,7 @@ class RunFrequencyAnomalyDetector(BaseDetector):
         if not _has_valid_pool(pool):
             return None
 
-        count = await self._get_run_count(
-            pool, summary.agent_name, summary.agent_version
-        )
+        count = await self._get_run_count(pool, summary.agent_name, summary.agent_version)
         if count is None:
             return None
 
@@ -203,9 +199,7 @@ class RunFrequencyAnomalyDetector(BaseDetector):
         return None
 
     @staticmethod
-    async def _get_run_count(
-        pool: Any, agent_name: str, agent_version: str | None
-    ) -> int | None:
+    async def _get_run_count(pool: Any, agent_name: str, agent_version: str | None) -> int | None:
         """Query the database for the number of runs matching agent+version.
 
         Returns ``None`` on any error (detector degrades gracefully).
@@ -221,8 +215,7 @@ class RunFrequencyAnomalyDetector(BaseDetector):
                     )
                 else:
                     row = await conn.fetchrow(
-                        "SELECT COUNT(*) AS cnt FROM run_summaries "
-                        "WHERE agent_name = $1",
+                        "SELECT COUNT(*) AS cnt FROM run_summaries WHERE agent_name = $1",
                         agent_name,
                     )
                 if row is None:

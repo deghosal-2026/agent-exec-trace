@@ -130,9 +130,7 @@ class TracePipeline:
         dataset_ids = datasets if datasets is not None else DEFAULT_DATASETS
 
         if not dataset_ids:
-            logger.warning(
-                "No datasets configured. Provide --dataset options to enable downloads."
-            )
+            logger.warning("No datasets configured. Provide --dataset options to enable downloads.")
             empty_manifest: list[dict[str, object]] = []
             await self.generate_manifest(empty_manifest, 0)
             return {
@@ -144,7 +142,10 @@ class TracePipeline:
 
         logger.info(
             "Starting trace pipeline: %d datasets, target=%d traces, batch=%d, ingest=%s",
-            len(dataset_ids), target_count, batch_size, ingest,
+            len(dataset_ids),
+            target_count,
+            batch_size,
+            ingest,
         )
 
         total_downloaded = 0
@@ -180,12 +181,11 @@ class TracePipeline:
 
                 try:
                     rows = await self.downloader.download_dataset(
-                        ds_id, max_rows=batch_size,
+                        ds_id,
+                        max_rows=batch_size,
                     )
                 except Exception:
-                    logger.warning(
-                        "Stream error for dataset %s, dropping it (no retry)", ds_id
-                    )
+                    logger.warning("Stream error for dataset %s, dropping it (no retry)", ds_id)
                     remaining.remove(ds_id)
                     continue
 
@@ -223,16 +223,20 @@ class TracePipeline:
                     all_traces.extend(valid_traces)
 
                 logger.info(
-                    "Dataset %s: +%d rows -> +%d converted -> +%d valid "
-                    "(total valid: %d/%d)",
-                    ds_id, len(rows), converted, len(valid_traces),
-                    total_valid, target_count,
+                    "Dataset %s: +%d rows -> +%d converted -> +%d valid (total valid: %d/%d)",
+                    ds_id,
+                    len(rows),
+                    converted,
+                    len(valid_traces),
+                    total_valid,
+                    target_count,
                 )
 
             if not cycle_progress:
                 logger.info(
                     "All datasets exhausted/failed after %d valid traces (target %d)",
-                    total_valid, target_count,
+                    total_valid,
+                    target_count,
                 )
                 break
 
@@ -243,20 +247,26 @@ class TracePipeline:
             conversion_rate = st.converted / st.rows if st.rows else 0.0
             framework = _infer_framework(ds_id, sample_rows.get(ds_id, []))
             task_domain = _infer_task_domain(ds_id)
-            dataset_manifests.append({
-                "dataset_id": ds_id,
-                "trace_count_rows": st_rows,
-                "trace_count_converted": st.converted,
-                "trace_count_valid": st.valid,
-                "framework": framework,
-                "task_domain": task_domain,
-                "conversion_success_rate": round(conversion_rate, 4),
-                "validation_errors": len(st.validation_errors),
-                "processed_at": datetime.now(timezone.utc).isoformat(),
-            })
+            dataset_manifests.append(
+                {
+                    "dataset_id": ds_id,
+                    "trace_count_rows": st_rows,
+                    "trace_count_converted": st.converted,
+                    "trace_count_valid": st.valid,
+                    "framework": framework,
+                    "task_domain": task_domain,
+                    "conversion_success_rate": round(conversion_rate, 4),
+                    "validation_errors": len(st.validation_errors),
+                    "processed_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
             logger.info(
                 "Dataset %s: %d rows -> %d converted -> %d valid (%.1f%%)",
-                ds_id, st.rows, st.converted, st.valid, conversion_rate * 100,
+                ds_id,
+                st.rows,
+                st.converted,
+                st.valid,
+                conversion_rate * 100,
             )
 
         logger.info("Pipeline complete: %d valid traces collected", total_valid)
@@ -267,9 +277,7 @@ class TracePipeline:
         await self.generate_manifest(dataset_manifests, total_valid)
 
         return {
-            "datasets_downloaded": len(
-                [d for d in dataset_manifests if d.get("trace_count_rows")]
-            ),
+            "datasets_downloaded": len([d for d in dataset_manifests if d.get("trace_count_rows")]),
             "total_rows_downloaded": total_downloaded,
             "total_traces_valid": total_valid,
             "datasets": dataset_manifests,
@@ -299,19 +307,21 @@ class TracePipeline:
 
         def flatten(node: SpanNode, row_idx: int) -> None:
             attrs_json = json.dumps(node.attributes, default=str)
-            rows.append({
-                "trace_id": node.trace_id,
-                "span_id": node.span_id,
-                "parent_span_id": node.parent_span_id,
-                "operation_name": node.operation_name,
-                "start_time": node.start_time.isoformat() if node.start_time else None,
-                "end_time": node.end_time.isoformat() if node.end_time else None,
-                "duration_ms": node.duration_ms,
-                "attributes_json": attrs_json,
-                "status": node.status,
-                "source_dataset": source_id,
-                "source_row_idx": row_idx,
-            })
+            rows.append(
+                {
+                    "trace_id": node.trace_id,
+                    "span_id": node.span_id,
+                    "parent_span_id": node.parent_span_id,
+                    "operation_name": node.operation_name,
+                    "start_time": node.start_time.isoformat() if node.start_time else None,
+                    "end_time": node.end_time.isoformat() if node.end_time else None,
+                    "duration_ms": node.duration_ms,
+                    "attributes_json": attrs_json,
+                    "status": node.status,
+                    "source_dataset": source_id,
+                    "source_row_idx": row_idx,
+                }
+            )
             for child in node.child_spans:
                 flatten(child, row_idx)
 
@@ -441,5 +451,7 @@ class TracePipeline:
 
         logger.info(
             "Ingestion complete: %d ingested, %d skipped, %d anomalies found",
-            ingested, skipped, anomalies_found,
+            ingested,
+            skipped,
+            anomalies_found,
         )

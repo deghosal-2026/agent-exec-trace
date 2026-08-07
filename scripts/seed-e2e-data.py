@@ -61,8 +61,10 @@ import asyncpg
 # ``demo_triage`` agent mirrors the request-triage LangGraph demo's agent name
 # so the demo replay works end-to-end.
 AGENTS = [
-    {"name": "research_crew", "workload": "research_crew", "versions": ["v1.2.0", "v1.3.0", {"v1.4.0": 3}]},
-    {"name": "support_triage", "workload": "support_triage", "versions": ["v1.0.0", "v1.1.0", "v2.0.0"]},
+    {"name": "research_crew", "workload": "research_crew",
+        "versions": ["v1.2.0", "v1.3.0", {"v1.4.0": 3}]},
+    {"name": "support_triage", "workload": "support_triage",
+        "versions": ["v1.0.0", "v1.1.0", "v2.0.0"]},
     {"name": "code_review", "workload": "code_review", "versions": ["v1.0.0"]},
     {"name": "demo_triage", "workload": "demo_triage", "versions": ["v0.1.0", "v0.2.0"]},
 ]
@@ -161,13 +163,12 @@ async def seed(dsn: str) -> None:
                 # Stages are:
                 #   0, 1, 2 = normal (1st third: cost spike on #1, loop on #2)
                 #   3, 4, 5 = moderate trouble (retry storm on #4, timeout on #6)
-                #   6, 7, 8 = error zone (2nd third: cost spike on #7, loop on #9, retry storm on #10)
+                #   6, 7, 8 = error zone (2nd third:
+                #   cost spike on #7, loop on #9, retry storm on #10)
                 #   9, 10, 11 = severe error zone (final third)
                 is_error = ri >= error_start
                 is_loop = ri in (2, 9)        # Every ~6th run has a loop.
                 is_retry_storm = ri in (4, 10)  # Every ~6th run has a retry storm.
-                is_cost_spike = ri in (1, 7)  # Cost spikes interspersed.
-                is_timeout = ri == 6           # One explicit timeout per version.
 
                 # Status: "error" for the last third; "success" otherwise.
                 status = "error" if is_error else "success"
@@ -236,7 +237,8 @@ async def seed(dsn: str) -> None:
             severity = "critical" if ai == 0 else "warning"
 
             await conn.execute(
-                """INSERT INTO anomalies (id, run_id, agent_name, anomaly_type, severity, explanation, evidence)
+                """INSERT INTO anomalies (
+                    id, run_id, agent_name, anomaly_type, severity, explanation, evidence)
                    VALUES ($1,$2,$3,$4,$5,$6,$7)""",
                 str(uuid.uuid4()),
                 run_id,

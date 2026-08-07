@@ -48,6 +48,7 @@ def _kwargs(run_id: str, tags: list[str], node: str | None) -> dict[str, Any]:
 # _NodeCallbackHandler — static methods
 # ---------------------------------------------------------------------------
 
+
 def test_node_name_extracts_from_metadata() -> None:
     assert _NodeCallbackHandler._node_name({"metadata": {"langgraph_node": "planner"}}) == "planner"
 
@@ -67,6 +68,7 @@ def test_is_primary_start_detects_graph_step() -> None:
 # ---------------------------------------------------------------------------
 # _NodeCallbackHandler — on_chain_start / on_chain_end
 # ---------------------------------------------------------------------------
+
 
 def test_on_chain_start_creates_plan_span_for_planner() -> None:
     _exporter()
@@ -192,6 +194,7 @@ def test_on_chain_end_handles_empty_outputs() -> None:
 # _NodeCallbackHandler — on_chain_error
 # ---------------------------------------------------------------------------
 
+
 def test_on_chain_error_records_exception_and_closes_span() -> None:
     _exporter()
     handler = _NodeCallbackHandler()
@@ -222,6 +225,7 @@ def test_on_chain_error_noop_for_unknown_run_id() -> None:
 # ---------------------------------------------------------------------------
 # TracedGraph — invoke with a mock graph
 # ---------------------------------------------------------------------------
+
 
 def _mock_graph(result: dict[str, Any] | None = None) -> Any:
     graph = MagicMock()
@@ -284,7 +288,7 @@ def test_traced_graph_invoke_no_output_when_result_has_no_known_key() -> None:
 
 
 def test_traced_graph_invoke_merges_existing_callbacks() -> None:
-    exporter = _exporter()
+    _exporter()
     graph = _mock_graph({"response": "ok"})
     user_cb = MagicMock()
     traced = TracedGraph(graph, agent_name="a")
@@ -296,7 +300,7 @@ def test_traced_graph_invoke_merges_existing_callbacks() -> None:
 
 
 def test_traced_graph_invoke_no_existing_callbacks() -> None:
-    exporter = _exporter()
+    _exporter()
     graph = _mock_graph({"response": "ok"})
     traced = TracedGraph(graph, agent_name="a")
     traced.invoke({"messages": []})
@@ -307,17 +311,18 @@ def test_traced_graph_invoke_no_existing_callbacks() -> None:
 
 
 def test_traced_graph_invoke_with_non_dict_result() -> None:
-    exporter = _exporter()
+    _exporter()
     graph = MagicMock()
     graph.invoke.return_value = "not-a-dict"
     traced = TracedGraph(graph, agent_name="a")
     result = traced.invoke({})
-    assert result == "not-a-dict"
+    assert result == "not-a-dict"  # type: ignore[comparison-overlap]
 
 
 # ---------------------------------------------------------------------------
 # trace_graph factory function
 # ---------------------------------------------------------------------------
+
 
 def test_trace_graph_returns_traced_graph() -> None:
     graph = _mock_graph()

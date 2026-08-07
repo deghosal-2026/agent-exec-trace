@@ -17,7 +17,8 @@ Each test locks down one behavior class of the deterministic agent:
    MAX_STEPS searches then escalating.  Tool log must contain only
    "search_kb" entries.
 
-4. **Evidence-gated resolution** (``test_missing_account_blocks_resolution_even_with_known_intent``):
+4. **Evidence-gated resolution**
+   (``test_missing_account_blocks_resolution_even_with_known_intent``):
    Even with a known KB intent ("reset password"), a missing account
    prevents resolution.  This validates that the resolution gate requires
    BOTH evidence gates (account_ok AND kb_hit) to be true.

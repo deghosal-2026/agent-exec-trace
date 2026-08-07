@@ -425,9 +425,7 @@ class AnalyticsWorker:
         """
         self._running = False
 
-    async def process_traces_in_range(
-        self, start: datetime, end: datetime
-    ) -> int:
+    async def process_traces_in_range(self, start: datetime, end: datetime) -> int:
         """Reprocess all traces from Jaeger within a time range.
 
         Fetches traces from Jaeger (up to 200) and processes each one.

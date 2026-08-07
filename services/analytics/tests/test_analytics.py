@@ -41,11 +41,12 @@ from analytics.worker import AnalyticsWorker
 
 
 def _noop_client() -> Any:
-    from analytics.llm_client import LLMClient
-
     # Ensure the client cannot make real HTTP calls: pass an http_client
     # backed by a transport that always returns 503 so chat() returns None.
     import httpx
+
+    from analytics.llm_client import LLMClient
+
     transport = httpx.MockTransport(lambda _: httpx.Response(503, json={}))
     return LLMClient(
         base_url="http://noop.test/v1",
@@ -781,9 +782,7 @@ class TestDetectorFactory:
 
     def test_all_detect_method_does_not_crash(self) -> None:
         summary = RunSummary(run_id="r1", agent_name="a")
-        spans: list[SpanNode] = [
-            SpanNode(span_id="s", trace_id="t", operation_name="invoke_agent")
-        ]
+        spans: list[SpanNode] = [SpanNode(span_id="s", trace_id="t", operation_name="invoke_agent")]
         for d in create_all_detectors():
             try:
                 result = d.detect(summary, spans)
@@ -798,14 +797,19 @@ class TestDetectorCategories:
     def _make_spans(self, tool_names: list[str]) -> list[SpanNode]:
         children = [
             SpanNode(
-                span_id=f"s{i}", trace_id="t", operation_name="execute_tool",
-                attributes={"gen_ai.tool.name": n}, parent_span_id="root",
+                span_id=f"s{i}",
+                trace_id="t",
+                operation_name="execute_tool",
+                attributes={"gen_ai.tool.name": n},
+                parent_span_id="root",
             )
             for i, n in enumerate(tool_names)
         ]
         return [
             SpanNode(
-                span_id="root", trace_id="t", operation_name="invoke_agent",
+                span_id="root",
+                trace_id="t",
+                operation_name="invoke_agent",
                 attributes={"gen_ai.agent.name": "a", "gen_ai.agent.run.id": "r"},
                 child_spans=children,
             )
@@ -817,52 +821,103 @@ class TestDetectorCategories:
     # Tool execution
     def test_tool_error_rate_positive(self) -> None:
         from analytics.detectors.tool import ToolErrorRateDetector
+
         d = ToolErrorRateDetector(threshold_pct=10.0)
-        spans = [SpanNode(
-            span_id="root", trace_id="t", operation_name="invoke_agent",
-            child_spans=[
-                SpanNode(span_id="s1", trace_id="t", operation_name="execute_tool",
-                         status="error", parent_span_id="root"),
-                SpanNode(span_id="s2", trace_id="t", operation_name="execute_tool",
-                         status="error", parent_span_id="root"),
-                SpanNode(span_id="s3", trace_id="t", operation_name="execute_tool",
-                         status="ok", parent_span_id="root"),
-            ],
-        )]
+        spans = [
+            SpanNode(
+                span_id="root",
+                trace_id="t",
+                operation_name="invoke_agent",
+                child_spans=[
+                    SpanNode(
+                        span_id="s1",
+                        trace_id="t",
+                        operation_name="execute_tool",
+                        status="error",
+                        parent_span_id="root",
+                    ),
+                    SpanNode(
+                        span_id="s2",
+                        trace_id="t",
+                        operation_name="execute_tool",
+                        status="error",
+                        parent_span_id="root",
+                    ),
+                    SpanNode(
+                        span_id="s3",
+                        trace_id="t",
+                        operation_name="execute_tool",
+                        status="ok",
+                        parent_span_id="root",
+                    ),
+                ],
+            )
+        ]
         assert d.detect(self._summary(), spans) is not None
 
     def test_tool_error_rate_negative(self) -> None:
         from analytics.detectors.tool import ToolErrorRateDetector
+
         d = ToolErrorRateDetector(threshold_pct=50.0)
-        spans = [SpanNode(
-            span_id="root", trace_id="t", operation_name="invoke_agent",
-            child_spans=[
-                SpanNode(span_id="s1", trace_id="t", operation_name="execute_tool",
-                         status="ok", parent_span_id="root"),
-            ],
-        )]
+        spans = [
+            SpanNode(
+                span_id="root",
+                trace_id="t",
+                operation_name="invoke_agent",
+                child_spans=[
+                    SpanNode(
+                        span_id="s1",
+                        trace_id="t",
+                        operation_name="execute_tool",
+                        status="ok",
+                        parent_span_id="root",
+                    ),
+                ],
+            )
+        ]
         assert d.detect(self._summary(), spans) is None
 
     # Retry
     def test_systemic_retry_positive(self) -> None:
         from analytics.detectors.retry import SystemicRetryDetector
+
         d = SystemicRetryDetector()
         s = RunSummary(run_id="r", agent_name="a", total_retries=3)
-        spans = [SpanNode(
-            span_id="root", trace_id="t", operation_name="invoke_agent",
-            child_spans=[
-                SpanNode(span_id="s1", trace_id="t", operation_name="retry_1",
-                         status="error", parent_span_id="root"),
-                SpanNode(span_id="s2", trace_id="t", operation_name="retry_2",
-                         status="error", parent_span_id="root"),
-                SpanNode(span_id="s3", trace_id="t", operation_name="retry_3",
-                         status="error", parent_span_id="root"),
-            ],
-        )]
+        spans = [
+            SpanNode(
+                span_id="root",
+                trace_id="t",
+                operation_name="invoke_agent",
+                child_spans=[
+                    SpanNode(
+                        span_id="s1",
+                        trace_id="t",
+                        operation_name="retry_1",
+                        status="error",
+                        parent_span_id="root",
+                    ),
+                    SpanNode(
+                        span_id="s2",
+                        trace_id="t",
+                        operation_name="retry_2",
+                        status="error",
+                        parent_span_id="root",
+                    ),
+                    SpanNode(
+                        span_id="s3",
+                        trace_id="t",
+                        operation_name="retry_3",
+                        status="error",
+                        parent_span_id="root",
+                    ),
+                ],
+            )
+        ]
         assert d.detect(s, spans) is not None
 
     def test_systemic_retry_negative(self) -> None:
         from analytics.detectors.retry import SystemicRetryDetector
+
         d = SystemicRetryDetector()
         s = RunSummary(run_id="r", agent_name="a", total_retries=1)
         assert d.detect(s, []) is None
@@ -870,27 +925,38 @@ class TestDetectorCategories:
     # Output
     def test_low_output_positive(self) -> None:
         from analytics.detectors.output import LowOutputDetector
+
         d = LowOutputDetector(min_chars=100)
         s = RunSummary(run_id="r", agent_name="a")
-        spans = [SpanNode(
-            span_id="s", trace_id="t", operation_name="invoke_agent",
-            attributes={"gen_ai.response.content": "too short"},
-        )]
+        spans = [
+            SpanNode(
+                span_id="s",
+                trace_id="t",
+                operation_name="invoke_agent",
+                attributes={"gen_ai.response.content": "too short"},
+            )
+        ]
         assert d.detect(s, spans) is not None
 
     def test_low_output_negative(self) -> None:
         from analytics.detectors.output import LowOutputDetector
+
         d = LowOutputDetector(min_chars=10)
         s = RunSummary(run_id="r", agent_name="a")
-        spans = [SpanNode(
-            span_id="s", trace_id="t", operation_name="invoke_agent",
-            attributes={"gen_ai.response.content": "long enough content here"},
-        )]
+        spans = [
+            SpanNode(
+                span_id="s",
+                trace_id="t",
+                operation_name="invoke_agent",
+                attributes={"gen_ai.response.content": "long enough content here"},
+            )
+        ]
         assert d.detect(s, spans) is None
 
     # Cross-run
     def test_first_run_heuristic(self) -> None:
         from analytics.detectors.cross_run import FirstRunHeuristicDetector
+
         d = FirstRunHeuristicDetector()
         assert d.detect(RunSummary(run_id="r", agent_name="a"), []) is None
 
@@ -1183,9 +1249,7 @@ class TestAdditionalRuleDetectors:
         assert (
             premature.detect(
                 self._summary(status="error"),
-                self._root(
-                    [SpanNode(span_id="p", trace_id="t", operation_name="plan")]
-                ),
+                self._root([SpanNode(span_id="p", trace_id="t", operation_name="plan")]),
             )
             is not None
         )
@@ -1262,16 +1326,17 @@ class TestAdditionalRuleDetectors:
         assert (
             empty.detect(
                 self._summary(),
-                self._root(
-                    [SpanNode(span_id="a", trace_id="t", operation_name="invoke_agent")]
-                ),
+                self._root([SpanNode(span_id="a", trace_id="t", operation_name="invoke_agent")]),
             )
             is not None
         )
-        assert indeterminate.detect(
-            self._summary(status="unknown"),
-            [SpanNode(span_id="a2", trace_id="t", operation_name="invoke_agent")],
-        ) is not None
+        assert (
+            indeterminate.detect(
+                self._summary(status="unknown"),
+                [SpanNode(span_id="a2", trace_id="t", operation_name="invoke_agent")],
+            )
+            is not None
+        )
         assert run_freq.detect(self._summary(), []) is None
 
 
@@ -1372,12 +1437,14 @@ class TestRemainingRuleDetectors:
         per_tool = PerToolCostSpikeDetector(multiplier=2.0)
         wasted = WastedToolCallsDetector(threshold=3)
         summary = self._summary(estimated_cost=10.0)
-        spans = self._root([
-            self._tool("s1", "search", **{"gen_ai.tool.result": "same"}),
-            self._tool("s2", "search", **{"gen_ai.tool.result": "same"}),
-            self._tool("s3", "search", **{"gen_ai.tool.result": "same"}),
-            self._tool("s4", "other", **{"gen_ai.tool.result": "x"}),
-        ])
+        spans = self._root(
+            [
+                self._tool("s1", "search", **{"gen_ai.tool.result": "same"}),
+                self._tool("s2", "search", **{"gen_ai.tool.result": "same"}),
+                self._tool("s3", "search", **{"gen_ai.tool.result": "same"}),
+                self._tool("s4", "other", **{"gen_ai.tool.result": "x"}),
+            ]
+        )
         assert summary.estimated_cost is not None
         anomaly = per_tool.detect(summary, spans)
         assert anomaly is not None
@@ -1390,12 +1457,14 @@ class TestRemainingRuleDetectors:
 
         wasted = WastedToolCallsDetector(threshold=3)
         summary = self._summary()
-        spans = self._root([
-            self._tool("s1", "search", **{"gen_ai.tool.result": "same"}),
-            self._tool("s2", "lookup", **{"gen_ai.tool.result": "same"}),
-            self._tool("s3", "fetch", **{"gen_ai.tool.result": "same"}),
-            self._tool("s4", "other", **{"gen_ai.tool.result": "x"}),
-        ])
+        spans = self._root(
+            [
+                self._tool("s1", "search", **{"gen_ai.tool.result": "same"}),
+                self._tool("s2", "lookup", **{"gen_ai.tool.result": "same"}),
+                self._tool("s3", "fetch", **{"gen_ai.tool.result": "same"}),
+                self._tool("s4", "other", **{"gen_ai.tool.result": "x"}),
+            ]
+        )
         anomaly = wasted.detect(summary, spans)
         assert anomaly is not None
         assert anomaly.evidence is not None
@@ -1411,16 +1480,20 @@ class TestRemainingRuleDetectors:
         from analytics.detectors.output import OutputDriftDetector
 
         conn = AsyncMock()
-        conn.fetch = AsyncMock(return_value=[
-            {"anomaly_type": "loop"},
-            {"anomaly_type": "retry_storm"},
-            {"anomaly_type": "cost_spike"},
-        ])
-        conn.fetchrow = AsyncMock(side_effect=[
-            {"cnt": 2},
-            {"cnt": 1, "first_run": "r"},
-            {"avg_len": 10.0},
-        ])
+        conn.fetch = AsyncMock(
+            return_value=[
+                {"anomaly_type": "loop"},
+                {"anomaly_type": "retry_storm"},
+                {"anomaly_type": "cost_spike"},
+            ]
+        )
+        conn.fetchrow = AsyncMock(
+            side_effect=[
+                {"cnt": 2},
+                {"cnt": 1, "first_run": "r"},
+                {"avg_len": 10.0},
+            ]
+        )
         pool = self._Pool(conn)
 
         cluster = AnomalyClusterDetector(min_anomaly_types=3)
@@ -1548,6 +1621,7 @@ class TestWorkerAndCrossFramework:
         assert detector.detect(summary, langgraph_spans) is not None
         assert detector.detect(summary, crewai_spans) is not None
 
+
 class TestLLMDetectorsGracefulDegradation:
     """LLM detectors return None when LLM client is unavailable."""
 
@@ -1659,9 +1733,7 @@ class TestPerDetectorToggle:
     def test_worker_filters_disabled_from_35_set(self) -> None:
         w = AnalyticsWorker()
         enabled_types = {
-            d.anomaly_type
-            for d in w.detectors
-            if d.anomaly_type not in w.disabled_set
+            d.anomaly_type for d in w.detectors if d.anomaly_type not in w.disabled_set
         }
         assert len(enabled_types) >= 32  # at most 3 original could be disabled
 

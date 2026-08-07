@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-
 import httpx
 import pytest
 
@@ -19,7 +17,7 @@ from analytics.detectors.llm import (
     ThresholdCalibrator,
 )
 from analytics.llm_client import LLMClient
-from analytics.models import Anomaly, RunSummary, SpanNode
+from analytics.models import RunSummary, SpanNode
 
 
 def _make_summary(**overrides: object) -> RunSummary:
@@ -66,7 +64,7 @@ def _make_llm_client(responses: list[str]) -> LLMClient:
             json={"choices": [{"message": {"role": "assistant", "content": content}}]},
         )
 
-    transport = httpx.MockTransport(handler)  # type: ignore[arg-type]
+    transport = httpx.MockTransport(handler)
     return LLMClient(
         base_url="http://test/v1",
         api_key="test",
@@ -80,7 +78,7 @@ def _make_failing_llm_client() -> LLMClient:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, json={"error": "server down"})
 
-    transport = httpx.MockTransport(handler)  # type: ignore[arg-type]
+    transport = httpx.MockTransport(handler)
     return LLMClient(
         base_url="http://test/v1",
         api_key="test",
@@ -104,7 +102,7 @@ def _make_embedding_llm_client(embed_vector: list[float] | None = None) -> LLMCl
             )
         return httpx.Response(500, json={"error": "chat not expected"})
 
-    transport = httpx.MockTransport(handler)  # type: ignore[arg-type]
+    transport = httpx.MockTransport(handler)
     return LLMClient(
         base_url="http://test/v1",
         api_key="test",
@@ -228,9 +226,7 @@ class TestLLMTriageClassifier:
 
     @pytest.mark.asyncio
     async def test_missing_confidence_field_defaults(self) -> None:
-        client = _make_llm_client(
-            ['{"verdict": "tp", "reasoning": "no confidence field"}']
-        )
+        client = _make_llm_client(['{"verdict": "tp", "reasoning": "no confidence field"}'])
         classifier = LLMTriageClassifier(client)
         result = await classifier.classify("loop", "warning", "summary")
         assert result is not None
@@ -545,9 +541,7 @@ class TestSemanticLoopDetector:
 class TestHallucinationDetector:
     @pytest.mark.asyncio
     async def test_detects_hallucination(self) -> None:
-        client = _make_llm_client(
-            ['{"hallucination": true, "evidence": "none"}']
-        )
+        client = _make_llm_client(['{"hallucination": true, "evidence": "none"}'])
         detector = HallucinationDetector(client)
         summary = _make_summary()
         spans = [
@@ -567,9 +561,7 @@ class TestHallucinationDetector:
 
     @pytest.mark.asyncio
     async def test_no_hallucination(self) -> None:
-        client = _make_llm_client(
-            ['{"hallucination": false, "evidence": "cited from context"}']
-        )
+        client = _make_llm_client(['{"hallucination": false, "evidence": "cited from context"}'])
         detector = HallucinationDetector(client)
         summary = _make_summary()
         spans = [
@@ -598,9 +590,7 @@ class TestHallucinationDetector:
 
     @pytest.mark.asyncio
     async def test_no_claims_uses_fallback(self) -> None:
-        client = _make_llm_client(
-            ['{"hallucination": true, "evidence": "none"}']
-        )
+        client = _make_llm_client(['{"hallucination": true, "evidence": "none"}'])
         detector = HallucinationDetector(client)
         summary = _make_summary()
         spans = [
@@ -611,9 +601,7 @@ class TestHallucinationDetector:
 
     @pytest.mark.asyncio
     async def test_no_spans_uses_placeholder(self) -> None:
-        client = _make_llm_client(
-            ['{"hallucination": true, "evidence": "none"}']
-        )
+        client = _make_llm_client(['{"hallucination": true, "evidence": "none"}'])
         detector = HallucinationDetector(client)
         summary = _make_summary()
         spans: list[SpanNode] = []
@@ -640,11 +628,13 @@ class TestHallucinationDetector:
 
     @pytest.mark.asyncio
     async def test_multiple_claims_checks_up_to_three(self) -> None:
-        client = _make_llm_client([
-            '{"hallucination": false, "evidence": "supported"}',
-            '{"hallucination": false, "evidence": "supported"}',
-            '{"hallucination": true, "evidence": "unsupported claim 3"}',
-        ])
+        client = _make_llm_client(
+            [
+                '{"hallucination": false, "evidence": "supported"}',
+                '{"hallucination": false, "evidence": "supported"}',
+                '{"hallucination": true, "evidence": "unsupported claim 3"}',
+            ]
+        )
         detector = HallucinationDetector(client)
         summary = _make_summary()
         spans = [
@@ -658,9 +648,7 @@ class TestHallucinationDetector:
 
     @pytest.mark.asyncio
     async def test_context_built_from_tool_results(self) -> None:
-        client = _make_llm_client(
-            ['{"hallucination": true, "evidence": "none"}']
-        )
+        client = _make_llm_client(['{"hallucination": true, "evidence": "none"}'])
         detector = HallucinationDetector(client)
         summary = _make_summary()
         spans = [
@@ -691,12 +679,14 @@ class TestGoalDriftDetector:
         detector = GoalDriftDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
+            _make_span(
+                "sp1",
                 operation_name="plan",
-                attributes={"gen_ai.response.content": "Build a web app"}),
-            _make_span("sp2",
-                operation_name="execute_tool",
-                attributes={"tool.name": "debug_logging"}),
+                attributes={"gen_ai.response.content": "Build a web app"},
+            ),
+            _make_span(
+                "sp2", operation_name="execute_tool", attributes={"tool.name": "debug_logging"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is not None
@@ -704,18 +694,18 @@ class TestGoalDriftDetector:
 
     @pytest.mark.asyncio
     async def test_no_drift(self) -> None:
-        client = _make_llm_client(
-            ['{"diverged": false, "similarity": 0.9, "note": "on track"}']
-        )
+        client = _make_llm_client(['{"diverged": false, "similarity": 0.9, "note": "on track"}'])
         detector = GoalDriftDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
+            _make_span(
+                "sp1",
                 operation_name="plan",
-                attributes={"gen_ai.response.content": "Build a web app"}),
-            _make_span("sp2",
-                operation_name="execute_tool",
-                attributes={"tool.name": "create_react_app"}),
+                attributes={"gen_ai.response.content": "Build a web app"},
+            ),
+            _make_span(
+                "sp2", operation_name="execute_tool", attributes={"tool.name": "create_react_app"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -726,12 +716,10 @@ class TestGoalDriftDetector:
         detector = GoalDriftDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                operation_name="plan",
-                attributes={"gen_ai.response.content": "goal"}),
-            _make_span("sp2",
-                operation_name="execute_tool",
-                attributes={"tool.name": "action"}),
+            _make_span(
+                "sp1", operation_name="plan", attributes={"gen_ai.response.content": "goal"}
+            ),
+            _make_span("sp2", operation_name="execute_tool", attributes={"tool.name": "action"}),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -742,9 +730,9 @@ class TestGoalDriftDetector:
         detector = GoalDriftDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                operation_name="execute_tool",
-                attributes={"tool.name": "some_action"}),
+            _make_span(
+                "sp1", operation_name="execute_tool", attributes={"tool.name": "some_action"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -755,9 +743,9 @@ class TestGoalDriftDetector:
         detector = GoalDriftDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                operation_name="plan",
-                attributes={"gen_ai.response.content": "some goal"}),
+            _make_span(
+                "sp1", operation_name="plan", attributes={"gen_ai.response.content": "some goal"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -776,12 +764,10 @@ class TestGoalDriftDetector:
         detector = GoalDriftDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                operation_name="plan",
-                attributes={"gen_ai.response.content": "goal"}),
-            _make_span("sp2",
-                operation_name="execute_tool",
-                attributes={"tool.name": "action"}),
+            _make_span(
+                "sp1", operation_name="plan", attributes={"gen_ai.response.content": "goal"}
+            ),
+            _make_span("sp2", operation_name="execute_tool", attributes={"tool.name": "action"}),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -795,54 +781,48 @@ class TestGoalDriftDetector:
 
     @pytest.mark.asyncio
     async def test_finds_goal_from_planning_operation(self) -> None:
-        client = _make_llm_client(
-            ['{"diverged": true, "similarity": 0.1, "note": "drifted"}']
-        )
+        client = _make_llm_client(['{"diverged": true, "similarity": 0.1, "note": "drifted"}'])
         detector = GoalDriftDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
+            _make_span(
+                "sp1",
                 operation_name="planning",
-                attributes={"gen_ai.response.content": "build feature X"}),
-            _make_span("sp2",
-                operation_name="execute_tool",
-                attributes={"tool.name": "unrelated_action"}),
+                attributes={"gen_ai.response.content": "build feature X"},
+            ),
+            _make_span(
+                "sp2", operation_name="execute_tool", attributes={"tool.name": "unrelated_action"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is not None
 
     @pytest.mark.asyncio
     async def test_finds_goal_from_think_operation(self) -> None:
-        client = _make_llm_client(
-            ['{"diverged": true, "similarity": 0.3, "note": "diverged"}']
-        )
+        client = _make_llm_client(['{"diverged": true, "similarity": 0.3, "note": "diverged"}'])
         detector = GoalDriftDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                operation_name="think",
-                attributes={"content": "I need to fix the bug"}),
-            _make_span("sp2",
-                operation_name="tool_call",
-                attributes={"tool.name": "unrelated_task"}),
+            _make_span(
+                "sp1", operation_name="think", attributes={"content": "I need to fix the bug"}
+            ),
+            _make_span(
+                "sp2", operation_name="tool_call", attributes={"tool.name": "unrelated_task"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is not None
 
     @pytest.mark.asyncio
     async def test_finds_action_from_tool_call_operation(self) -> None:
-        client = _make_llm_client(
-            ['{"diverged": true, "similarity": 0.1, "note": "drifted"}']
-        )
+        client = _make_llm_client(['{"diverged": true, "similarity": 0.1, "note": "drifted"}'])
         detector = GoalDriftDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                operation_name="plan",
-                attributes={"gen_ai.response.content": "goal"}),
-            _make_span("sp2",
-                operation_name="tool_call",
-                attributes={"tool.name": "action_name"}),
+            _make_span(
+                "sp1", operation_name="plan", attributes={"gen_ai.response.content": "goal"}
+            ),
+            _make_span("sp2", operation_name="tool_call", attributes={"tool.name": "action_name"}),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is not None
@@ -862,11 +842,13 @@ class TestQualityDegradationDetector:
         detector = QualityDegradationDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
+            _make_span(
+                "sp1",
                 attributes={
                     "gen_ai.response.content": "Detailed, thorough analysis of the data",
                     "gen_ai.baseline_output": "Baseline gold-standard analysis",
-                }),
+                },
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is not None
@@ -880,11 +862,13 @@ class TestQualityDegradationDetector:
         detector = QualityDegradationDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
+            _make_span(
+                "sp1",
                 attributes={
                     "gen_ai.response.content": "good output",
                     "gen_ai.baseline_output": "good baseline",
-                }),
+                },
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -895,11 +879,13 @@ class TestQualityDegradationDetector:
         detector = QualityDegradationDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
+            _make_span(
+                "sp1",
                 attributes={
                     "gen_ai.response.content": "output",
                     "gen_ai.baseline_output": "baseline",
-                }),
+                },
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -921,10 +907,8 @@ class TestQualityDegradationDetector:
         detector = QualityDegradationDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                attributes={"gen_ai.response.content": "earlier output"}),
-            _make_span("sp2",
-                attributes={"gen_ai.response.content": "later degraded output"}),
+            _make_span("sp1", attributes={"gen_ai.response.content": "earlier output"}),
+            _make_span("sp2", attributes={"gen_ai.response.content": "later degraded output"}),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is not None
@@ -943,11 +927,13 @@ class TestQualityDegradationDetector:
         detector = QualityDegradationDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
+            _make_span(
+                "sp1",
                 attributes={
                     "gen_ai.response.content": "output",
                     "gen_ai.baseline_output": "baseline",
-                }),
+                },
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -967,12 +953,9 @@ class TestQualityDegradationDetector:
         detector = QualityDegradationDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                attributes={"gen_ai.response.content": "first baseline output"}),
-            _make_span("sp2",
-                attributes={"gen_ai.response.content": "second output"}),
-            _make_span("sp3",
-                attributes={"gen_ai.response.content": "third output degraded"}),
+            _make_span("sp1", attributes={"gen_ai.response.content": "first baseline output"}),
+            _make_span("sp2", attributes={"gen_ai.response.content": "second output"}),
+            _make_span("sp3", attributes={"gen_ai.response.content": "third output degraded"}),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is not None
@@ -992,12 +975,14 @@ class TestConfusionPatternDetector:
         detector = ConfusionPatternDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
+            _make_span(
+                "sp1",
                 operation_name="plan",
-                attributes={"gen_ai.response.content": "Build a REST API"}),
-            _make_span("sp2",
-                operation_name="execute_tool",
-                attributes={"gen_ai.tool.name": "run_tests"}),
+                attributes={"gen_ai.response.content": "Build a REST API"},
+            ),
+            _make_span(
+                "sp2", operation_name="execute_tool", attributes={"gen_ai.tool.name": "run_tests"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is not None
@@ -1005,18 +990,20 @@ class TestConfusionPatternDetector:
 
     @pytest.mark.asyncio
     async def test_no_confusion(self) -> None:
-        client = _make_llm_client(
-            ['{"contradiction": false, "explanation": ""}']
-        )
+        client = _make_llm_client(['{"contradiction": false, "explanation": ""}'])
         detector = ConfusionPatternDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
+            _make_span(
+                "sp1",
                 operation_name="plan",
-                attributes={"gen_ai.response.content": "Build a REST API"}),
-            _make_span("sp2",
+                attributes={"gen_ai.response.content": "Build a REST API"},
+            ),
+            _make_span(
+                "sp2",
                 operation_name="execute_tool",
-                attributes={"gen_ai.tool.name": "scaffold_api"}),
+                attributes={"gen_ai.tool.name": "scaffold_api"},
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -1027,12 +1014,12 @@ class TestConfusionPatternDetector:
         detector = ConfusionPatternDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                operation_name="plan",
-                attributes={"gen_ai.response.content": "plan text"}),
-            _make_span("sp2",
-                operation_name="execute_tool",
-                attributes={"gen_ai.tool.name": "some_tool"}),
+            _make_span(
+                "sp1", operation_name="plan", attributes={"gen_ai.response.content": "plan text"}
+            ),
+            _make_span(
+                "sp2", operation_name="execute_tool", attributes={"gen_ai.tool.name": "some_tool"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -1043,9 +1030,9 @@ class TestConfusionPatternDetector:
         detector = ConfusionPatternDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                operation_name="execute_tool",
-                attributes={"gen_ai.tool.name": "some_tool"}),
+            _make_span(
+                "sp1", operation_name="execute_tool", attributes={"gen_ai.tool.name": "some_tool"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -1056,9 +1043,9 @@ class TestConfusionPatternDetector:
         detector = ConfusionPatternDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                operation_name="plan",
-                attributes={"gen_ai.response.content": "plan text"}),
+            _make_span(
+                "sp1", operation_name="plan", attributes={"gen_ai.response.content": "plan text"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -1077,12 +1064,12 @@ class TestConfusionPatternDetector:
         detector = ConfusionPatternDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                operation_name="plan",
-                attributes={"gen_ai.response.content": "plan text"}),
-            _make_span("sp2",
-                operation_name="execute_tool",
-                attributes={"gen_ai.tool.name": "some_tool"}),
+            _make_span(
+                "sp1", operation_name="plan", attributes={"gen_ai.response.content": "plan text"}
+            ),
+            _make_span(
+                "sp2", operation_name="execute_tool", attributes={"gen_ai.tool.name": "some_tool"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is None
@@ -1096,36 +1083,38 @@ class TestConfusionPatternDetector:
 
     @pytest.mark.asyncio
     async def test_finds_plan_from_planning_operation(self) -> None:
-        client = _make_llm_client(
-            ['{"contradiction": true, "explanation": "mismatch"}']
-        )
+        client = _make_llm_client(['{"contradiction": true, "explanation": "mismatch"}'])
         detector = ConfusionPatternDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
+            _make_span(
+                "sp1",
                 operation_name="planning",
-                attributes={"gen_ai.response.content": "plan from planning"}),
-            _make_span("sp2",
-                operation_name="execute_tool",
-                attributes={"gen_ai.tool.name": "wrong_tool"}),
+                attributes={"gen_ai.response.content": "plan from planning"},
+            ),
+            _make_span(
+                "sp2", operation_name="execute_tool", attributes={"gen_ai.tool.name": "wrong_tool"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is not None
 
     @pytest.mark.asyncio
     async def test_finds_plan_from_think_operation(self) -> None:
-        client = _make_llm_client(
-            ['{"contradiction": true, "explanation": "mismatch"}']
-        )
+        client = _make_llm_client(['{"contradiction": true, "explanation": "mismatch"}'])
         detector = ConfusionPatternDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
+            _make_span(
+                "sp1",
                 operation_name="think",
-                attributes={"gen_ai.response.content": "thinking plan"}),
-            _make_span("sp2",
+                attributes={"gen_ai.response.content": "thinking plan"},
+            ),
+            _make_span(
+                "sp2",
                 operation_name="tool_call",
-                attributes={"gen_ai.tool.name": "contradictory_tool"}),
+                attributes={"gen_ai.tool.name": "contradictory_tool"},
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is not None
@@ -1138,15 +1127,15 @@ class TestConfusionPatternDetector:
         detector = ConfusionPatternDetector(client)
         summary = _make_summary()
         spans = [
-            _make_span("sp1",
-                operation_name="plan",
-                attributes={"gen_ai.response.content": "test plan"}),
-            _make_span("sp2",
-                operation_name="tool_call",
-                attributes={"gen_ai.tool.name": "tool_alpha"}),
-            _make_span("sp3",
-                operation_name="tool_call",
-                attributes={"gen_ai.tool.name": "tool_beta"}),
+            _make_span(
+                "sp1", operation_name="plan", attributes={"gen_ai.response.content": "test plan"}
+            ),
+            _make_span(
+                "sp2", operation_name="tool_call", attributes={"gen_ai.tool.name": "tool_alpha"}
+            ),
+            _make_span(
+                "sp3", operation_name="tool_call", attributes={"gen_ai.tool.name": "tool_beta"}
+            ),
         ]
         result = await detector.detect_async(summary, spans)
         assert result is not None

@@ -43,6 +43,7 @@ def _parse_jsonish(raw: str) -> dict[str, Any] | None:
 # 8.7.2  Explanation quality scoring
 # ---------------------------------------------------------------------------
 
+
 class ExplanationScorer:
     """Score anomaly explanations for clarity and actionability.
 
@@ -76,6 +77,7 @@ class ExplanationScorer:
 # ---------------------------------------------------------------------------
 # 8.7.3  LLM false-positive triage classifier
 # ---------------------------------------------------------------------------
+
 
 class LLMTriageClassifier:
     """Second-pass classifier that reviews rule-based anomaly alerts.
@@ -116,6 +118,7 @@ class LLMTriageClassifier:
 # 8.7.4  Embedding-based output drift detection
 # ---------------------------------------------------------------------------
 
+
 class EmbeddingDriftDetector(BaseDetector):
     """Detect semantic drift in agent output via embedding comparison.
 
@@ -136,7 +139,10 @@ class EmbeddingDriftDetector(BaseDetector):
         self._baselines: dict[str, list[float]] = {}
 
     async def detect_async(
-        self, summary: RunSummary, spans: list[SpanNode], pool: Any = None,
+        self,
+        summary: RunSummary,
+        spans: list[SpanNode],
+        pool: Any = None,
     ) -> Anomaly | None:
         output = self._extract_output(spans)
         if not output:
@@ -162,7 +168,8 @@ class EmbeddingDriftDetector(BaseDetector):
         distance = 1.0 - sim
 
         if distance >= self._threshold:
-            return Anomaly(agent_name="unknown",
+            return Anomaly(
+                agent_name="unknown",
                 run_id="embedding_drift",
                 anomaly_type=self.anomaly_type,
                 severity="warning" if distance < 0.5 else "critical",
@@ -181,6 +188,7 @@ class EmbeddingDriftDetector(BaseDetector):
 # ---------------------------------------------------------------------------
 # 8.7.5  LLM severity calibration
 # ---------------------------------------------------------------------------
+
 
 class ThresholdCalibrator:
     """Analyse anomaly distributions and suggest threshold adjustments.
@@ -201,7 +209,10 @@ class ThresholdCalibrator:
     ) -> dict[str, Any] | None:
         """Return ``{"action": str, "suggested_value": str, "rationale": str}`` or None."""
         system, user = PromptBuilder.calibrate_thresholds(
-            detector_name, anomaly_rate, sample_count, current_threshold,
+            detector_name,
+            anomaly_rate,
+            sample_count,
+            current_threshold,
         )
         raw = await self._client.chat(user, system=system, max_tokens=128)
         if raw is None:
@@ -233,7 +244,10 @@ class SemanticLoopDetector(BaseDetector):
         self._threshold = threshold
 
     async def detect_async(
-        self, summary: RunSummary, spans: list[SpanNode], pool: Any = None,
+        self,
+        summary: RunSummary,
+        spans: list[SpanNode],
+        pool: Any = None,
     ) -> Anomaly | None:
         outputs = self._extract_outputs(spans)
         if len(outputs) < 2:
@@ -258,15 +272,18 @@ class SemanticLoopDetector(BaseDetector):
         try:
             parsed = _parse_jsonish(raw) or {}
             if parsed.get("identical") and float(parsed.get("similarity", 0)) >= self._threshold:
-                return Anomaly(agent_name="unknown",
+                return Anomaly(
+                    agent_name="unknown",
                     run_id="semantic",
                     anomaly_type=self.anomaly_type,
                     severity="warning",
                     explanation=(
-                        f"Semantically identical output repeated "
-                        f"({parsed.get('similarity')})"
+                        f"Semantically identical output repeated ({parsed.get('similarity')})"
                     ),
-                    evidence={"similarity": parsed.get("similarity"), "cache_hit": self._client.last_cache_hit},
+                    evidence={
+                        "similarity": parsed.get("similarity"),
+                        "cache_hit": self._client.last_cache_hit,
+                    },
                 )
         except (json.JSONDecodeError, ValueError, KeyError):
             pass
@@ -276,9 +293,14 @@ class SemanticLoopDetector(BaseDetector):
         results: list[str] = []
         for span in self._walk_spans(spans):
             for key in (
-                "gen_ai.response.content", "gen_ai.agent.output",
-                "gen_ai.node.output", "gen_ai.plan.content",
-                "assistant_response", "completion", "content", "output",
+                "gen_ai.response.content",
+                "gen_ai.agent.output",
+                "gen_ai.node.output",
+                "gen_ai.plan.content",
+                "assistant_response",
+                "completion",
+                "content",
+                "output",
             ):
                 val = span.attributes.get(key)
                 if isinstance(val, str) and val.strip():
@@ -298,7 +320,10 @@ class HallucinationDetector(BaseDetector):
         self._client = client
 
     async def detect_async(
-        self, summary: RunSummary, spans: list[SpanNode], pool: Any = None,
+        self,
+        summary: RunSummary,
+        spans: list[SpanNode],
+        pool: Any = None,
     ) -> Anomaly | None:
         claims = self._extract_text(spans, "gen_ai.response.content")
         if not claims:
@@ -323,15 +348,19 @@ class HallucinationDetector(BaseDetector):
         try:
             parsed = _parse_jsonish(raw) or {}
             if parsed.get("hallucination"):
-                return Anomaly(agent_name="unknown",
+                return Anomaly(
+                    agent_name="unknown",
                     run_id="halluc",
                     anomaly_type=self.anomaly_type,
                     severity="critical",
                     explanation=(
-                        f"Hallucination: {claim} "
-                        f"(evidence: {parsed.get('evidence', 'none')})"
+                        f"Hallucination: {claim} (evidence: {parsed.get('evidence', 'none')})"
                     ),
-                    evidence={"claim": claim, "evidence": parsed.get("evidence"), "cache_hit": self._client.last_cache_hit},
+                    evidence={
+                        "claim": claim,
+                        "evidence": parsed.get("evidence"),
+                        "cache_hit": self._client.last_cache_hit,
+                    },
                 )
         except (json.JSONDecodeError, ValueError, KeyError):
             pass
@@ -367,7 +396,10 @@ class GoalDriftDetector(BaseDetector):
         self._client = client
 
     async def detect_async(
-        self, summary: RunSummary, spans: list[SpanNode], pool: Any = None,
+        self,
+        summary: RunSummary,
+        spans: list[SpanNode],
+        pool: Any = None,
     ) -> Anomaly | None:
         goal = self._find_goal(spans)
         actions = self._find_actions(spans)
@@ -384,7 +416,8 @@ class GoalDriftDetector(BaseDetector):
         try:
             parsed = _parse_jsonish(raw) or {}
             if parsed.get("diverged"):
-                return Anomaly(agent_name="unknown",
+                return Anomaly(
+                    agent_name="unknown",
                     run_id="drift",
                     anomaly_type=self.anomaly_type,
                     severity="warning",
@@ -399,8 +432,12 @@ class GoalDriftDetector(BaseDetector):
         for span in self._walk_spans(spans):
             if span.operation_name in ("plan", "planning", "think"):
                 for key in (
-                    "gen_ai.request.content", "gen_ai.response.content",
-                    "goal", "description", "content", "plan_text",
+                    "gen_ai.request.content",
+                    "gen_ai.response.content",
+                    "goal",
+                    "description",
+                    "content",
+                    "plan_text",
                 ):
                     val = span.attributes.get(key)
                     if isinstance(val, str) and val.strip():
@@ -430,7 +467,10 @@ class QualityDegradationDetector(BaseDetector):
         self._client = client
 
     async def detect_async(
-        self, summary: RunSummary, spans: list[SpanNode], pool: Any = None,
+        self,
+        summary: RunSummary,
+        spans: list[SpanNode],
+        pool: Any = None,
     ) -> Anomaly | None:
         current = self._get_output(spans)
         baseline = self._get_baseline(spans)
@@ -447,7 +487,8 @@ class QualityDegradationDetector(BaseDetector):
         try:
             parsed = _parse_jsonish(raw) or {}
             if parsed.get("degraded"):
-                return Anomaly(agent_name="unknown",
+                return Anomaly(
+                    agent_name="unknown",
                     run_id="quality",
                     anomaly_type=self.anomaly_type,
                     severity="warning",
@@ -493,7 +534,10 @@ class ConfusionPatternDetector(BaseDetector):
         self._client = client
 
     async def detect_async(
-        self, summary: RunSummary, spans: list[SpanNode], pool: Any = None,
+        self,
+        summary: RunSummary,
+        spans: list[SpanNode],
+        pool: Any = None,
     ) -> Anomaly | None:
         plan = self._find_plan(spans)
         execution = self._summarise_execution(spans)
@@ -510,13 +554,13 @@ class ConfusionPatternDetector(BaseDetector):
         try:
             parsed = _parse_jsonish(raw) or {}
             if parsed.get("contradiction"):
-                return Anomaly(agent_name="unknown",
+                return Anomaly(
+                    agent_name="unknown",
                     run_id="confusion",
                     anomaly_type=self.anomaly_type,
                     severity="warning",
                     explanation=(
-                        f"Confusion: "
-                        f"{parsed.get('explanation', 'plan-execution mismatch')}"
+                        f"Confusion: {parsed.get('explanation', 'plan-execution mismatch')}"
                     ),
                     evidence={**parsed, "cache_hit": self._client.last_cache_hit},
                 )
@@ -528,8 +572,12 @@ class ConfusionPatternDetector(BaseDetector):
         for span in self._walk_spans(spans):
             if span.operation_name in ("plan", "planning", "think"):
                 for key in (
-                    "gen_ai.response.content", "gen_ai.request.content",
-                    "plan_text", "goal", "description", "content",
+                    "gen_ai.response.content",
+                    "gen_ai.request.content",
+                    "plan_text",
+                    "goal",
+                    "description",
+                    "content",
                 ):
                     val = span.attributes.get(key)
                     if isinstance(val, str) and val.strip():

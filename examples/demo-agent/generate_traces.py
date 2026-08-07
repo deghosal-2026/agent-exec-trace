@@ -124,7 +124,12 @@ AGENTS = [
     {
         "name": "price_optimizer",
         "version": "v1.0",
-        "tools": ["fetch_market_data", "analyze_competitors", "compute_elasticity", "recommend_price"],
+        "tools": [
+            "fetch_market_data",
+            "analyze_competitors",
+            "compute_elasticity",
+            "recommend_price",
+        ],
         "scenarios": ["normal", "loop", "high_cost", "retry_storm"],
         "runs_per": 40,
     },
@@ -135,8 +140,14 @@ AGENTS = [
 
 
 def _span(
-    sid: str, tid: str, pid: str | None, op: str,
-    attrs: dict[str, object], t0: float, dur: float, status: str = "ok",
+    sid: str,
+    tid: str,
+    pid: str | None,
+    op: str,
+    attrs: dict[str, object],
+    t0: float,
+    dur: float,
+    status: str = "ok",
 ) -> dict[str, Any]:
     """Build a single synthetic span row dict.
 
@@ -160,8 +171,8 @@ def _span(
         "operation_name": op,
         # Timestamps are relative to 2026-08-04T12:00:00; the float offset is
         # divided by 1000 to convert ms -> seconds for the ISO timestamp.
-        "start_time": f"2026-08-04T12:00:{t0/1000:07.3f}",
-        "end_time": f"2026-08-04T12:00:{(t0+dur)/1000:07.3f}",
+        "start_time": f"2026-08-04T12:00:{t0 / 1000:07.3f}",
+        "end_time": f"2026-08-04T12:00:{(t0 + dur) / 1000:07.3f}",
         "duration_ms": int(dur),
         # Attributes are stored as a JSON string to match the analytics
         # service's expected parquet schema format.
@@ -259,7 +270,7 @@ def _gen(agent: dict, scenario: str, idx: int) -> list[dict[str, Any]]:
         # the retry_storm, systemic_retry, and cascading_retry detectors.
         if scenario == "retry_storm" and i > 3:
             ta["retry"] = "true"
-            ta["error.code"] = f"ERR_{random.choice(['TIMEOUT','NOT_FOUND','RATE_LIMIT'])}"
+            ta["error.code"] = f"ERR_{random.choice(['TIMEOUT', 'NOT_FOUND', 'RATE_LIMIT'])}"
             st = "error" if i > 12 else "ok"
 
         rows.append(_span(f"{tid}_t{i}", tid, f"{tid}_root", "execute_tool", ta, t, dur, st))
@@ -299,6 +310,7 @@ def main() -> None:
                 if len(batch) >= 5000:
                     import pyarrow as pa
                     import pyarrow.parquet as pq
+
                     t = pa.Table.from_pylist(batch)  # type: ignore
                     pq.write_table(t, str(out / f"traces-{bi:04d}.parquet"))
                     print(f"  batch {bi}: {len(batch)} rows ({total} traces)")
@@ -308,6 +320,7 @@ def main() -> None:
     if batch:
         import pyarrow as pa
         import pyarrow.parquet as pq
+
         t = pa.Table.from_pylist(batch)  # type: ignore
         pq.write_table(t, str(out / f"traces-{bi:04d}.parquet"))
         print(f"  final batch {bi}: {len(batch)} rows")

@@ -54,9 +54,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Run the request-triage demo agent with OTLP tracing"
     )
-    parser.add_argument(
-        "--scenario", choices=("normal", "loop", "high_cost"), default="normal"
-    )
+    parser.add_argument("--scenario", choices=("normal", "loop", "high_cost"), default="normal")
     parser.add_argument("--endpoint", default="http://localhost:4317")
     args = parser.parse_args()
 

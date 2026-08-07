@@ -107,9 +107,7 @@ class AnalyticsMetrics:
         with self._lock:
             self._anomaly_detected_count += n
             if anomaly_type:
-                self._anomaly_by_type[anomaly_type] = (
-                    self._anomaly_by_type.get(anomaly_type, 0) + n
-                )
+                self._anomaly_by_type[anomaly_type] = self._anomaly_by_type.get(anomaly_type, 0) + n
 
     def anomaly_count_by_type(self, anomaly_type: str) -> int:
         """Return the count of anomalies for a specific type.
@@ -149,9 +147,7 @@ class AnalyticsMetrics:
         by_type = snap.get("anomaly_by_type", {})
         # Build a compact string like "loop=5, retry_storm=2, cost_spike=1"
         type_summary = (
-            ", ".join(f"{k}={v}" for k, v in sorted(by_type.items()))
-            if by_type
-            else "none"
+            ", ".join(f"{k}={v}" for k, v in sorted(by_type.items())) if by_type else "none"
         )
         logger.info(
             "Metrics snapshot: processed=%d failed=%d skipped=%d rebuild=%d "

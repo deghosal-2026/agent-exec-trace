@@ -260,9 +260,7 @@ class TestCompare:
         mock_pool = _make_mock_pool(mock_conn)
 
         with patch("api.routes.get_pool", return_value=mock_pool):
-            resp = client.get(
-                "/api/v1/compare?agent_name=demo-agent&version_a=v1&version_b=v2"
-            )
+            resp = client.get("/api/v1/compare?agent_name=demo-agent&version_a=v1&version_b=v2")
             assert resp.status_code == 200
             data = resp.json()
             assert data["left"]["version"] == "v1"
@@ -282,9 +280,7 @@ class TestCompare:
         mock_pool = _make_mock_pool(mock_conn)
 
         with patch("api.routes.get_pool", return_value=mock_pool):
-            resp = client.get(
-                "/api/v1/compare?agent_name=demo-agent&version_a=v1&version_b=v3"
-            )
+            resp = client.get("/api/v1/compare?agent_name=demo-agent&version_a=v1&version_b=v3")
             assert resp.status_code == 200
             data = resp.json()
             assert data["warning"] == "sparse_cohorts"
@@ -304,9 +300,7 @@ class TestCompare:
         mock_pool = _make_mock_pool(mock_conn)
 
         with patch("api.routes.get_pool", return_value=mock_pool):
-            resp = client.get(
-                "/api/v1/compare?agent_name=demo-agent&version_a=v1&version_b=v2"
-            )
+            resp = client.get("/api/v1/compare?agent_name=demo-agent&version_a=v1&version_b=v2")
             assert resp.status_code == 200
             data = resp.json()
             assert data["warning"] == "sparse_cohorts"
@@ -352,9 +346,7 @@ class TestAnomalies:
     def test_anomalies_with_filters(self, client: TestClient) -> None:
         mock_conn = AsyncMock()
         mock_conn.fetchval = AsyncMock(return_value=1)
-        mock_conn.fetch = AsyncMock(
-            return_value=[_make_anomaly_row(anomaly_type="loop")]
-        )
+        mock_conn.fetch = AsyncMock(return_value=[_make_anomaly_row(anomaly_type="loop")])
         mock_pool = _make_mock_pool(mock_conn)
 
         with patch("api.routes.get_pool", return_value=mock_pool):

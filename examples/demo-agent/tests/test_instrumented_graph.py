@@ -163,7 +163,8 @@ def test_instrumented_graph_maps_planner_to_plan_span() -> None:
     graph.invoke(normal_request())
 
     plan_spans = [
-        s for s in exporter.get_finished_spans()
+        s
+        for s in exporter.get_finished_spans()
         if s.attributes and s.attributes.get(GEN_AI_OPERATION_NAME) == SPAN_KIND_PLAN
     ]
     assert len(plan_spans) >= 1
@@ -182,7 +183,8 @@ def test_instrumented_graph_maps_run_tool_to_tool_span() -> None:
     graph.invoke(normal_request())
 
     tool_spans = [
-        s for s in exporter.get_finished_spans()
+        s
+        for s in exporter.get_finished_spans()
         if s.attributes and s.attributes.get(GEN_AI_OPERATION_NAME) == SPAN_KIND_TOOL
     ]
     assert len(tool_spans) >= 1

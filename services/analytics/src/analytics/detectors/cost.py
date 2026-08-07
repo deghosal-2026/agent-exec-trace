@@ -104,9 +104,7 @@ class CostSpikeDetector(BaseDetector):
         self, summary: RunSummary, spans: list[SpanNode], *, pool: Any
     ) -> Awaitable[Anomaly | None]: ...
 
-    def detect(
-        self, summary: RunSummary, spans: list[SpanNode], pool: Any = _SENTINEL
-    ) -> Any:
+    def detect(self, summary: RunSummary, spans: list[SpanNode], pool: Any = _SENTINEL) -> Any:
         """Dual-mode detect.
 
         - When called without the optional 'pool' argument (e.g., factory
@@ -141,9 +139,7 @@ class CostSpikeDetector(BaseDetector):
 
         # Check 1: Absolute threshold.
         if cost > self.absolute_threshold:
-            reasons.append(
-                f"absolute spike: ${cost:.2f} exceeds ${self.absolute_threshold:.2f}"
-            )
+            reasons.append(f"absolute spike: ${cost:.2f} exceeds ${self.absolute_threshold:.2f}")
 
         # Check 2: Relative to version cohort baseline (requires database pool).
         baseline: float | None = None
@@ -247,8 +243,7 @@ class CostVsBaselineDetector(BaseDetector):
             return self._build_anomaly(
                 summary,
                 severity,
-                f"Run cost ${cost:.2f} is {ratio:.1f}x "
-                f"version cohort baseline of ${baseline:.2f}",
+                f"Run cost ${cost:.2f} is {ratio:.1f}x version cohort baseline of ${baseline:.2f}",
                 {
                     "cost": cost,
                     "baseline": baseline,
@@ -380,9 +375,7 @@ class TokenExplosionDetector(BaseDetector):
     anomaly_type = "token_explosion"
 
     def __init__(self, growth_multiplier: float | None = None) -> None:
-        self.growth_multiplier = (
-            growth_multiplier or settings.detector_token_explosion_multiplier
-        )
+        self.growth_multiplier = growth_multiplier or settings.detector_token_explosion_multiplier
 
     def detect(self, summary: RunSummary, spans: list[SpanNode]) -> Anomaly | None:
         all_spans = self._walk_spans(spans)
@@ -597,8 +590,8 @@ class WastedToolCallsDetector(BaseDetector):
             count = sum(1 for _ in tool_spans if self._matches_output(_, output_str))
             # Must appear at least threshold times AND across at least 2 different tools.
             if count >= self.threshold and len(tool_names) >= 2 and count > max_wasted:
-                    max_wasted = count
-                    wasted_output = output_str
+                max_wasted = count
+                wasted_output = output_str
 
         if max_wasted > 0:
             severity = self._severity(float(max_wasted), float(self.threshold))

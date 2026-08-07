@@ -4,6 +4,7 @@ Revision ID: 001
 Revises:
 Create Date: 2026-01-01
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -75,7 +76,11 @@ def upgrade() -> None:
         sa.Column("avg_cost", sa.Numeric(10, 6), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.UniqueConstraint(
-            "agent_name", "agent_version", "workload_type", "period_start", "period_end",
+            "agent_name",
+            "agent_version",
+            "workload_type",
+            "period_start",
+            "period_end",
             name="uq_fleet_rollup_period",
         ),
     )

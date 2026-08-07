@@ -125,9 +125,7 @@ class HFTraceDownloader:
 
         loop = asyncio.get_running_loop()
         try:
-            result = await asyncio.wait_for(
-                loop.run_in_executor(None, _open_sync), timeout=timeout
-            )
+            result = await asyncio.wait_for(loop.run_in_executor(None, _open_sync), timeout=timeout)
         except asyncio.TimeoutError:
             logger.warning("Timed out opening dataset %s, skipping", dataset_id)
             return False
@@ -166,9 +164,7 @@ class HFTraceDownloader:
         """
         stream = self._streams.get(dataset_id)
         if stream is None:
-            raise RuntimeError(
-                f"Dataset {dataset_id} is not open; call open_dataset() first"
-            )
+            raise RuntimeError(f"Dataset {dataset_id} is not open; call open_dataset() first")
 
         batch = max_rows if max_rows is not None else 5
         rows: list[dict[str, object]] = []
@@ -212,9 +208,7 @@ class HFTraceDownloader:
                 results[ds_id] = []
                 continue
             try:
-                rows = await self.download_dataset(
-                    ds_id, max_rows=max_rows_per_dataset
-                )
+                rows = await self.download_dataset(ds_id, max_rows=max_rows_per_dataset)
                 results[ds_id] = rows
                 logger.info("  -> %d rows downloaded", len(rows))
             except Exception:

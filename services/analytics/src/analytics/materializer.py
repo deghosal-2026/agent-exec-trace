@@ -151,10 +151,13 @@ class FleetRollupMaterializer:
                     anom_params.append(version)
 
                 async with pool.acquire() as conn:
-                    anomaly_count = await conn.fetchval(
-                        f"SELECT COUNT(*) FROM anomalies WHERE {anom_conditions}",
-                        *anom_params,
-                    ) or 0
+                    anomaly_count = (
+                        await conn.fetchval(
+                            f"SELECT COUNT(*) FROM anomalies WHERE {anom_conditions}",
+                            *anom_params,
+                        )
+                        or 0
+                    )
 
             rollup = FleetRollup(
                 id=str(uuid.uuid4()),
@@ -252,12 +255,15 @@ class VersionCohortMaterializer:
             # anomalies may not have agent_version directly.
             anomaly_count = 0
             if agent and version:
-                anomaly_count = await conn.fetchval(
-                    "SELECT COUNT(*) FROM anomalies WHERE agent_name = $1 AND run_id IN "
-                    "(SELECT run_id FROM run_summaries WHERE agent_version = $2)",
-                    agent,
-                    version,
-                ) or 0
+                anomaly_count = (
+                    await conn.fetchval(
+                        "SELECT COUNT(*) FROM anomalies WHERE agent_name = $1 AND run_id IN "
+                        "(SELECT run_id FROM run_summaries WHERE agent_version = $2)",
+                        agent,
+                        version,
+                    )
+                    or 0
+                )
 
             cohort = VersionCohortSummary(
                 agent_name=agent,

@@ -144,6 +144,7 @@ class LowOutputDetector(BaseDetector):
             )
         return None
 
+
 class IndeterminateDetector(BaseDetector):
     """Detect ambiguous or unclear run status.
 
@@ -191,8 +192,15 @@ class IndeterminateDetector(BaseDetector):
         # Case 2: Status is in the known ambiguous set.
         status_lower = status.lower().strip()
         ambiguous_statuses = {
-            "unknown", "undefined", "null", "none", "unclear",
-            "indeterminate", "pending", "na", "n/a",
+            "unknown",
+            "undefined",
+            "null",
+            "none",
+            "unclear",
+            "indeterminate",
+            "pending",
+            "na",
+            "n/a",
         }
         if status_lower in ambiguous_statuses:
             return self._build_anomaly(

@@ -149,7 +149,9 @@ def test_tool_args_dropped_when_field_not_opted_in() -> None:
     # must not be stored. Opting into prompts does NOT opt into tool args.
     exporter = _exporter()
     ctx = RunContext(run_id="run-1", agent_name="triage")
-    redaction = RedactionConfig(mode=PrivacyMode.TRUNCATED, capture_prompts=True, capture_tool_args=False)
+    redaction = RedactionConfig(
+        mode=PrivacyMode.TRUNCATED, capture_prompts=True, capture_tool_args=False
+    )
     with (
         invoke_agent(ctx),
         execute_tool_span("search_kb", redaction=redaction, tool_args="secret query"),
@@ -241,7 +243,7 @@ def test_tool_span_parents_to_root() -> None:
         pass
     span = next(s for s in exporter.get_finished_spans() if s.name == "lookup")
     assert span.parent is not None
-    assert span.parent.span_id == root.context.span_id
+    assert span.parent.span_id == root.get_span_context().span_id
 
 
 def test_tool_span_with_result_captures_output() -> None:

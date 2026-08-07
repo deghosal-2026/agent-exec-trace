@@ -258,6 +258,7 @@ class LLMClient:
             # Track JSON parse success for telemetry.
             if content:
                 import json as _json_check
+
                 try:
                     _json_check.loads(content)
                     self._stats["json_parse_success"] += 1
@@ -286,22 +287,30 @@ class LLMClient:
             self._record(start, "chat_calls")
             self._cache[key] = content
             # Record for audit/debugging (truncated to 500 chars).
-            self._responses.append({
-                **self._trace_context,
-                "system": system or "",
-                "prompt": prompt[:500],
-                "response": content[:500],
-            })
+            self._responses.append(
+                {
+                    **self._trace_context,
+                    "system": system or "",
+                    "prompt": prompt[:500],
+                    "response": content[:500],
+                }
+            )
             # Optionally write to JSONL log file.
             if self._response_log:
                 import json as _json
+
                 with open(self._response_log, "a") as _f:
-                    _f.write(_json.dumps({
-                        **self._trace_context,
-                        "system": system or "",
-                        "prompt": prompt[:500],
-                        "response": content[:500],
-                    }) + "\n")
+                    _f.write(
+                        _json.dumps(
+                            {
+                                **self._trace_context,
+                                "system": system or "",
+                                "prompt": prompt[:500],
+                                "response": content[:500],
+                            }
+                        )
+                        + "\n"
+                    )
             return content  # type: ignore[no-any-return]
         except Exception as exc:
             self._record(start, "chat_calls")
@@ -410,8 +419,10 @@ class LLMClient:
             "avg_prompt_chars": round(sum(r["prompt_chars"] for r in self._telemetry) / n, 1),
             "avg_completion_chars": round(sum(r["content_chars"] for r in self._telemetry) / n, 1),
             "finish_reasons": dict.fromkeys(r["finish_reason"] for r in self._telemetry),
-            "cache_hit_rate": self._stats["cache_hits"] / max(self._stats["cache_hits"] + self._stats["cache_misses"], 1),
-            "json_parse_rate": self._stats["json_parse_success"] / max(self._stats["json_parse_success"] + self._stats["json_parse_fail"], 1),
+            "cache_hit_rate": self._stats["cache_hits"]
+            / max(self._stats["cache_hits"] + self._stats["cache_misses"], 1),
+            "json_parse_rate": self._stats["json_parse_success"]
+            / max(self._stats["json_parse_success"] + self._stats["json_parse_fail"], 1),
         }
 
     def models(self) -> list[str] | None:
@@ -493,7 +504,7 @@ class PromptBuilder:
         user = (
             f"Anomaly type: {anomaly_type}\n"
             f"Explanation: {cls._clean_text(explanation, 300)}\n\n"
-            "Return a JSON object: {\"score\": <int 1-5>, \"reasoning\": \"<one sentence>\"}"
+            'Return a JSON object: {"score": <int 1-5>, "reasoning": "<one sentence>"}'
         )
         return system, user
 
@@ -515,7 +526,7 @@ class PromptBuilder:
         """
         system = (
             "You are a triage classifier. Given an anomaly alert, classify it as "
-            "\"tp\" (true positive), \"fp\" (false positive), or \"uncertain\". "
+            '"tp" (true positive), "fp" (false positive), or "uncertain". '
             "A false positive is a benign condition that happens to cross a numeric "
             "threshold without real problems. RETURN ONLY VALID JSON. NO PROSE."
         )
@@ -523,8 +534,8 @@ class PromptBuilder:
             f"Anomaly type: {anomaly_type}\n"
             f"Severity: {severity}\n"
             f"Run summary: {cls._clean_text(summary, 400)}\n\n"
-            "Return JSON: {\"verdict\": \"tp|fp|uncertain\", \"confidence\": <0.0-1.0>, "
-            "\"reasoning\": \"<one sentence>\"}"
+            'Return JSON: {"verdict": "tp|fp|uncertain", "confidence": <0.0-1.0>, '
+            '"reasoning": "<one sentence>"}'
         )
         return system, user
 
@@ -550,8 +561,8 @@ class PromptBuilder:
         user = (
             f"Prior version output: {cls._clean_text(prior_output)}\n"
             f"Current version output: {cls._clean_text(current_output)}\n\n"
-            "Return JSON: {\"drift\": true|false, \"magnitude\": \"none|minor|major\", "
-            "\"note\": \"<one sentence>\"}"
+            'Return JSON: {"drift": true|false, "magnitude": "none|minor|major", '
+            '"note": "<one sentence>"}'
         )
         return system, user
 
@@ -576,7 +587,7 @@ class PromptBuilder:
         )
         user = (
             f"Output A: {cls._clean_text(prev)}\nOutput B: {cls._clean_text(curr)}\n\n"
-            "Return JSON: {\"identical\": true|false, \"similarity\": <0.0-1.0>}"
+            'Return JSON: {"identical": true|false, "similarity": <0.0-1.0>}'
         )
         return system, user
 
@@ -601,8 +612,8 @@ class PromptBuilder:
         )
         user = (
             f"Claim: {cls._clean_text(claim, 300)}\nContext: {cls._clean_text(context, 500)}\n\n"
-            "Return JSON: {\"hallucination\": true|false, "
-            "\"evidence\": \"<quote from context or 'none'>\"}"
+            'Return JSON: {"hallucination": true|false, '
+            '"evidence": "<quote from context or \'none\'>"}'
         )
         return system, user
 
@@ -627,8 +638,8 @@ class PromptBuilder:
         user = (
             f"Original goal: {cls._clean_text(original_goal, 300)}\n"
             f"Current action: {cls._clean_text(current_action, 200)}\n\n"
-            "Return JSON: {\"diverged\": true|false, "
-            "\"similarity\": <0.0-1.0>, \"note\": \"<one sentence>\"}"
+            'Return JSON: {"diverged": true|false, '
+            '"similarity": <0.0-1.0>, "note": "<one sentence>"}'
         )
         return system, user
 
@@ -652,8 +663,8 @@ class PromptBuilder:
         user = (
             f"Baseline output: {cls._clean_text(baseline_output)}\n"
             f"Current output: {cls._clean_text(current_output)}\n\n"
-            "Return JSON: {\"degraded\": true|false, \"severity\": \"none|minor|major\", "
-            "\"note\": \"<one sentence>\"}"
+            'Return JSON: {"degraded": true|false, "severity": "none|minor|major", '
+            '"note": "<one sentence>"}'
         )
         return system, user
 
@@ -676,15 +687,18 @@ class PromptBuilder:
         )
         user = (
             f"Plan: {cls._clean_text(plan, 300)}\nExecution: {cls._clean_text(execution, 200)}\n\n"
-            "Return JSON: {\"contradiction\": true|false, "
-            "\"explanation\": \"<one sentence if contradiction>\"}"
+            'Return JSON: {"contradiction": true|false, '
+            '"explanation": "<one sentence if contradiction>"}'
         )
         return system, user
 
     @classmethod
     def calibrate_thresholds(
-        cls, detector_name: str, anomaly_rate: float,
-        sample_count: int, current_threshold: str,
+        cls,
+        detector_name: str,
+        anomaly_rate: float,
+        sample_count: int,
+        current_threshold: str,
     ) -> tuple[str, str]:
         """Build prompt to suggest threshold adjustments based on anomaly rates.
 
@@ -707,9 +721,9 @@ class PromptBuilder:
             f"Detector: {detector_name}\n"
             f"Anomaly rate: {anomaly_rate:.2%} ({sample_count} samples)\n"
             f"Current threshold: {current_threshold}\n\n"
-            "Return JSON: {\"action\": \"raise|lower|keep\", "
-            "\"suggested_value\": \"<new threshold or 'same'>\", "
-            "\"rationale\": \"<one sentence>\"}"
+            'Return JSON: {"action": "raise|lower|keep", '
+            '"suggested_value": "<new threshold or \'same\'>", '
+            '"rationale": "<one sentence>"}'
         )
         return system, user
 

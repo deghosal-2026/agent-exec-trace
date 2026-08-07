@@ -197,9 +197,15 @@ def validate(
                 click.echo("Postgres unavailable — running file-only validation")
 
         v = Validator(
-            input_dir=input_dir, output_dir=output_dir,
-            llm_sample=llm_sample, resume=resume, diagnose=diagnose,
-            pool=pool, llm_batch=llm_batch, max_files=max_files, max_traces=max_traces,
+            input_dir=input_dir,
+            output_dir=output_dir,
+            llm_sample=llm_sample,
+            resume=resume,
+            diagnose=diagnose,
+            pool=pool,
+            llm_batch=llm_batch,
+            max_files=max_files,
+            max_traces=max_traces,
             llm_no_cache=llm_no_cache,
         )
         if diagnose:
@@ -266,8 +272,12 @@ def validate(
             llm_anomalies: dict[str, int] = {}
             for dt, cnt in by_type.items():
                 if dt in {
-                    "semantic_loop", "hallucination", "goal_drift",
-                    "quality_degradation", "confusion_pattern", "output_drift",
+                    "semantic_loop",
+                    "hallucination",
+                    "goal_drift",
+                    "quality_degradation",
+                    "confusion_pattern",
+                    "output_drift",
                 }:
                     llm_anomalies[dt] = cnt
             if llm_anomalies:
@@ -279,8 +289,11 @@ def validate(
             skipped = report.get("skipped_detectors", {})
             errors = report.get("detector_errors", {})
             llm_types = {
-                "semantic_loop", "hallucination", "goal_drift",
-                "quality_degradation", "confusion_pattern",
+                "semantic_loop",
+                "hallucination",
+                "goal_drift",
+                "quality_degradation",
+                "confusion_pattern",
             }
             if any(t in skipped or t in errors for t in llm_types):
                 click.echo("  Skipped/errored:")
@@ -373,6 +386,7 @@ async def _download_traces_async(
     if datasets_file:
         try:
             from pathlib import Path
+
             lines = Path(datasets_file).read_text().splitlines()
             # Skip empty lines and comments (lines starting with #).
             ids.extend(
@@ -391,7 +405,10 @@ async def _download_traces_async(
         dataset_ids = ordered
 
     summary = await pipeline.run(
-        target_count=target, ingest=ingest, batch_size=batch_size, datasets=dataset_ids,
+        target_count=target,
+        ingest=ingest,
+        batch_size=batch_size,
+        datasets=dataset_ids,
     )
     click.echo("Download complete:")
     click.echo(f"  Datasets attempted: {summary.get('datasets_downloaded', 0)}")
@@ -524,6 +541,7 @@ async def _materialize_async(
     )
 
     click.echo(f"Materialized {fleet_count} fleet rollups, {cohort_count} version cohorts")
+
 
 if __name__ == "__main__":
     cli()

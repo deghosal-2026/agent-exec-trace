@@ -70,7 +70,7 @@ def test_captures_content_flag() -> None:
     # in under a mode that can store content. The default config (TRUNCATED +
     # capture_tool_args=True) returns True.
     assert RedactionConfig().captures_content
-    assert not RedactionConfig(mode=PrivacyMode.METADATA_ONLY, capture_tool_args=True).captures_content
-    assert RedactionConfig(
-        mode=PrivacyMode.TRUNCATED, capture_prompts=True
+    assert not RedactionConfig(
+        mode=PrivacyMode.METADATA_ONLY, capture_tool_args=True
     ).captures_content
+    assert RedactionConfig(mode=PrivacyMode.TRUNCATED, capture_prompts=True).captures_content

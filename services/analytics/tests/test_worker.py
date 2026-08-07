@@ -8,16 +8,17 @@ empty spans, auto-discovery, disabled detectors, metrics snapshots).
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from analytics.metrics import AnalyticsMetrics
-from analytics.models import Anomaly, RunSummary, SpanNode
+from analytics.models import RunSummary, SpanNode
 from analytics.worker import AnalyticsWorker
 
 
-def _make_pool(extra_methods: dict | None = None) -> MagicMock:
+def _make_pool(extra_methods: dict[str, Any] | None = None) -> MagicMock:
     """Build a mock asyncpg pool that supports ``acquire`` async context manager."""
     pool = MagicMock()
     pool.acquire = MagicMock()
@@ -39,9 +40,9 @@ def _make_trace_data(
     agent_name: str = "test-agent",
     run_id: str = "run_1",
     operation: str = "invoke_agent",
-    extra_tags: list[dict] | None = None,
-    extra_spans: list[dict] | None = None,
-) -> dict:
+    extra_tags: list[dict[str, Any]] | None = None,
+    extra_spans: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Build a minimal Jaeger-style trace dict for tests."""
     tags = [
         {"key": "gen_ai.agent.name", "value": agent_name},
@@ -138,6 +139,7 @@ class TestWorkerRunLoop:
 
         async def cancelled_cycle() -> None:
             import asyncio
+
             raise asyncio.CancelledError()
 
         w._process_cycle = cancelled_cycle  # type: ignore[method-assign]
@@ -388,7 +390,12 @@ class TestProcessTracesInRange:
     @pytest.mark.asyncio
     async def test_processes_traces_returns_count(self) -> None:
         w = AnalyticsWorker()
-        w.fetcher.fetch_traces_by_service = AsyncMock(return_value=[_make_trace_data(), _make_trace_data(trace_id="t2", span_id="s2", run_id="run_2")])  # type: ignore[method-assign]
+        w.fetcher.fetch_traces_by_service = AsyncMock(  # type: ignore[method-assign]
+            return_value=[
+                _make_trace_data(),
+                _make_trace_data(trace_id="t2", span_id="s2", run_id="run_2"),
+            ]
+        )
         w.fetcher.fetch_trace_by_id = AsyncMock(return_value=_make_trace_data())  # type: ignore[method-assign]
         pool = _make_pool()
         now = datetime.now(timezone.utc)
@@ -404,7 +411,9 @@ class TestProcessTracesInRange:
     @pytest.mark.asyncio
     async def test_skips_traces_without_trace_id(self) -> None:
         w = AnalyticsWorker()
-        w.fetcher.fetch_traces_by_service = AsyncMock(return_value=[{"spans": []}, _make_trace_data()])  # type: ignore[method-assign]
+        w.fetcher.fetch_traces_by_service = AsyncMock(  # type: ignore[method-assign]
+            return_value=[{"spans": []}, _make_trace_data()]
+        )
         w.fetcher.fetch_trace_by_id = AsyncMock(return_value=_make_trace_data())  # type: ignore[method-assign]
         pool = _make_pool()
         now = datetime.now(timezone.utc)
@@ -434,7 +443,7 @@ class TestRebuildAll:
     async def test_no_stored_traces_returns_zero(self) -> None:
         w = AnalyticsWorker()
         pool = _make_pool()
-        pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(return_value=[])  # type: ignore[method-assign]
+        pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(return_value=[])
         with patch("analytics.worker.get_pool", return_value=pool):
             count = await w.rebuild_all()
             assert count == 0
@@ -443,7 +452,7 @@ class TestRebuildAll:
     async def test_processes_stored_trace_ids(self) -> None:
         w = AnalyticsWorker()
         pool = _make_pool()
-        pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(  # type: ignore[method-assign]
+        pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(
             return_value=[{"trace_id": "t1"}, {"trace_id": "t2"}]
         )
         w.fetcher.fetch_trace_by_id = AsyncMock(return_value=_make_trace_data())  # type: ignore[method-assign]
@@ -460,10 +469,12 @@ class TestRebuildAll:
     async def test_continues_on_individual_failure(self) -> None:
         w = AnalyticsWorker()
         pool = _make_pool()
-        pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(  # type: ignore[method-assign]
+        pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(
             return_value=[{"trace_id": "t1"}, {"trace_id": "t2"}]
         )
-        w.fetcher.fetch_trace_by_id = AsyncMock(side_effect=[RuntimeError("fail"), _make_trace_data()])  # type: ignore[method-assign]
+        w.fetcher.fetch_trace_by_id = AsyncMock(  # type: ignore[method-assign]
+            side_effect=[RuntimeError("fail"), _make_trace_data()]
+        )
         with (
             patch("analytics.worker.get_pool", return_value=pool),
             patch("analytics.worker.persist_run_summary", AsyncMock()),
@@ -478,13 +489,15 @@ class TestRebuildAll:
     async def test_skips_null_trace_ids(self) -> None:
         w = AnalyticsWorker()
         pool = _make_pool()
-        pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(  # type: ignore[method-assign]
+        pool.acquire.return_value.__aenter__.return_value.fetch = AsyncMock(
             return_value=[{"trace_id": None}, {"trace_id": "t2"}]
         )
-        async def fetch_by_id(trace_id: str) -> dict | None:
+
+        async def fetch_by_id(trace_id: str) -> dict[str, Any] | None:
             if trace_id is None or trace_id == "":
                 return None
             return _make_trace_data(trace_id=trace_id)
+
         w.fetcher.fetch_trace_by_id = AsyncMock(side_effect=fetch_by_id)  # type: ignore[method-assign]
         with (
             patch("analytics.worker.get_pool", return_value=pool),
@@ -515,9 +528,9 @@ class TestDetectAndAlert:
     """Tests for _detect_and_alert — anomaly detection and alert dispatch."""
 
     def _summary(self, **kwargs: object) -> RunSummary:
-        defaults: dict = {"run_id": "run_1", "agent_name": "test-agent"}
-        defaults.update(kwargs)  # type: ignore[arg-type]
-        return RunSummary(**defaults)  # type: ignore[arg-type]
+        defaults: dict[str, Any] = {"run_id": "run_1", "agent_name": "test-agent"}
+        defaults.update(kwargs)
+        return RunSummary(**defaults)
 
     @pytest.mark.asyncio
     async def test_detects_and_alerts(self) -> None:
@@ -540,7 +553,9 @@ class TestDetectAndAlert:
         spans: list[SpanNode] = []
         pool = _make_pool()
         with (
-            patch("analytics.worker.persist_anomaly", AsyncMock(side_effect=RuntimeError("db down"))),
+            patch(
+                "analytics.worker.persist_anomaly", AsyncMock(side_effect=RuntimeError("db down"))
+            ),
             patch.object(w.alerter, "send_alert", AsyncMock(return_value=True)),
             patch("analytics.worker.CostSpikeDetector.detect", AsyncMock(return_value=None)),
         ):
@@ -554,7 +569,9 @@ class TestDetectAndAlert:
         pool = _make_pool()
         with (
             patch("analytics.worker.persist_anomaly", AsyncMock()),
-            patch.object(w.alerter, "send_alert", AsyncMock(side_effect=RuntimeError("webhook down"))),
+            patch.object(
+                w.alerter, "send_alert", AsyncMock(side_effect=RuntimeError("webhook down"))
+            ),
             patch("analytics.worker.CostSpikeDetector.detect", AsyncMock(return_value=None)),
         ):
             await w._detect_and_alert(pool, summary, spans)
@@ -598,7 +615,9 @@ class TestDetectAndAlert:
         spans: list[SpanNode] = []
         pool = _make_pool()
         with (
-            patch("analytics.worker.LoopDetector.detect", side_effect=RuntimeError("detector crash")),
+            patch(
+                "analytics.worker.LoopDetector.detect", side_effect=RuntimeError("detector crash")
+            ),
             patch("analytics.worker.persist_anomaly", AsyncMock()),
             patch.object(w.alerter, "send_alert", AsyncMock(return_value=True)),
             patch("analytics.worker.CostSpikeDetector.detect", AsyncMock(return_value=None)),
@@ -608,7 +627,8 @@ class TestDetectAndAlert:
     @pytest.mark.asyncio
     async def test_async_detectors_run_concurrently(self) -> None:
         import asyncio as aio_mod
-        from analytics.detectors.base import BaseDetector as BD
+
+        from analytics.detectors.base import BaseDetector
 
         w = AnalyticsWorker()
 
@@ -616,7 +636,9 @@ class TestDetectAndAlert:
             running = 0
             max_running = 0
 
-            async def detect_async(self, _summary, _spans, pool=None):
+            async def detect_async(
+                self, _summary: RunSummary, _spans: list[SpanNode], pool: Any = None
+            ) -> None:
                 self.running += 1
                 self.max_running = max(self.max_running, self.running)
                 await aio_mod.sleep(0.01)
@@ -625,10 +647,10 @@ class TestDetectAndAlert:
 
         tracker = AsyncTracker()
         for d in w.detectors:
-            if getattr(type(d), "detect_async", None) is not BD.detect_async:
+            if getattr(type(d), "detect_async", None) is not BaseDetector.detect_async:
                 continue
-            d.detect = MagicMock()
-            d.detect_async = tracker.detect_async  # type: ignore[method-assign]
+            d.detect = MagicMock()  # type: ignore[method-assign]
+            d.detect_async = tracker.detect_async  # type: ignore[assignment]
 
         summary = self._summary()
         spans: list[SpanNode] = []
@@ -690,5 +712,3 @@ class TestMetricsHealthSnapshot:
         m.inc_failed(1)
         m.inc_anomaly_detected(anomaly_type="loop")
         m.log_summary()
-
-

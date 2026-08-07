@@ -12,7 +12,6 @@ import tempfile
 from collections.abc import Generator
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -21,15 +20,14 @@ import pytest
 from analytics.detectors.base import BaseDetector
 from analytics.models import Anomaly, RunSummary, SpanNode
 from analytics.trace_pipeline.validator import (
+    DIAGNOSE_FIELDS,
     Validator,
     _build_correlation,
     _dedup_loop_family,
-    _is_output_unavailable_trace,
-    _field_pct,
     _detector_requirements,
-    DIAGNOSE_FIELDS,
+    _field_pct,
+    _is_output_unavailable_trace,
 )
-
 
 # ---- helpers ----
 
@@ -37,7 +35,7 @@ from analytics.trace_pipeline.validator import (
 def _make_root_span(
     trace_id: str = "t1",
     span_id: str = "root",
-    attrs: dict | None = None,
+    attrs: dict[str, object] | None = None,
     children: list[SpanNode] | None = None,
 ) -> SpanNode:
     return SpanNode(
@@ -58,7 +56,7 @@ def _make_tool_span(
     trace_id: str = "t1",
     span_id: str = "s1",
     parent_id: str = "root",
-    attrs: dict | None = None,
+    attrs: dict[str, object] | None = None,
 ) -> SpanNode:
     return SpanNode(
         span_id=span_id,
@@ -73,7 +71,7 @@ def _make_tool_span(
     )
 
 
-def _make_parquet(tmp: str, filename: str, rows: list[dict]) -> Path:
+def _make_parquet(tmp: str, filename: str, rows: list[dict[str, object]]) -> Path:
     path = Path(tmp) / filename
     table = pa.Table.from_pylist(rows)
     pq.write_table(table, str(path))  # type: ignore[no-untyped-call]
@@ -196,9 +194,7 @@ def parquet_multi_trace() -> Generator[str, None, None]:
                         "start_time": "2026-01-01T00:00:00",
                         "end_time": "2026-01-01T00:01:00",
                         "duration_ms": 60000,
-                        "attributes_json": json.dumps(
-                            {"gen_ai.agent.name": "triage"}
-                        ),
+                        "attributes_json": json.dumps({"gen_ai.agent.name": "triage"}),
                         "status": "success",
                         "source_dataset": "test",
                         "source_row_idx": file_idx,
@@ -211,9 +207,7 @@ def parquet_multi_trace() -> Generator[str, None, None]:
                         "start_time": "2026-01-01T00:00:10",
                         "end_time": "2026-01-01T00:00:11",
                         "duration_ms": 1000,
-                        "attributes_json": json.dumps(
-                            {"gen_ai.tool.name": "search"}
-                        ),
+                        "attributes_json": json.dumps({"gen_ai.tool.name": "search"}),
                         "status": "ok",
                         "source_dataset": "test",
                         "source_row_idx": file_idx,
@@ -263,58 +257,58 @@ def parquet_diagnose_data() -> Generator[str, None, None]:
 # ---- _dedup_loop_family ----
 
 
-def test_dedup_loop_family_removes_step_efficiency_when_loop_present():
+def test_dedup_loop_family_removes_step_efficiency_when_loop_present() -> None:
     assert _dedup_loop_family(["loop", "step_efficiency", "tool_error_rate"]) == [
         "loop",
         "tool_error_rate",
     ]
 
 
-def test_dedup_loop_family_removes_step_efficiency_when_pattern_loop_present():
+def test_dedup_loop_family_removes_step_efficiency_when_pattern_loop_present() -> None:
     result = _dedup_loop_family(["pattern_loop", "step_efficiency", "tool_error_rate"])
     assert "step_efficiency" not in result
     assert "pattern_loop" in result
 
 
-def test_dedup_loop_family_removes_step_efficiency_when_argument_loop_present():
+def test_dedup_loop_family_removes_step_efficiency_when_argument_loop_present() -> None:
     result = _dedup_loop_family(["argument_loop", "step_efficiency"])
     assert "step_efficiency" not in result
 
 
-def test_dedup_loop_family_leaves_step_efficiency_alone():
+def test_dedup_loop_family_leaves_step_efficiency_alone() -> None:
     assert _dedup_loop_family(["step_efficiency", "tool_error_rate"]) == [
         "step_efficiency",
         "tool_error_rate",
     ]
 
 
-def test_dedup_loop_family_loop_removes_pattern_loop_too():
+def test_dedup_loop_family_loop_removes_pattern_loop_too() -> None:
     result = _dedup_loop_family(["loop", "pattern_loop", "step_efficiency"])
     assert "step_efficiency" not in result
     assert "pattern_loop" not in result
     assert "loop" in result
 
 
-def test_dedup_loop_family_empty():
+def test_dedup_loop_family_empty() -> None:
     assert _dedup_loop_family([]) == []
 
 
 # ---- _build_correlation ----
 
 
-def test_build_correlation_empty():
+def test_build_correlation_empty() -> None:
     result = _build_correlation({})
     assert result["top_co_fires"] == []
     assert result["type_counts"] == {}
 
 
-def test_build_correlation_single_trace():
+def test_build_correlation_single_trace() -> None:
     result = _build_correlation({"t1": ["loop", "tool_error_rate"]})
     assert len(result["top_co_fires"]) == 2
     assert result["type_counts"] == {"loop": 1, "tool_error_rate": 1}
 
 
-def test_build_correlation_multiple_traces():
+def test_build_correlation_multiple_traces() -> None:
     result = _build_correlation(
         {"t1": ["loop", "cost_spike"], "t2": ["loop", "cost_spike"], "t3": ["loop"]}
     )
@@ -327,7 +321,7 @@ def test_build_correlation_multiple_traces():
 # ---- _is_output_unavailable_trace ----
 
 
-def test_is_output_unavailable_scratchpad_only():
+def test_is_output_unavailable_scratchpad_only() -> None:
     span = SpanNode(
         span_id="s1",
         trace_id="t1",
@@ -338,7 +332,7 @@ def test_is_output_unavailable_scratchpad_only():
     assert _is_output_unavailable_trace([span]) is True
 
 
-def test_is_output_unavailable_scratchpad_with_content():
+def test_is_output_unavailable_scratchpad_with_content() -> None:
     span = SpanNode(
         span_id="s1",
         trace_id="t1",
@@ -349,7 +343,7 @@ def test_is_output_unavailable_scratchpad_with_content():
     assert _is_output_unavailable_trace([span]) is False
 
 
-def test_is_output_unavailable_no_scratchpad():
+def test_is_output_unavailable_no_scratchpad() -> None:
     span = SpanNode(
         span_id="s1",
         trace_id="t1",
@@ -360,7 +354,7 @@ def test_is_output_unavailable_no_scratchpad():
     assert _is_output_unavailable_trace([span]) is False
 
 
-def test_is_output_unavailable_child_span_has_output():
+def test_is_output_unavailable_child_span_has_output() -> None:
     parent = SpanNode(
         span_id="root",
         trace_id="t1",
@@ -380,7 +374,7 @@ def test_is_output_unavailable_child_span_has_output():
     assert _is_output_unavailable_trace([parent]) is False
 
 
-def test_is_output_unavailable_value_non_ai_role_ignored():
+def test_is_output_unavailable_value_non_ai_role_ignored() -> None:
     span = SpanNode(
         span_id="s1",
         trace_id="t1",
@@ -394,7 +388,7 @@ def test_is_output_unavailable_value_non_ai_role_ignored():
 # ---- _field_pct ----
 
 
-def test_field_pct():
+def test_field_pct() -> None:
     from collections import Counter
 
     c = Counter({"has_output": 7})
@@ -402,14 +396,14 @@ def test_field_pct():
     assert result == {"count": 7, "pct": 70.0}
 
 
-def test_field_pct_missing():
+def test_field_pct_missing() -> None:
     from collections import Counter
 
     result = _field_pct(Counter(), "has_output", 10)
     assert result == {"count": 0, "pct": 0.0}
 
 
-def test_field_pct_zero_total():
+def test_field_pct_zero_total() -> None:
     from collections import Counter
 
     result = _field_pct(Counter({"has_output": 5}), "has_output", 0)
@@ -580,9 +574,7 @@ async def test_partial_reports_written_during_batch(
     parquet_single_trace: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     with tempfile.TemporaryDirectory() as out_dir:
-        v = Validator(
-            input_dir=parquet_single_trace, output_dir=out_dir, llm_batch=1
-        )
+        v = Validator(input_dir=parquet_single_trace, output_dir=out_dir, llm_batch=1)
         firing = _fake_firing_detector("loop")
         monkeypatch.setattr(v, "detectors", [firing])
         await v.run()
@@ -617,9 +609,7 @@ async def test_empty_response_tracks_source_file(
 async def test_run_diagnose_produces_compatibility_report(
     parquet_diagnose_data: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    report = Validator(
-        input_dir=parquet_diagnose_data, max_traces=2
-    ).run_diagnose()
+    report = Validator(input_dir=parquet_diagnose_data, max_traces=2).run_diagnose()
     assert "total_traces" in report
     assert report["total_traces"] == 2
     assert "total_datasets" in report
@@ -663,22 +653,22 @@ async def test_llm_detectors_fire_on_anomalous_traces(
     parquet_single_trace: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     class _FakeLLMClient:
-        def stats(self):
+        def stats(self) -> dict[str, object]:
             return {}
 
-        def telemetry_summary(self):
+        def telemetry_summary(self) -> dict[str, object]:
             return {}
 
-        def telemetry(self):
+        def telemetry(self) -> list[dict[str, object]]:
             return []
 
-        def responses(self):
+        def responses(self) -> list[dict[str, object]]:
             return []
 
-        def set_response_log(self, path):
+        def set_response_log(self, path: str) -> None:
             pass
 
-        def set_trace_context(self, tid, dtype):
+        def set_trace_context(self, tid: str, dtype: str) -> None:
             pass
 
     class _LLMDet(BaseDetector):
@@ -695,7 +685,9 @@ async def test_llm_detectors_fire_on_anomalous_traces(
                 explanation="llm hit",
             )
 
-        def detect(self, summary, spans):
+        def detect(
+            self, summary: RunSummary, spans: list[SpanNode]
+        ) -> Anomaly | None:
             return None
 
     with tempfile.TemporaryDirectory() as out_dir:
@@ -720,10 +712,14 @@ async def test_llm_detector_skipped_when_disabled(
     class _LLMDet(BaseDetector):
         anomaly_type = "semantic_loop"
 
-        async def detect_async(self, summary, spans, pool=None):
+        async def detect_async(
+            self, summary: RunSummary, spans: list[SpanNode], pool: object = None
+        ) -> Anomaly | None:
             return Anomaly(
-                agent_name="test", run_id=summary.run_id,
-                anomaly_type="semantic_loop", severity="warning",
+                agent_name="test",
+                run_id=summary.run_id,
+                anomaly_type="semantic_loop",
+                severity="warning",
                 explanation="llm",
             )
 
@@ -751,7 +747,9 @@ async def test_llm_detector_exception_handled(
     class _BrokenLLMDet(BaseDetector):
         anomaly_type = "semantic_loop"
 
-        async def detect_async(self, summary, spans, pool=None):
+        async def detect_async(
+            self, summary: RunSummary, spans: list[SpanNode], pool: object = None
+        ) -> Anomaly | None:
             raise RuntimeError("llm boom")
 
     with tempfile.TemporaryDirectory() as out_dir:
@@ -772,31 +770,35 @@ async def test_llm_response_files_written(
     parquet_single_trace: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     class _FakeClient:
-        def stats(self):
+        def stats(self) -> dict[str, object]:
             return {"calls": 1}
 
-        def telemetry_summary(self):
+        def telemetry_summary(self) -> dict[str, object]:
             return {"avg_latency": 0.5}
 
-        def telemetry(self):
+        def telemetry(self) -> list[dict[str, object]]:
             return [{"latency": 0.5}]
 
-        def responses(self):
+        def responses(self) -> list[dict[str, object]]:
             return []
 
-        def set_response_log(self, path):
+        def set_response_log(self, path: str) -> None:
             pass
 
-        def set_trace_context(self, tid, dtype):
+        def set_trace_context(self, tid: str, dtype: str) -> None:
             pass
 
     class _LLMDet(BaseDetector):
         anomaly_type = "semantic_loop"
 
-        async def detect_async(self, summary, spans, pool=None):
+        async def detect_async(
+            self, summary: RunSummary, spans: list[SpanNode], pool: object = None
+        ) -> Anomaly | None:
             return Anomaly(
-                agent_name="test", run_id=summary.run_id,
-                anomaly_type="semantic_loop", severity="warning",
+                agent_name="test",
+                run_id=summary.run_id,
+                anomaly_type="semantic_loop",
+                severity="warning",
                 explanation="llm",
             )
 
@@ -863,7 +865,7 @@ async def test_report_has_expected_keys(
 # ---- _detector_requirements ----
 
 
-def test_detector_requirements_has_all_35():
+def test_detector_requirements_has_all_35() -> None:
     reqs = _detector_requirements()
     assert isinstance(reqs, dict)
     assert len(reqs) == 35
@@ -872,7 +874,7 @@ def test_detector_requirements_has_all_35():
 # ---- DIAGNOSE_FIELDS ----
 
 
-def test_diagnose_fields_has_expected_count():
+def test_diagnose_fields_has_expected_count() -> None:
     assert len(DIAGNOSE_FIELDS) == 12
 
 
@@ -952,21 +954,23 @@ async def test_count_traces_skips_broken_parquet(tmp_path: Path) -> None:
     broken = tmp_path / "broken.parquet"
     broken.write_text("not a parquet file")
     good = tmp_path / "traces-0001.parquet"
-    table = pa.Table.from_pylist([
-        {
-            "trace_id": "tx",
-            "span_id": "s1",
-            "parent_span_id": None,
-            "operation_name": "invoke_agent",
-            "start_time": "2026-01-01T00:00:00",
-            "end_time": "2026-01-01T00:01:00",
-            "duration_ms": 60000,
-            "attributes_json": "{}",
-            "status": "ok",
-            "source_dataset": "test",
-            "source_row_idx": 1,
-        }
-    ])
+    table = pa.Table.from_pylist(
+        [
+            {
+                "trace_id": "tx",
+                "span_id": "s1",
+                "parent_span_id": None,
+                "operation_name": "invoke_agent",
+                "start_time": "2026-01-01T00:00:00",
+                "end_time": "2026-01-01T00:01:00",
+                "duration_ms": 60000,
+                "attributes_json": "{}",
+                "status": "ok",
+                "source_dataset": "test",
+                "source_row_idx": 1,
+            }
+        ]
+    )
     pq.write_table(table, str(good))  # type: ignore[no-untyped-call]
 
     v = Validator(input_dir=str(tmp_path))

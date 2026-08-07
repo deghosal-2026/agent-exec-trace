@@ -198,8 +198,7 @@ class TransientRetryDetector(BaseDetector):
             return self._build_anomaly(
                 summary,
                 "info",  # Informational severity — retries succeeded.
-                f"Transient retry storm: {retries} retries "
-                f"but {success_rate:.0%} succeeded",
+                f"Transient retry storm: {retries} retries but {success_rate:.0%} succeeded",
                 {
                     "total_retries": retries,
                     "retry_events": len(retry_outcomes),
@@ -295,9 +294,8 @@ class CascadingRetryDetector(BaseDetector):
         """Walk spans, collecting only those related to retries."""
         result: list[SpanNode] = []
         for node in spans:
-            if (
-                node.operation_name.startswith("retry_")
-                or node.attributes.get("gen_ai.retry.count")
+            if node.operation_name.startswith("retry_") or node.attributes.get(
+                "gen_ai.retry.count"
             ):
                 result.append(node)
             result.extend(CascadingRetryDetector._walk_retry_spans(node.child_spans))

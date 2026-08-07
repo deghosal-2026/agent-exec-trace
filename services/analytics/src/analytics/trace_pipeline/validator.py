@@ -158,9 +158,7 @@ class Validator:
             "partial": True,
         }
 
-        (out_dir / "progress-summary.json").write_text(
-            json.dumps(report, indent=2, default=str)
-        )
+        (out_dir / "progress-summary.json").write_text(json.dumps(report, indent=2, default=str))
         (out_dir / "progress-traces.json").write_text(
             json.dumps(anomalies_by_trace, indent=2, default=str)
         )
@@ -188,12 +186,15 @@ class Validator:
             self._llm_attempt_log = attempt_log
 
         if self.diagnose and self.llm_sample:
-            traces: list[tuple[str, RunSummary, list[SpanNode], str]] | None = self._load_traces_fast(self.llm_sample * 10)
-            traces = traces[::10][:self.llm_sample] if len(traces) > self.llm_sample else traces
-            trace_iter = iter(traces)
-            total = len(traces)
+            fast_traces = self._load_traces_fast(self.llm_sample * 10)
+            samples = (
+                fast_traces[::10][: self.llm_sample]
+                if len(fast_traces) > self.llm_sample
+                else fast_traces
+            )
+            trace_iter = iter(samples)
+            total = len(samples)
         else:
-            traces = None
             trace_iter = self._iter_traces(max_traces=self.max_traces)
             total = self._count_traces()
 
@@ -260,19 +261,22 @@ class Validator:
                     detector_errors.setdefault(d_type, "not implemented (needs pool)")
                     skipped[d_type] = skipped.get(d_type, 0) + 1
                 except Exception:
-                    logger.exception(
-                        "Detector %s failed for trace %s", d_type, trace_id
-                    )
+                    logger.exception("Detector %s failed for trace %s", d_type, trace_id)
                     detector_errors.setdefault(d_type, "exception")
 
             llm_limit = self.llm_sample or 0
             if self._llm_detectors and trace_anomalies and self._llm_traces_done < llm_limit:
                 with open(self._llm_candidate_log, "a") as f:
-                    f.write(json.dumps({
-                        "trace_id": trace_id,
-                        "run_id": str(summary.run_id),
-                        "rule_anomalies": list(trace_anomalies),
-                    }) + "\n")
+                    f.write(
+                        json.dumps(
+                            {
+                                "trace_id": trace_id,
+                                "run_id": str(summary.run_id),
+                                "rule_anomalies": list(trace_anomalies),
+                            }
+                        )
+                        + "\n"
+                    )
                 for llm_det in self._llm_detectors:
                     llm_type = llm_det.anomaly_type
                     if llm_type in settings.detector_disabled:
@@ -282,11 +286,16 @@ class Validator:
                         if client is not None and hasattr(client, "set_trace_context"):
                             client.set_trace_context(trace_id, llm_type)
                         with open(self._llm_attempt_log, "a") as f:
-                            f.write(json.dumps({
-                                "trace_id": trace_id,
-                                "run_id": str(summary.run_id),
-                                "detector": llm_type,
-                            }) + "\n")
+                            f.write(
+                                json.dumps(
+                                    {
+                                        "trace_id": trace_id,
+                                        "run_id": str(summary.run_id),
+                                        "detector": llm_type,
+                                    }
+                                )
+                                + "\n"
+                            )
                         raw = await llm_det.detect_async(summary, spans, pool=self.pool)
                         if raw is not None and not _is_awaitable(raw):
                             llm_anomaly: Anomaly = raw
@@ -322,16 +331,24 @@ class Validator:
                 llm_summary = ""
                 if self.llm_sample:
                     llm_found = {
-                        dt: cnt for dt, cnt in anomaly_counter.items()
-                        if dt in ("semantic_loop", "hallucination", "goal_drift",
-                                  "quality_degradation", "confusion_pattern")
+                        dt: cnt
+                        for dt, cnt in anomaly_counter.items()
+                        if dt
+                        in (
+                            "semantic_loop",
+                            "hallucination",
+                            "goal_drift",
+                            "quality_degradation",
+                            "confusion_pattern",
+                        )
                     }
-                    llm_summary = (
-                        f", LLM: {llm_found}" if llm_found else ", LLM: 0"
-                    )
+                    llm_summary = f", LLM: {llm_found}" if llm_found else ", LLM: 0"
                 logger.info(
                     "Processed %d/%d traces, %d anomalies%s",
-                    processed, total, len(anomalies_by_trace), llm_summary,
+                    processed,
+                    total,
+                    len(anomalies_by_trace),
+                    llm_summary,
                 )
                 self._save_progress(
                     completed,
@@ -390,17 +407,11 @@ class Validator:
                     "\n".join(json.dumps(r, default=str) for r in telemetry)
                 )
 
-        (out_dir / "summary.json").write_text(
-            json.dumps(report, indent=2, default=str)
-        )
+        (out_dir / "summary.json").write_text(json.dumps(report, indent=2, default=str))
         (out_dir / "correlation.json").write_text(
-            json.dumps(
-                {"matrix": correlation, "suspicious": suspicious}, indent=2, default=str
-            )
+            json.dumps({"matrix": correlation, "suspicious": suspicious}, indent=2, default=str)
         )
-        (out_dir / "traces.json").write_text(
-            json.dumps(anomalies_by_trace, indent=2, default=str)
-        )
+        (out_dir / "traces.json").write_text(json.dumps(anomalies_by_trace, indent=2, default=str))
         (out_dir / "empty_response_sources.json").write_text(
             json.dumps(
                 {
@@ -456,8 +467,13 @@ class Validator:
         dataset_detector_eligibility: dict[str, Counter[str]] = {}
         incompatibility_reasons: Counter[str] = Counter()
         behavior_ops = {
-            "plan", "think", "execute_tool", "tool",
-            "retrieval", "memory", "invoke_agent",
+            "plan",
+            "think",
+            "execute_tool",
+            "tool",
+            "retrieval",
+            "memory",
+            "invoke_agent",
         }
 
         for _trace_id, summary, spans, source_file in trace_iter:
@@ -559,12 +575,8 @@ class Validator:
 
             duration_ok = summary.duration_ms and summary.duration_ms > 0
             if not duration_ok:
-                min_start = min(
-                    (s.start_time for s in all_spans if s.start_time), default=None
-                )
-                max_end = max(
-                    (s.end_time for s in all_spans if s.end_time), default=None
-                )
+                min_start = min((s.start_time for s in all_spans if s.start_time), default=None)
+                max_end = max((s.end_time for s in all_spans if s.end_time), default=None)
                 if min_start is not None and max_end is not None:
                     duration_ok = True
             if duration_ok:
@@ -602,9 +614,7 @@ class Validator:
             c = dataset_fields.get(ds, Counter())
             per_dataset[ds] = {
                 "total_traces": total,
-                "fields": {
-                    f: _field_pct(c, f, total) for f in DIAGNOSE_FIELDS
-                },
+                "fields": {f: _field_pct(c, f, total) for f in DIAGNOSE_FIELDS},
             }
 
         corpus_totals: dict[str, dict[str, int | float]] = {}
@@ -684,8 +694,7 @@ class Validator:
             "corpus_field_coverage": corpus_totals,
             "per_dataset": per_dataset,
             "detector_requirements": {
-                dt: {"required_fields": req}
-                for dt, req in detector_requirements.items()
+                dt: {"required_fields": req} for dt, req in detector_requirements.items()
             },
             "per_dataset_eligibility": per_dataset_eligibility,
             "per_detector_coverage": per_detector_coverage,
@@ -704,12 +713,15 @@ class Validator:
         )
         logger.info(
             "Diagnostics complete: %d traces, %d datasets, global compatibility score %.1f%%",
-            total_trace_count, len(dataset_trace_counts), global_score,
+            total_trace_count,
+            len(dataset_trace_counts),
+            global_score,
         )
         return report
 
     def _load_traces_fast(
-        self, target: int,
+        self,
+        target: int,
     ) -> list[tuple[str, RunSummary, list[SpanNode], str]]:
         import random
 
@@ -768,16 +780,21 @@ class Validator:
 
         logger.info(
             "Fast-loaded %d traces from %d/%d files",
-            len(traces), len(sampled_files), len(parquet_files),
+            len(traces),
+            len(sampled_files),
+            len(parquet_files),
         )
         return traces
 
     def _load_traces(
-        self, max_traces: int | None = None,
+        self,
+        max_traces: int | None = None,
     ) -> list[tuple[str, RunSummary, list[SpanNode], str]]:
         traces = list(self._iter_traces(max_traces=max_traces))
         logger.info(
-            "Loaded %d traces from %d parquet files", len(traces), len(list(self.input_dir.rglob('*.parquet')))
+            "Loaded %d traces from %d parquet files",
+            len(traces),
+            len(list(self.input_dir.rglob("*.parquet"))),
         )
         return traces
 
@@ -815,7 +832,8 @@ class Validator:
         return parquet_files
 
     def _iter_traces(
-        self, max_traces: int | None = None,
+        self,
+        max_traces: int | None = None,
     ) -> Any:
         parquet_files = self._parquet_files()
         if not parquet_files:
@@ -857,7 +875,9 @@ class Validator:
                 span = SpanNode(
                     span_id=str(row["span_id"]),
                     trace_id=str(row["trace_id"]),
-                    parent_span_id=(str(row["parent_span_id"]) if row.get("parent_span_id") else None),
+                    parent_span_id=(
+                        str(row["parent_span_id"]) if row.get("parent_span_id") else None
+                    ),
                     operation_name=operation_name,
                     start_time=_parse_dt(row.get("start_time")),
                     end_time=_parse_dt(row.get("end_time")),
@@ -903,10 +923,18 @@ def _field_pct(counter: Counter[str], field: str, total: int) -> dict[str, int |
 
 
 DIAGNOSE_FIELDS: list[str] = [
-    "has_output", "has_tool_name", "has_tool_result", "has_tool_args",
-    "has_status", "has_timestamps", "has_parent_child",
-    "has_tokens", "has_cost", "has_operations",
-    "has_run_duration", "has_retry_semantics",
+    "has_output",
+    "has_tool_name",
+    "has_tool_result",
+    "has_tool_args",
+    "has_status",
+    "has_timestamps",
+    "has_parent_child",
+    "has_tokens",
+    "has_cost",
+    "has_operations",
+    "has_run_duration",
+    "has_retry_semantics",
 ]
 
 
@@ -948,6 +976,7 @@ def _detector_requirements() -> dict[str, list[str]]:
         "run_frequency_anomaly": [],
         "first_run_heuristic": [],
     }
+
 
 def _parse_dt(val: Any) -> datetime | None:
     if val is None:

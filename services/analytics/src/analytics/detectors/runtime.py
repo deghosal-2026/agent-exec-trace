@@ -111,9 +111,7 @@ class MaxStepHitDetector(BaseDetector):
 
         if not is_incomplete:
             all_spans = self._walk_spans(spans)
-            plan_span_count = sum(
-                1 for s in all_spans if s.operation_name in ("plan", "think")
-            )
+            plan_span_count = sum(1 for s in all_spans if s.operation_name in ("plan", "think"))
             if plan_span_count > 0 and len(tool_spans) > 50:
                 is_incomplete = True
 
@@ -171,9 +169,11 @@ class InactivityDetector(BaseDetector):
             return None
 
         all_spans.sort(
-            key=lambda s: s.start_time
-            if s.start_time is not None
-            else datetime.min.replace(tzinfo=timezone.utc)
+            key=lambda s: (
+                s.start_time
+                if s.start_time is not None
+                else datetime.min.replace(tzinfo=timezone.utc)
+            )
         )
 
         max_gap_ms = 0

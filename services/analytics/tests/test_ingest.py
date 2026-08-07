@@ -42,8 +42,8 @@ def _make_pool() -> tuple[MagicMock, MagicMock]:
 
 def _make_jaeger_trace(
     trace_id: str = "t1",
-    spans: list[dict] | None = None,
-) -> dict:
+    spans: list[dict[str, object]] | None = None,
+) -> dict[str, object]:
     """Build a minimal Jaeger-format trace dict."""
     return {"traceID": trace_id, "spans": spans or []}
 
@@ -53,13 +53,13 @@ def _make_span_dict(
     trace_id: str = "t1",
     parent_span_id: str | None = None,
     operation_name: str = "invoke_agent",
-    tags: list[dict] | None = None,
-    references: list[dict] | None = None,
+    tags: list[dict[str, str]] | None = None,
+    references: list[dict[str, str]] | None = None,
     start_time: int = 1_000_000_000_000,
     duration: int = 1000,
-) -> dict:
+) -> dict[str, object]:
     """Build a single Jaeger span dict."""
-    d: dict = {
+    d: dict[str, object] = {
         "spanID": span_id,
         "traceID": trace_id,
         "operationName": operation_name,
@@ -150,7 +150,9 @@ class TestTraceFetcher:
         mock_response.json.return_value = {"data": [{"traceID": "abc", "spans": []}]}
         mock_response.raise_for_status = MagicMock()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
             result = await fetcher.fetch_traces_by_service("demo-agent", limit=50)
             assert len(result) == 1
             assert result[0]["traceID"] == "abc"
@@ -162,7 +164,9 @@ class TestTraceFetcher:
         mock_response.json.return_value = {"data": []}
         mock_response.raise_for_status = MagicMock()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
             result = await fetcher.fetch_traces_by_service("unknown", limit=10)
             assert result == []
 
@@ -173,7 +177,9 @@ class TestTraceFetcher:
         mock_response.json.return_value = {}
         mock_response.raise_for_status = MagicMock()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
             result = await fetcher.fetch_traces_by_service("svc")
             assert result == []
 
@@ -185,7 +191,9 @@ class TestTraceFetcher:
         mock_response.status_code = 200
         mock_response.raise_for_status = MagicMock()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
             result = await fetcher.fetch_trace_by_id("t1")
             assert result is not None
             assert result["traceID"] == "t1"
@@ -196,7 +204,9 @@ class TestTraceFetcher:
         mock_response = MagicMock()
         mock_response.status_code = 404
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
             result = await fetcher.fetch_trace_by_id("nonexistent")
             assert result is None
 
@@ -208,7 +218,9 @@ class TestTraceFetcher:
         mock_response.status_code = 200
         mock_response.raise_for_status = MagicMock()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
             result = await fetcher.fetch_trace_by_id("t1")
             assert result is None
 
@@ -219,7 +231,9 @@ class TestTraceFetcher:
         mock_response.json.return_value = {"data": ["svc-a", "svc-b", "jaeger-all-in-one"]}
         mock_response.raise_for_status = MagicMock()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
             result = await fetcher.list_services()
             assert len(result) == 3
             assert "svc-a" in result
@@ -228,7 +242,9 @@ class TestTraceFetcher:
     async def test_list_services_handles_error(self) -> None:
         fetcher = TraceFetcher()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(side_effect=RuntimeError("down"))
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                side_effect=RuntimeError("down")
+            )
             result = await fetcher.list_services()
             assert result == []
 
@@ -239,7 +255,9 @@ class TestTraceFetcher:
         mock_response.json.return_value = {"data": []}
         mock_response.raise_for_status = MagicMock()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
             result = await fetcher.list_services()
             assert result == []
 
@@ -337,7 +355,7 @@ class TestRunSummaryBuilder:
         trace_id: str = "t1",
         span_id: str = "s1",
         children: list[SpanNode] | None = None,
-        extra_attrs: dict | None = None,
+        extra_attrs: dict[str, object] | None = None,
     ) -> list[SpanNode]:
         attrs: dict[str, object] = {
             "gen_ai.agent.name": agent_name,
@@ -422,38 +440,46 @@ class TestRunSummaryBuilder:
         assert result.status == "error"
 
     def test_extracts_version(self) -> None:
-        spans = self._root_spans(extra_attrs={
-            "gen_ai.agent.version": "v2.0",
-            "gen_ai.agent.workload.type": "batch",
-        })
+        spans = self._root_spans(
+            extra_attrs={
+                "gen_ai.agent.version": "v2.0",
+                "gen_ai.agent.workload.type": "batch",
+            }
+        )
         result = RunSummaryBuilder.build_from_span_tree(spans, "t1")
         assert result is not None
         assert result.agent_version == "v2.0"
         assert result.workload_type == "batch"
 
     def test_extracts_cost(self) -> None:
-        spans = self._root_spans(extra_attrs={
-            "gen_ai.agent.run.cost.total": 3.50,
-        })
+        spans = self._root_spans(
+            extra_attrs={
+                "gen_ai.agent.run.cost.total": 3.50,
+            }
+        )
         result = RunSummaryBuilder.build_from_span_tree(spans, "t1")
         assert result is not None
         assert result.estimated_cost == 3.50
 
     def test_extracts_loop_count(self) -> None:
-        spans = self._root_spans(extra_attrs={
-            "gen_ai.agent.loop.count": 7,
-            "gen_ai.agent.loop.detected": "true",
-        })
+        spans = self._root_spans(
+            extra_attrs={
+                "gen_ai.agent.loop.count": 7,
+                "gen_ai.agent.loop.detected": "true",
+            }
+        )
         result = RunSummaryBuilder.build_from_span_tree(spans, "t1")
         assert result is not None
         assert result.loop_count == 7
         assert result.loop_detected is True
 
     def test_extracts_retry_count(self) -> None:
-        spans = self._root_spans(extra_attrs={
-            "gen_ai.agent.retry.count": 3,
-            "gen_ai.agent.intervention.count": 2,
-        })
+        spans = self._root_spans(
+            extra_attrs={
+                "gen_ai.agent.retry.count": 3,
+                "gen_ai.agent.intervention.count": 2,
+            }
+        )
         result = RunSummaryBuilder.build_from_span_tree(spans, "t1")
         assert result is not None
         assert result.total_retries == 3
@@ -483,22 +509,33 @@ class TestRunSummaryBuilder:
     def test_error_status_variants(self) -> None:
         for status_val in ("failed", "timeout", "cancelled", "interrupted", "max_steps_exceeded"):
             child = SpanNode(
-                span_id="c1", trace_id="t1", operation_name="execute_tool",
-                parent_span_id="s1", status=status_val,
+                span_id="c1",
+                trace_id="t1",
+                operation_name="execute_tool",
+                parent_span_id="s1",
+                status=status_val,
             )
             spans = self._root_spans(children=[child])
             result = RunSummaryBuilder.build_from_span_tree(spans, "t1")
             assert result is not None
-            assert result.status == "error", f"status={status_val} → expected error, got {result.status}"
+            assert result.status == "error", (
+                f"status={status_val} → expected error, got {result.status}"
+            )
 
     def test_nested_children_counted(self) -> None:
         deep = SpanNode(
-            span_id="d1", trace_id="t1", operation_name="execute_tool",
-            parent_span_id="c1", attributes={"gen_ai.tool.name": "write"},
+            span_id="d1",
+            trace_id="t1",
+            operation_name="execute_tool",
+            parent_span_id="c1",
+            attributes={"gen_ai.tool.name": "write"},
         )
         mid = SpanNode(
-            span_id="c1", trace_id="t1", operation_name="execute_tool",
-            parent_span_id="s1", attributes={"gen_ai.tool.name": "read"},
+            span_id="c1",
+            trace_id="t1",
+            operation_name="execute_tool",
+            parent_span_id="s1",
+            attributes={"gen_ai.tool.name": "read"},
             child_spans=[deep],
         )
         spans = self._root_spans(children=[mid])
@@ -530,16 +567,26 @@ class TestSpanTreeBuilder:
         assert result[0].child_spans[0].span_id == "c"
 
     def test_orphan_becomes_root(self) -> None:
-        orphan = SpanNode(span_id="o", trace_id="t1", operation_name="orphan", parent_span_id="missing")
+        orphan = SpanNode(
+            span_id="o", trace_id="t1", operation_name="orphan", parent_span_id="missing"
+        )
         result = SpanTreeBuilder.build_tree([orphan])
         assert len(result) == 1
         assert result[0].span_id == "o"
 
     def test_roots_sorted_by_start_time(self) -> None:
-        late = SpanNode(span_id="late", trace_id="t1", operation_name="late",
-                        start_time=datetime(2024, 2, 1, tzinfo=timezone.utc))
-        early = SpanNode(span_id="early", trace_id="t1", operation_name="early",
-                         start_time=datetime(2024, 1, 1, tzinfo=timezone.utc))
+        late = SpanNode(
+            span_id="late",
+            trace_id="t1",
+            operation_name="late",
+            start_time=datetime(2024, 2, 1, tzinfo=timezone.utc),
+        )
+        early = SpanNode(
+            span_id="early",
+            trace_id="t1",
+            operation_name="early",
+            start_time=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        )
         result = SpanTreeBuilder.build_tree([late, early])
         assert result[0].span_id == "early"
         assert result[1].span_id == "late"
@@ -658,28 +705,32 @@ class TestIngestIntegration:
         mock_response.json.return_value = {"data": []}
         mock_response.raise_for_status = MagicMock()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
             traces = await fetcher.fetch_traces_by_service("svc")
             assert traces == []
 
     @pytest.mark.asyncio
     async def test_full_pipeline_parse_and_summarize(self) -> None:
-        raw = _make_jaeger_trace(spans=[
-            _make_span_dict(
-                span_id="root",
-                references=[],
-                tags=[
-                    {"key": "gen_ai.agent.name", "value": "agent"},
-                    {"key": "gen_ai.agent.run.id", "value": "r1"},
-                ],
-            ),
-            _make_span_dict(
-                span_id="tool1",
-                operation_name="execute_tool",
-                parent_span_id="root",
-                tags=[{"key": "gen_ai.tool.name", "value": "search"}],
-            ),
-        ])
+        raw = _make_jaeger_trace(
+            spans=[
+                _make_span_dict(
+                    span_id="root",
+                    references=[],
+                    tags=[
+                        {"key": "gen_ai.agent.name", "value": "agent"},
+                        {"key": "gen_ai.agent.run.id", "value": "r1"},
+                    ],
+                ),
+                _make_span_dict(
+                    span_id="tool1",
+                    operation_name="execute_tool",
+                    parent_span_id="root",
+                    tags=[{"key": "gen_ai.tool.name", "value": "search"}],
+                ),
+            ]
+        )
         root_spans = TraceParser.parse_jaeger_trace(raw)
         assert len(root_spans) == 1
         assert root_spans[0].span_id == "root"
@@ -697,13 +748,18 @@ class TestIngestIntegration:
         assert s1.run_id == s2.run_id
 
     def test_malformed_spans_no_span_id(self) -> None:
-        raw = {"traceID": "t1", "spans": [{"traceID": "t1", "references": [{"spanID": "parent_ref", "refType": "CHILD_OF"}]}]}
+        raw = {
+            "traceID": "t1",
+            "spans": [
+                {"traceID": "t1", "references": [{"spanID": "parent_ref", "refType": "CHILD_OF"}]}
+            ],
+        }
         result = TraceParser.parse_jaeger_trace(raw)
         assert len(result) == 1
         assert result[0].span_id == ""
 
     def test_malformed_spans_no_tags(self) -> None:
-        spans = [_make_span_dict(tags=None)]  # type: ignore[arg-type]
+        spans = [_make_span_dict(tags=None)]
         raw = _make_jaeger_trace(spans=spans)
         result = TraceParser.parse_jaeger_trace(raw)
         assert len(result) == 1

@@ -70,11 +70,9 @@ from opentelemetry.trace import Span, SpanKind
 
 from agent_exec_trace.attrs import (
     GEN_AI_OPERATION_NAME,
-    GEN_AI_TOOL_NAME,
     GEN_AI_TOOL_ARGS,
+    GEN_AI_TOOL_NAME,
     GEN_AI_TOOL_RESULT,
-    GEN_AI_RESPONSE_CONTENT,
-    GEN_AI_AGENT_OUTPUT,
     SPAN_KIND_MEMORY,
     SPAN_KIND_PLAN,
     SPAN_KIND_RETRIEVAL,
@@ -208,7 +206,8 @@ def execute_tool_span(
     Args:
         tool_name: the tool being called (used as the span name).
         attributes: optional extra span attributes.
-        redaction: privacy config used to decide whether/how ``tool_args``/``tool_result`` is stored.
+        redaction: privacy config used to decide whether/how
+            ``tool_args``/``tool_result`` is stored.
         tool_args: raw tool arguments; captured only when redaction allows it.
         tool_result: tool return value; captured only when redaction allows it.
         tracer: optional explicit tracer (tests).
@@ -222,7 +221,9 @@ def execute_tool_span(
 
         redact = RedactionConfig(mode=PrivacyMode.TRUNCATED, capture_tool_args=True)
 
-        with execute_tool_span("search_kb", redaction=redact, tool_args='{"q": "password"}') as span:
+        with execute_tool_span(
+            "search_kb", redaction=redact, tool_args='{"q": "password"}'
+        ) as span:
             result = search("password")
             span.set_attribute(GEN_AI_TOOL_RESULT, str(result))
     """
@@ -376,6 +377,7 @@ def record_event(span: Span, name: str, attributes: dict[str, _Value] | None = N
 # ---------------------------------------------------------------------------
 # Convenience wrappers — auto-derive redaction from default config
 # ---------------------------------------------------------------------------
+
 
 @contextmanager
 def tool_span(

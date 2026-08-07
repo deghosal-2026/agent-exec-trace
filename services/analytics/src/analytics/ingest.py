@@ -334,9 +334,7 @@ class RunSummaryBuilder:
         # Extract agent identity from OTel semantic convention attributes.
         agent_name = str(attrs.get("gen_ai.agent.name", "unknown"))
         agent_version = (
-            str(attrs["gen_ai.agent.version"])
-            if "gen_ai.agent.version" in attrs
-            else None
+            str(attrs["gen_ai.agent.version"]) if "gen_ai.agent.version" in attrs else None
         )
         workload_type = (
             str(attrs["gen_ai.agent.workload.type"])

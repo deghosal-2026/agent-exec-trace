@@ -100,8 +100,7 @@ async def test_validator_normalizes_hf_output_attributes() -> None:
                         "gen_ai.agent.name": "triage",
                         "gen_ai.agent.version": "v1",
                         "assistant_response": (
-                            "This is a non-empty assistant response "
-                            "that should not look empty."
+                            "This is a non-empty assistant response that should not look empty."
                         ),
                     }
                 ),
@@ -197,10 +196,10 @@ async def test_validator_normalizes_from_value_chat_traces() -> None:
 async def test_validator_parses_tool_response_blobs() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tool_blob = (
-            '<tool_response>\n'
+            "<tool_response>\n"
             '{"tool_call_id":"functions.search_files:1","name":"search_files",'
             '"content":{"total_count":0}}\n'
-            '</tool_response>'
+            "</tool_response>"
         )
         rows = [
             {
@@ -233,10 +232,12 @@ async def test_validator_parses_tool_response_blobs() -> None:
                     "start_time": None,
                     "end_time": None,
                     "duration_ms": 100,
-                    "attributes_json": json.dumps({
-                        "from": "tool",
-                        "value": tool_blob.replace("search_files", tname),
-                    }),
+                    "attributes_json": json.dumps(
+                        {
+                            "from": "tool",
+                            "value": tool_blob.replace("search_files", tname),
+                        }
+                    ),
                     "status": "ok",
                     "source_dataset": "test",
                     "source_row_idx": 1,

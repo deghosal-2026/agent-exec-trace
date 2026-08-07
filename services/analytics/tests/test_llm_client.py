@@ -83,9 +83,7 @@ class TestChat:
             assert body["messages"][0]["content"] == "be strict"
             return httpx.Response(
                 200,
-                json={
-                    "choices": [{"message": {"role": "assistant", "content": "x"}}]
-                },
+                json={"choices": [{"message": {"role": "assistant", "content": "x"}}]},
             )
 
         client = _make_client(handler)
@@ -147,9 +145,7 @@ class TestCaching:
             calls["n"] += 1
             return httpx.Response(
                 200,
-                json={
-                    "choices": [{"message": {"role": "assistant", "content": "same"}}]
-                },
+                json={"choices": [{"message": {"role": "assistant", "content": "same"}}]},
             )
 
         client = _make_client(handler)
@@ -167,9 +163,7 @@ class TestCaching:
             calls["n"] += 1
             return httpx.Response(
                 200,
-                json={
-                    "choices": [{"message": {"role": "assistant", "content": "r"}}]
-                },
+                json={"choices": [{"message": {"role": "assistant", "content": "r"}}]},
             )
 
         client = _make_client(handler)
@@ -268,9 +262,7 @@ class TestLatencyTracking:
                 )
             return httpx.Response(
                 200,
-                json={
-                    "choices": [{"message": {"role": "assistant", "content": "ok"}}]
-                },
+                json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]},
             )
 
         client = _make_client(handler)
@@ -292,9 +284,7 @@ class TestModelConfig:
             assert body["model"] == "Custom-7B-4bit"
             return httpx.Response(
                 200,
-                json={
-                    "choices": [{"message": {"role": "assistant", "content": "y"}}]
-                },
+                json={"choices": [{"message": {"role": "assistant", "content": "y"}}]},
             )
 
         client = _make_client(handler, chat_model="Custom-7B-4bit")
@@ -374,7 +364,5 @@ class TestPromptBuilder:
         assert "plan X" in user
 
     def test_calibrate_thresholds(self) -> None:
-        system, user = PromptBuilder.calibrate_thresholds(
-            "LoopDetector", 0.42, 1000, "5"
-        )
+        system, user = PromptBuilder.calibrate_thresholds("LoopDetector", 0.42, 1000, "5")
         assert "42" in user

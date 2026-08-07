@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
 from analytics.models import SpanNode
 from analytics.trace_pipeline.converter import (
@@ -15,10 +16,10 @@ from analytics.trace_pipeline.converter import (
     _sanitize_attrs,
 )
 
-
 # =============================================================================
 # OPERATION_MAP
 # =============================================================================
+
 
 def test_operation_map_has_expected_mappings() -> None:
     assert OPERATION_MAP["tool_call"] == "execute_tool"
@@ -34,6 +35,7 @@ def test_operation_map_has_expected_mappings() -> None:
 # _now_utc
 # =============================================================================
 
+
 def test_now_utc_returns_datetime_with_utc_tz() -> None:
     dt = _now_utc()
     assert isinstance(dt, datetime)
@@ -44,6 +46,7 @@ def test_now_utc_returns_datetime_with_utc_tz() -> None:
 # =============================================================================
 # _parse_timestamp
 # =============================================================================
+
 
 def test_parse_timestamp_returns_none_for_none() -> None:
     assert _parse_timestamp(None) is None
@@ -125,6 +128,7 @@ def test_parse_timestamp_handles_float_seconds() -> None:
 # _infer_operation_name
 # =============================================================================
 
+
 def test_infer_maps_type_key() -> None:
     assert _infer_operation_name({"type": "tool_call"}) == "execute_tool"
 
@@ -188,6 +192,7 @@ def test_infer_key_priority_type_beats_run_type() -> None:
 # _extract_status
 # =============================================================================
 
+
 def test_extract_status_true_is_ok() -> None:
     assert _extract_status({"success": True}) == "ok"
 
@@ -226,6 +231,7 @@ def test_extract_status_priority_status_beats_success() -> None:
 # _sanitize_attrs
 # =============================================================================
 
+
 def test_sanitize_passes_string() -> None:
     assert _sanitize_attrs({"key": "value"}) == {"key": "value"}
 
@@ -263,6 +269,7 @@ def test_sanitize_handles_empty_dict() -> None:
 # =============================================================================
 # TraceConverter — _detect_format
 # =============================================================================
+
 
 def test_detect_format_returns_langchain_for_run_type() -> None:
     c = TraceConverter()
@@ -333,6 +340,7 @@ def test_detect_format_langchain_beats_chat() -> None:
 # =============================================================================
 # TraceConverter — _convert_langchain_trace
 # =============================================================================
+
 
 def test_convert_langchain_basic() -> None:
     c = TraceConverter()
@@ -436,6 +444,7 @@ def test_convert_langchain_extra_metadata() -> None:
 # TraceConverter — _convert_chat_trace
 # =============================================================================
 
+
 def test_convert_chat_with_messages() -> None:
     c = TraceConverter()
     row = {
@@ -498,6 +507,7 @@ def test_convert_chat_with_missing_messages_falls_back() -> None:
 # =============================================================================
 # TraceConverter — _convert_steps_trace
 # =============================================================================
+
 
 def test_convert_steps_basic() -> None:
     c = TraceConverter()
@@ -565,6 +575,7 @@ def test_convert_steps_excess_attributes() -> None:
 # =============================================================================
 # TraceConverter — _convert_structured_trace
 # =============================================================================
+
 
 def test_convert_structured_basic() -> None:
     c = TraceConverter()
@@ -639,7 +650,7 @@ def test_convert_structured_generates_trace_id_when_missing() -> None:
 
 def test_convert_structured_empty_spans_falls_back() -> None:
     c = TraceConverter()
-    row = {"spans": []}
+    row: dict[str, object] = {"spans": []}
     result = c._convert_structured_trace(row)
     assert len(result) >= 1
 
@@ -647,6 +658,7 @@ def test_convert_structured_empty_spans_falls_back() -> None:
 # =============================================================================
 # TraceConverter — _convert_nested_list_trace
 # =============================================================================
+
 
 def test_convert_nested_list_detects_first_list_field() -> None:
     c = TraceConverter()
@@ -671,6 +683,7 @@ def test_convert_nested_list_no_list_field_falls_back() -> None:
 # =============================================================================
 # TraceConverter — _convert_generic_json
 # =============================================================================
+
 
 def test_convert_generic_basic() -> None:
     c = TraceConverter()
@@ -738,6 +751,7 @@ def test_convert_generic_computes_duration() -> None:
 # TraceConverter — convert_batch
 # =============================================================================
 
+
 def test_convert_batch_processes_multiple_rows() -> None:
     c = TraceConverter()
     rows = [
@@ -752,7 +766,7 @@ def test_convert_batch_processes_multiple_rows() -> None:
 
 def test_convert_batch_handles_error_rows_gracefully() -> None:
     c = TraceConverter()
-    rows = [
+    rows: list[Any] = [
         {"steps": [{"type": "tool_call", "name": "search"}]},
         "not-a-dict",  # will fail silently
         {"steps": [{"type": "think", "name": "decide"}]},
@@ -764,6 +778,7 @@ def test_convert_batch_handles_error_rows_gracefully() -> None:
 # =============================================================================
 # TraceConverter — validate_spans
 # =============================================================================
+
 
 def test_validate_spans_valid_tree_returns_empty() -> None:
     c = TraceConverter()
@@ -806,9 +821,11 @@ def test_validate_spans_detects_missing_trace_id() -> None:
 def test_validate_spans_detects_orphan_parent() -> None:
     c = TraceConverter()
     child = SpanNode(
-        span_id="c1", trace_id="t1",
+        span_id="c1",
+        trace_id="t1",
         parent_span_id="nonexistent",
-        operation_name="plan", child_spans=[],
+        operation_name="plan",
+        child_spans=[],
     )
     errors = c.validate_spans([child])
     assert len(errors) > 0
@@ -817,8 +834,9 @@ def test_validate_spans_detects_orphan_parent() -> None:
 def test_validate_spans_detects_cycle() -> None:
     c = TraceConverter()
     s1 = SpanNode(span_id="r1", trace_id="t1", operation_name="root", child_spans=[])
-    s2 = SpanNode(span_id="c1", trace_id="t1", parent_span_id="r1",
-                  operation_name="plan", child_spans=[])
+    s2 = SpanNode(
+        span_id="c1", trace_id="t1", parent_span_id="r1", operation_name="plan", child_spans=[]
+    )
     s3 = SpanNode(span_id="r1", trace_id="t1", operation_name="root", child_spans=[])
     s1.child_spans = [s2]
     s2.child_spans = [s3]
@@ -842,6 +860,7 @@ def test_validate_spans_single_node_is_valid() -> None:
 # =============================================================================
 # TraceConverter — _convert_array_trace
 # =============================================================================
+
 
 def test_convert_array_delegates_to_steps() -> None:
     c = TraceConverter()

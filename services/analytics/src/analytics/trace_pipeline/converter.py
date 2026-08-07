@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
 
@@ -99,7 +100,7 @@ def _parse_timestamp(value: object) -> datetime | None:
     return None
 
 
-def _infer_operation_name(step: dict[str, object]) -> str:
+def _infer_operation_name(step: Mapping[str, object]) -> str:
     """Map source-specific names to OTel operation names."""
     for key in ("type", "run_type", "name", "action", "role", "operation", "kind"):
         val = step.get(key)
@@ -122,7 +123,7 @@ def _infer_operation_name(step: dict[str, object]) -> str:
     return "unknown"
 
 
-def _extract_status(step: dict[str, object]) -> str | None:
+def _extract_status(step: Mapping[str, object]) -> str | None:
     """Extract status from a step dict."""
     for key in ("status", "success", "error", "outcome", "result"):
         val = step.get(key)
@@ -140,7 +141,7 @@ def _extract_status(step: dict[str, object]) -> str | None:
     return None
 
 
-def _sanitize_attrs(attrs: dict[str, object]) -> dict[str, object]:
+def _sanitize_attrs(attrs: Mapping[str, object]) -> dict[str, object]:
     """Convert values to JSON-serializable types for SpanNode attributes."""
     sanitized: dict[str, object] = {}
     for k, v in attrs.items():
@@ -152,6 +153,7 @@ def _sanitize_attrs(attrs: dict[str, object]) -> dict[str, object]:
             sanitized[k] = v.isoformat()
         elif isinstance(v, list | dict):
             import json as _json
+
             try:
                 sanitized[k] = _json.dumps(v, default=str)
             except (TypeError, ValueError):
@@ -172,7 +174,7 @@ class TraceConverter:
     def convert_batch(
         self,
         dataset_id: str,
-        rows: list[dict[str, object]],
+        rows: Sequence[Mapping[str, object]],
     ) -> list[list[SpanNode]]:
         """Convert all rows from a dataset, auto-detecting format.
 
@@ -197,12 +199,14 @@ class TraceConverter:
             except Exception:
                 logger.warning(
                     "Conversion failed for row %d in dataset %s, skipping",
-                    idx, dataset_id, exc_info=True,
+                    idx,
+                    dataset_id,
+                    exc_info=True,
                 )
                 results.append([])
         return results
 
-    def _detect_format(self, rows: list[dict[str, object]]) -> Any:
+    def _detect_format(self, rows: Sequence[Mapping[str, object]]) -> Any:
         """Inspect a sample of rows to determine the best converter."""
         if not rows:
             return self._convert_generic_json
@@ -230,7 +234,7 @@ class TraceConverter:
                     return self._convert_nested_list_trace
         return self._convert_generic_json
 
-    def _convert_langchain_trace(self, row: dict[str, object]) -> list[SpanNode]:
+    def _convert_langchain_trace(self, row: Mapping[str, object]) -> list[SpanNode]:
         """Convert LangChain/LangSmith trace format.
 
         LangChain traces have: id, run_type, inputs, outputs, child_runs,
@@ -238,7 +242,7 @@ class TraceConverter:
         """
         trace_id = str(row.get("trace_id", row.get("id", _generate_id("tr_"))))
 
-        def _convert_run(run: dict[str, object], parent_id: str | None = None) -> SpanNode:
+        def _convert_run(run: Mapping[str, object], parent_id: str | None = None) -> SpanNode:
             span_id = str(run.get("id", _generate_id("sp_")))
             operation = _infer_operation_name(run)
             start_time = _parse_timestamp(run.get("start_time", run.get("start")))
@@ -283,7 +287,7 @@ class TraceConverter:
         root = _convert_run(row, parent_id=None)
         return [root]
 
-    def _convert_chat_trace(self, row: dict[str, object]) -> list[SpanNode]:
+    def _convert_chat_trace(self, row: Mapping[str, object]) -> list[SpanNode]:
         """Convert traces stored as chat message lists.
 
         Creates a root span with child spans for each message turn.
@@ -321,11 +325,13 @@ class TraceConverter:
                     parent_span_id=root_span_id,
                     operation_name=op_name,
                     start_time=ts,
-                    attributes=_sanitize_attrs({
-                        "role": role,
-                        "content": str(content)[:500],
-                        "turn_index": i,
-                    }),
+                    attributes=_sanitize_attrs(
+                        {
+                            "role": role,
+                            "content": str(content)[:500],
+                            "turn_index": i,
+                        }
+                    ),
                 )
             )
 
@@ -341,17 +347,19 @@ class TraceConverter:
             start_time=first_ts or _now_utc(),
             end_time=last_ts,
             duration_ms=duration_ms,
-            attributes=_sanitize_attrs({
-                "message_count": len(children),
-                "source": "chat_conversion",
-            }),
+            attributes=_sanitize_attrs(
+                {
+                    "message_count": len(children),
+                    "source": "chat_conversion",
+                }
+            ),
             status="ok",
             child_spans=children,
         )
 
         return [root]
 
-    def _convert_steps_trace(self, row: dict[str, object]) -> list[SpanNode]:
+    def _convert_steps_trace(self, row: Mapping[str, object]) -> list[SpanNode]:
         """Convert traces stored as an array of execution steps.
 
         Each element in ``steps``/``actions``/``turns`` becomes a child span
@@ -398,8 +406,15 @@ class TraceConverter:
             extra_attrs: dict[str, object] = {}
             for key in step:
                 if key not in (
-                    "type", "name", "action", "role",
-                    "timestamp", "ts", "time", "status", "error",
+                    "type",
+                    "name",
+                    "action",
+                    "role",
+                    "timestamp",
+                    "ts",
+                    "time",
+                    "status",
+                    "error",
                 ):
                     extra_attrs[key] = step[key]
 
@@ -434,7 +449,7 @@ class TraceConverter:
 
         return [root]
 
-    def _convert_structured_trace(self, row: dict[str, object]) -> list[SpanNode]:
+    def _convert_structured_trace(self, row: Mapping[str, object]) -> list[SpanNode]:
         """Convert pre-structured trace data with spans/traces field."""
         spans_data = row.get("spans", row.get("traces", []))
         if isinstance(spans_data, dict):
@@ -467,9 +482,19 @@ class TraceConverter:
             attrs: dict[str, object] = {}
             for key in item:
                 if key not in (
-                    "span_id", "id", "parent_span_id", "parent_id",
-                    "start_time", "start", "end_time", "end",
-                    "type", "name", "status", "error", "operation_name",
+                    "span_id",
+                    "id",
+                    "parent_span_id",
+                    "parent_id",
+                    "start_time",
+                    "start",
+                    "end_time",
+                    "end",
+                    "type",
+                    "name",
+                    "status",
+                    "error",
+                    "operation_name",
                 ):
                     attrs[key] = item[key]
 
@@ -501,7 +526,7 @@ class TraceConverter:
 
         return roots
 
-    def _convert_nested_list_trace(self, row: dict[str, object]) -> list[SpanNode]:
+    def _convert_nested_list_trace(self, row: Mapping[str, object]) -> list[SpanNode]:
         """Convert rows where a value is a list of dicts (array-based trace)."""
         list_field: str = ""
         list_data: list[object] = []
@@ -519,7 +544,7 @@ class TraceConverter:
         del wrapped[list_field]
         return self._convert_steps_trace(wrapped)
 
-    def _convert_generic_json(self, row: dict[str, object]) -> list[SpanNode]:
+    def _convert_generic_json(self, row: Mapping[str, object]) -> list[SpanNode]:
         """Convert arbitrary JSON row with best-effort field detection.
 
         Tries to find timing, status, and descriptive fields to construct
@@ -602,9 +627,7 @@ class TraceConverter:
             if not node.span_id:
                 errors.append(f"Span {span_id}: missing span_id (should not happen)")
             if node.parent_span_id and node.parent_span_id not in all_spans:
-                errors.append(
-                    f"Span {span_id}: parent {node.parent_span_id} not found in tree"
-                )
+                errors.append(f"Span {span_id}: parent {node.parent_span_id} not found in tree")
 
         visited: set[str] = set()
         in_stack: set[str] = set()
@@ -626,7 +649,7 @@ class TraceConverter:
 
         return errors
 
-    def _convert_array_trace(self, row: dict[str, object]) -> list[SpanNode]:
+    def _convert_array_trace(self, row: Mapping[str, object]) -> list[SpanNode]:
         """Convert traces stored as arrays of events/actions.
 
         Each element represents one step: extract action name, timing, result.
