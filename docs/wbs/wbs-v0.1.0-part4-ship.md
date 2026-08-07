@@ -615,12 +615,12 @@ This task maps the implementation back to the PRD promises. The release should n
 
 **Success looks like:** each `v0.1.0` promise can be demonstrated with the local stack using the seeded scenarios and standard views.
 
-- [ ] Confirm one real agent is easier to debug here than with logs alone
-- [ ] Confirm run timeline works end-to-end
-- [ ] Confirm fleet board works end-to-end
-- [ ] Confirm anomaly inbox works end-to-end
-- [ ] Confirm version compare works end-to-end
-- [ ] Confirm the need for a separate field-test plan is documented and tracked as a required follow-on before stronger production confidence claims
+- [x] Confirm one real agent is easier to debug here than with logs alone
+- [x] Confirm run timeline works end-to-end
+- [x] Confirm fleet board works end-to-end
+- [x] Confirm anomaly inbox works end-to-end
+- [x] Confirm version compare works end-to-end
+- [x] Confirm the need for a separate field-test plan is documented and tracked as a required follow-on before stronger production confidence claims
 
 ### 14.2.1 Demo acceptance verification
 
@@ -628,11 +628,11 @@ This task explicitly checks the demo acceptance bar instead of assuming it is im
 
 **Success looks like:** the product can be shown cleanly through the minimum demo scenarios and each standard view contributes something meaningful to that demonstration.
 
-- [ ] Validate one normal run demo
-- [ ] Validate one loop anomaly demo
-- [ ] Validate one cost spike anomaly demo
-- [ ] Validate one fleet grouping demo
-- [ ] Validate one version compare demo
+- [x] Validate one normal run demo
+- [x] Validate one loop anomaly demo
+- [x] Validate one cost spike anomaly demo
+- [x] Validate one fleet grouping demo
+- [x] Validate one version compare demo
 
 ### 14.3 Final packaging
 
@@ -640,10 +640,10 @@ This task makes sure the repo is coherent as a releasable OSS artifact. The main
 
 **Success looks like:** a clean clone of the repo can boot the stack, install the SDK, and follow the docs without hidden tribal knowledge.
 
-- [ ] Confirm compose stack boots cleanly
-- [ ] Confirm SDK package installs locally
-- [ ] Confirm docs match actual commands and paths
-- [ ] Confirm repo structure is reflected in README
+- [x] Confirm compose stack boots cleanly
+- [x] Confirm SDK package installs locally
+- [x] Confirm docs match actual commands and paths
+- [x] Confirm repo structure is reflected in README
 
 ### 14.4 Launch prep
 
@@ -651,9 +651,9 @@ This task prepares the project to be shown and evaluated as a real OSS release. 
 
 **Success looks like:** screenshots or demos exist, near-term roadmap items are visible, and `v0.1.0` limitations are written down instead of hidden.
 
-- [ ] Capture screenshots or demo artifacts
-- [ ] Prepare initial issues for `v0.2.0`
-- [ ] Prepare known limitations doc for `v0.1.0`
+- [x] Capture screenshots or demo artifacts
+- [x] Prepare initial issues for `v0.2.0`
+- [x] Prepare known limitations doc for `v0.1.0`
 
 ### 14.5 Post-release follow-on tracking
 
@@ -661,18 +661,18 @@ This task prevents `v0.1.0` from ending with undocumented next steps. It should 
 
 **Success looks like:** the project has a visible and honest follow-on list covering field testing, additional adapters, richer anomaly work, and deeper interop tasks.
 
-- [ ] Track separate field-test plan as follow-on work
-- [ ] Track PydanticAI adapter as follow-on work
-- [ ] Track memory review and policy overlay as follow-on work
-- [ ] Track `v0.2.0` issue creation as a next step
+- [x] Track separate field-test plan as follow-on work
+- [x] Track PydanticAI adapter as follow-on work
+- [x] Track memory review and policy overlay as follow-on work
+- [x] Track `v0.2.0` issue creation as a next step
 
 **Milestone 14 Quality Gates:**
-- [ ] Code review passed
-- [ ] Comments present on public API and complex logic
-- [ ] Ruff: zero violations (`ruff check .`)
-- [ ] Mypy: strict mode passes with zero errors (`mypy --strict .`)
-- [ ] Tests pass: all unit/integration tests green (`pytest`)
-- [ ] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
+- [x] Code review passed
+- [x] Comments present on public API and complex logic
+- [x] Ruff: zero violations (`ruff check .`)
+- [x] Mypy: strict mode passes with zero errors (`mypy --strict .`)
+- [x] Tests pass: all unit/integration tests green (`pytest`)
+- [x] Coverage > 90%: line coverage at or above 90% (`pytest --cov --cov-report=term`)
 
 ---
 

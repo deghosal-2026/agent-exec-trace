@@ -3,6 +3,21 @@
 Instrumentation SDK for `agent-exec-trace`: OpenTelemetry-style observability for AI
 agent workflows.
 
+## Installation
+
+```bash
+pip install agent-exec-trace
+```
+
+Add optional extras for LangGraph integration or OTLP export:
+
+```bash
+pip install agent-exec-trace[langgraph]   # LangGraph adapter
+pip install agent-exec-trace[otlp]        # OTLP export extras
+```
+
+Published on [PyPI](https://pypi.org/project/agent-exec-trace/).
+
 ## Overview
 
 The SDK turns agent behavior into OpenTelemetry spans and attributes so runs can be

@@ -256,12 +256,12 @@ class TestProcessCycle:
         pool = _make_pool()
         with (
             patch("analytics.worker.get_pool", return_value=pool),
-            patch("analytics.worker.settings", trace_query_services=("*",)),
+            patch("analytics.worker.settings", trace_query_services=("*",), trace_fetch_limit=1000),
             patch.object(w.fleet_materializer, "materialize_fleet_rollups", AsyncMock()),
             patch.object(w.cohort_materializer, "materialize_version_cohorts", AsyncMock()),
         ):
             await w._process_cycle()
-            w.fetcher.fetch_traces_by_service.assert_called_with(service="demo-agent", limit=50)
+            w.fetcher.fetch_traces_by_service.assert_called_with(service="demo-agent", limit=1000)
 
     @pytest.mark.asyncio
     async def test_materializers_called_even_with_no_traces(self) -> None:

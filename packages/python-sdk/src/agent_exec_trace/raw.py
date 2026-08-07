@@ -49,6 +49,7 @@ Usage
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar, cast
@@ -119,10 +120,6 @@ def trace_agent(
         # to introspection tools (mypy, pyright, Sphinx).
         @wraps(fn)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            # A fresh RunContext per call: each invocation is its own run with its
-            # own run id and start timestamp.  The ``RunContext.operation`` default
-            # (``"invoke_agent"``) is the canonical source -- we do not duplicate it
-            # here to avoid maintenance drift.
             ctx = RunContext(
                 agent_name=agent_name,
                 agent_version=agent_version,
@@ -131,13 +128,28 @@ def trace_agent(
                 provider=provider,
             )
             with invoke_agent(ctx):
-                # The original function runs inside the root span context.  Any
-                # nested *_span() helpers called within the function automatically
-                # parent to this root via OTel's implicit context propagation.
                 return fn(*args, **kwargs)
 
-        # ``functools.wraps`` preserves name/docstring/signature; the cast keeps
-        # mypy happy that we are returning the same callable shape we received.
+        @wraps(fn)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            ctx = RunContext(
+                agent_name=agent_name,
+                agent_version=agent_version,
+                workload_type=workload_type,
+                model=model,
+                provider=provider,
+            )
+            with invoke_agent(ctx):
+                return await fn(*args, **kwargs)
+
+        # Preserve the callable's sync/async nature so nested coroutines can
+        # still resolve their OTel parent trace context.  A sync wrapper calling
+        # an ``async fn`` returns the coroutine object *after* the root span
+        # context has closed, so the awaited body would escape to its own root
+        # trace.  An async wrapper awaiting ``fn`` keeps the root span active for
+        # the full coroutine lifetime, so plan_span/tool spans parent correctly.
+        if inspect.iscoroutinefunction(fn):
+            return cast(AgentFn, async_wrapper)
         return cast(AgentFn, wrapper)
 
     return decorator

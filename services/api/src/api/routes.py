@@ -249,7 +249,7 @@ async def get_anomalies_endpoint(
     severity: str | None = Query(None),  # noqa: B008
     anomaly_type: str | None = Query(None),  # noqa: B008
     agent_name: str | None = Query(None),  # noqa: B008
-    limit: int = Query(20, ge=1, le=100),  # noqa: B008
+    limit: int = Query(20, ge=1, le=1000),  # noqa: B008
     offset: int = Query(0, ge=0),  # noqa: B008
     pool: Pool = Depends(_get_pool),  # noqa: B008
 ) -> dict[str, Any]:

@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    name: Python (lint, typecheck, tests)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package:
+          - packages/python-sdk
+          - services/api
+          - services/analytics
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install package (editable)
+        run: pip install -e "${{ matrix.package }}"
+
+      - name: Install dev tools
+        run: pip install ruff mypy pytest pytest-asyncio pytest-cov
+
+      - name: Lint (ruff)
+        run: |
+          cd "${{ matrix.package }}"
+          ruff check src/
+
+      - name: Typecheck (mypy strict)
+        run: |
+          cd "${{ matrix.package }}"
+          mypy --strict .
+
+      - name: Test (pytest)
+        run: |
+          cd "${{ matrix.package }}"
+          pytest --cov --cov-report=term
+
+  web:
+    name: Web (typecheck, build, unit tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm test

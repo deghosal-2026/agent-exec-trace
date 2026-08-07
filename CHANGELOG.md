@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Async `@trace_agent` bug** (`packages/python-sdk/`) — top-level `@trace_agent` on `async def` agents returned the coroutine without awaiting inside the span context, producing duplicate root spans (one parsed as `agent_name='unknown'`) and flat children. Wrapper now infers coroutine functions via `inspect.iscoroutinefunction` and awaits inside the invocation span.
+
+- **Worker trace fetch cap** (`services/analytics/`) — the poll loop fetched at most 50 traces per service per cycle, silently capping high-volume agents. Fetch limit is now configurable via `AnalyticsSettings.trace_fetch_limit` (default 1000).
+
+- **Fleet rollup NULL counts** (`services/api/`) — fleet anomaly counts returned 0 when `workload_type` was NULL by comparing with `=` instead of `IS NOT DISTINCT FROM`.
+
+- **Dashboard/inbox pagination caps** (`services/api/`, `apps/web/`) — raised the anomaly and trace page limits to 1000 to match ingestion volume.
+
+- **OSS tests** (`services/analytics/tests/test_worker.py`) — updated `test_auto_discovery_falls_back_on_failure` to assert the configurable `trace_fetch_limit` instead of the removed hard-coded `50`.
+
 ## [0.1.0] — 2026-08-05
 
 ### Added

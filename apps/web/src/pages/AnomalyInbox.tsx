@@ -70,7 +70,7 @@ export default function AnomalyInboxPage() {
 
   // Fetch anomalies whenever filters change; pass undefined for empty strings
   const { data, loading, error, refetch } = useAsync(
-    () => api.getAnomalies({ severity: severity || undefined, anomaly_type: type || undefined, agent_name: agent || undefined, limit: 50 }),
+    () => api.getAnomalies({ severity: severity || undefined, anomaly_type: type || undefined, agent_name: agent || undefined, limit: 1000 }),
     [severity, type, agent]
   );
 

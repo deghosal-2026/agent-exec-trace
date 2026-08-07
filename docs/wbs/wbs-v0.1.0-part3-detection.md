@@ -682,14 +682,14 @@ context assembly, truncation, or evaluation methodology.
 **Success looks like:** for each LLM detector, the team can explain the main cause of
 non-detection and can separate trace incompatibility from model incapability.
 
-- [ ] Build an LLM validation corpus inventory separate from the full non-LLM corpus
-- [ ] Identify which traces contain the minimum semantic evidence each LLM detector needs: consecutive outputs, grounded tool evidence, plan/execution drift evidence, baseline outputs, contradictory steps, or embedding-eligible text
-- [ ] Measure how often each LLM detector receives insufficient evidence before any model call is made
-- [ ] Measure how often context assembly fails due to truncation, token budget overflow, or missing normalized fields
-- [ ] Measure how often the LLM runtime fails due to timeout, parser failure, malformed response, or unavailable model server
-- [ ] Run detector-by-detector trace audits on non-firing cases and classify root cause: incompatible trace, bad prompt/context, weak model, or true negative
-- [ ] Compare a small benchmark sample across at least two model options or model sizes to determine whether non-firing is model-limited or trace-limited
-- [ ] Document root-cause reason codes for all major LLM failure modes
+- [x] Build an LLM validation corpus inventory separate from the full non-LLM corpus
+- [x] Identify which traces contain the minimum semantic evidence each LLM detector needs: consecutive outputs, grounded tool evidence, plan/execution drift evidence, baseline outputs, contradictory steps, or embedding-eligible text
+- [x] Measure how often each LLM detector receives insufficient evidence before any model call is made
+- [x] Measure how often context assembly fails due to truncation, token budget overflow, or missing normalized fields
+- [x] Measure how often the LLM runtime fails due to timeout, parser failure, malformed response, or unavailable model server
+- [x] Run detector-by-detector trace audits on non-firing cases and classify root cause: incompatible trace, bad prompt/context, weak model, or true negative
+- [x] Compare a small benchmark sample across at least two model options or model sizes to determine whether non-firing is model-limited or trace-limited
+- [x] Document root-cause reason codes for all major LLM failure modes
 
 #### 9.2.2 Define the LLM compatibility contract
 
@@ -701,12 +701,12 @@ detectors that cannot possibly succeed.
 **Success looks like:** each LLM detector has a clear contract describing what trace evidence,
 context size, normalization state, and model/runtime conditions are required for a fair run.
 
-- [ ] Define required evidence per LLM detector
-- [ ] Define minimum normalized fields required to build a trustworthy prompt/context bundle
-- [ ] Define token/context budget requirements per LLM detector
-- [ ] Define incompatibility conditions for missing evidence, oversize context, missing baselines, and ambiguous trace structure
-- [ ] Define what counts as model failure versus trace incompatibility versus detector-clean result
-- [ ] Freeze the documented LLM detector subset and its compatibility rules for metric comparability
+- [x] Define required evidence per LLM detector
+- [x] Define minimum normalized fields required to build a trustworthy prompt/context bundle
+- [x] Define token/context budget requirements per LLM detector
+- [x] Define incompatibility conditions for missing evidence, oversize context, missing baselines, and ambiguous trace structure
+- [x] Define what counts as model failure versus trace incompatibility versus detector-clean result
+- [x] Freeze the documented LLM detector subset and its compatibility rules for metric comparability
 
 #### 9.2.3 Implement LLM trace compatibility improvements
 
@@ -718,13 +718,13 @@ boundary between trustworthy context and weak inference.
 **Success looks like:** LLM detectors receive cleaner, bounded, detector-specific context bundles
 that preserve the evidence needed for semantic reasoning.
 
-- [ ] Reuse the non-LLM normalization improvements needed for LLM prompt construction
-- [ ] Add detector-specific context assemblers so each LLM detector receives only the evidence it needs
-- [ ] Add stable output extraction for consecutive agent outputs, grounded tool evidence, and plan-versus-execution evidence
-- [ ] Add context compaction/truncation strategies that preserve high-value evidence instead of naive text clipping
-- [ ] Add baseline-output selection rules for embedding and quality-comparison detectors
-- [ ] Add explicit compatibility checks before invoking any LLM detector
-- [ ] Add tests covering prompt/context assembly for compatible and incompatible traces
+- [x] Reuse the non-LLM normalization improvements needed for LLM prompt construction
+- [x] Add detector-specific context assemblers so each LLM detector receives only the evidence it needs
+- [x] Add stable output extraction for consecutive agent outputs, grounded tool evidence, and plan-versus-execution evidence
+- [x] Add context compaction/truncation strategies that preserve high-value evidence instead of naive text clipping
+- [x] Add baseline-output selection rules for embedding and quality-comparison detectors
+- [x] Add explicit compatibility checks before invoking any LLM detector
+- [x] Add tests covering prompt/context assembly for compatible and incompatible traces
 
 #### 9.2.4 Implement model and prompt quality improvements
 
@@ -737,12 +737,12 @@ root cause justifies them.
 **Success looks like:** model- or prompt-driven failure modes are addressed with measurable gains
 and without confusing them with trace-shape problems.
 
-- [ ] Benchmark candidate local models against a fixed labeled sample for the LLM detector subset
-- [ ] Compare current model versus stronger or larger alternatives on recall, precision, latency, and context handling
-- [ ] Improve detector prompts where audits show weak grounding, vague instructions, or ambiguous outputs
-- [ ] Improve output parsing and schema validation for LLM responses
-- [ ] Add timeout, retry, and graceful-degradation policies that do not distort compatibility accounting
-- [ ] Add detector-level evaluation fixtures for known semantic positives and negatives
+- [x] Benchmark candidate local models against a fixed labeled sample for the LLM detector subset
+- [x] Compare current model versus stronger or larger alternatives on recall, precision, latency, and context handling
+- [x] Improve detector prompts where audits show weak grounding, vague instructions, or ambiguous outputs
+- [x] Improve output parsing and schema validation for LLM responses
+- [x] Add timeout, retry, and graceful-degradation policies that do not distort compatibility accounting
+- [x] Add detector-level evaluation fixtures for known semantic positives and negatives
 
 #### 9.2.5 Add LLM compatibility-aware reporting
 
@@ -754,13 +754,13 @@ actually runnable, whether the model was invoked, and why a result did or did no
 **Success looks like:** every LLM validation run explains non-results in terms of evidence,
 context, model, and detector outcome rather than collapsing them into silence.
 
-- [ ] Add per-trace LLM compatibility classification to validator output
-- [ ] Add per-detector outcome buckets: compatible+fired, compatible+clean, incompatible+skipped, model/runtime-failed
-- [ ] Add reason-code reporting for missing evidence, truncation, token overflow, model timeout, parse failure, and unavailable baselines
-- [ ] Add per-dataset LLM compatibility summaries
-- [ ] Add a reported top-line `llm_trace_compatibility_score` metric for the documented LLM detector subset
-- [ ] Add side-by-side reporting that separates trace incompatibility from model weakness
-- [ ] Add regression tests for LLM compatibility accounting and reporting outputs
+- [x] Add per-trace LLM compatibility classification to validator output
+- [x] Add per-detector outcome buckets: compatible+fired, compatible+clean, incompatible+skipped, model/runtime-failed
+- [x] Add reason-code reporting for missing evidence, truncation, token overflow, model timeout, parse failure, and unavailable baselines
+- [x] Add per-dataset LLM compatibility summaries
+- [x] Add a reported top-line `llm_trace_compatibility_score` metric for the documented LLM detector subset
+- [x] Add side-by-side reporting that separates trace incompatibility from model weakness
+- [x] Add regression tests for LLM compatibility accounting and reporting outputs
 
 #### 9.2.6 Re-run root-cause-driven LLM validation until the target metric is reached
 
@@ -772,15 +772,15 @@ and re-run. The team should not iterate blindly or switch models without evidenc
 **Success looks like:** each iteration closes a documented root-cause gap, and repeated
 validation converges on the target compatibility score.
 
-- [ ] Run a baseline LLM validation pass with root-cause accounting enabled
-- [ ] Record baseline `llm_trace_compatibility_score` for the frozen LLM detector subset
-- [ ] Record per-dataset and per-detector root-cause breakdowns
-- [ ] Prioritize the highest-volume causes of incompatibility or model failure
-- [ ] Implement one remediation round at a time: trace compatibility, prompt/context, or model/runtime
-- [ ] Re-run validation after each remediation round and compare against the same labeled benchmark sample
-- [ ] Repeat investigate -> implement -> re-validate until `llm_trace_compatibility_score >= 90%`
-- [ ] Document any remaining unsupported trace classes, model limits, or detector blind spots
-- [ ] Publish a final LLM compatibility report with before/after metrics and root-cause conclusions
+- [x] Run a baseline LLM validation pass with root-cause accounting enabled
+- [x] Record baseline `llm_trace_compatibility_score` for the frozen LLM detector subset
+- [x] Record per-dataset and per-detector root-cause breakdowns
+- [x] Prioritize the highest-volume causes of incompatibility or model failure
+- [x] Implement one remediation round at a time: trace compatibility, prompt/context, or model/runtime
+- [x] Re-run validation after each remediation round and compare against the same labeled benchmark sample
+- [x] Repeat investigate -> implement -> re-validate until `llm_trace_compatibility_score >= 90%`
+- [x] Document any remaining unsupported trace classes, model limits, or detector blind spots
+- [x] Publish a final LLM compatibility report with before/after metrics and root-cause conclusions
 
 #### 9.2.7 Exit criteria for LLM improvements
 
@@ -790,12 +790,12 @@ with evidence.
 
 **LLM exit criteria:**
 
-- [ ] `llm_trace_compatibility_score >= 90%` on the documented LLM validation corpus
-- [ ] LLM detector subset documented and frozen for metric comparability
-- [ ] Root-cause reason codes implemented and reported
-- [ ] Reports distinguish incompatible traces, context-construction failures, model/runtime failures, and compatible clean negatives
-- [ ] At least one benchmark comparison confirms whether prior under-coverage was trace-limited, model-limited, or mixed
-- [ ] Remaining unsupported trace classes and model limitations documented as known limitations
+- [x] `llm_trace_compatibility_score >= 90%` on the documented LLM validation corpus
+- [x] LLM detector subset documented and frozen for metric comparability
+- [x] Root-cause reason codes implemented and reported
+- [x] Reports distinguish incompatible traces, context-construction failures, model/runtime failures, and compatible clean negatives
+- [x] At least one benchmark comparison confirms whether prior under-coverage was trace-limited, model-limited, or mixed
+- [x] Remaining unsupported trace classes and model limitations documented as known limitations
 
 **Milestone 9 Quality Gates (9.1 non-LLM):**
 - [x] Code review passed (detector fixes reviewed via multiple validation rounds)

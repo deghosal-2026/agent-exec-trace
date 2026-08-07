@@ -228,10 +228,11 @@ async def get_fleet_rollups(
                 COUNT(*) FILTER (WHERE status = 'success') AS success_count,
                 COUNT(*) FILTER (WHERE status NOT IN ('success')) AS error_count,
                 0 AS loop_count,
-                COALESCE((SELECT COUNT(*) FROM anomalies a WHERE a.run_id IN
-                    (SELECT run_id FROM run_summaries r2 WHERE r2.agent_name = run_summaries.agent_name
-                     AND r2.agent_version = run_summaries.agent_version
-                     AND r2.workload_type = run_summaries.workload_type)), 0) AS anomaly_count,
+COALESCE((SELECT COUNT(*) FROM anomalies a WHERE a.run_id IN
+                (SELECT run_id FROM run_summaries r2 WHERE r2.agent_name = run_summaries.agent_name
+                 AND r2.agent_version = run_summaries.agent_version
+                 AND r2.workload_type IS NOT DISTINCT FROM run_summaries.workload_type
+                )), 0) AS anomaly_count,
                 COALESCE(AVG(duration_ms), 0) AS avg_duration_ms,
                 COALESCE(AVG(estimated_cost), 0) AS avg_cost
             FROM run_summaries{where_clause}

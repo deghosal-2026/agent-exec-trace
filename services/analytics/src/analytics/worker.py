@@ -152,7 +152,9 @@ class AnalyticsWorker:
                 services = ["demo-agent"]
 
         for service in services:
-            traces = await self.fetcher.fetch_traces_by_service(service=service, limit=50)
+            traces = await self.fetcher.fetch_traces_by_service(
+                service=service, limit=settings.trace_fetch_limit
+            )
 
             for trace_data in traces:
                 trace_id = trace_data.get("traceID", "")

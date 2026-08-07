@@ -60,6 +60,7 @@ class Settings(BaseSettings):
 
     # --- Worker ---
     polling_interval_seconds: int = 30
+    trace_fetch_limit: int = 1000
 
     # --- Legacy detector thresholds (kept for backward compat) ---
     # These are referenced by the original LoopDetector, RetryStormDetector,
