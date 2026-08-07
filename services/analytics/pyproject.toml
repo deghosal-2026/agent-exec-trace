@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-exec-trace-analytics"
-version = "0.1.0"
+version = "0.2.0"
 description = "Behavior analytics service for agent-exec-trace - transforms raw traces into operator-ready signals"
 readme = "README.md"
 requires-python = ">=3.10"
