@@ -1,7 +1,9 @@
 <p align="center">
   <img src="https://img.shields.io/badge/agent-exec-trace-0.1.0-orange.svg" alt="version v0.1.0">
+  <a href="https://pypi.org/project/agent-exec-trace/"><img src="https://img.shields.io/pypi/v/agent-exec-trace.svg" alt="PyPI version"></a>
   <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT License">
+  <a href="https://www.bestpractices.dev/projects/13979"><img src="https://www.bestpractices.dev/projects/13979/badge" alt="OpenSSF Best Practices"></a>
   <img src="https://img.shields.io/github/stars/deghosal-2026/agent-exec-trace.svg" alt="GitHub stars">
   <img src="https://img.shields.io/github/forks/deghosal-2026/agent-exec-trace.svg" alt="GitHub forks">
 </p>
