@@ -12,8 +12,12 @@ security updates.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please report it by emailing
-**deghosal@gmail.com**. Do **not** open a public issue.
+If you discover a security vulnerability, please use one of these methods:
+
+- **Preferred:** Submit via [GitHub's private vulnerability reporting](https://github.com/deghosal-2026/agent-exec-trace/security/advisories/new)
+- **Alternative:** Email **deghosal@gmail.com**
+
+Do **not** open a public issue for security vulnerabilities.
 
 You can expect:
 

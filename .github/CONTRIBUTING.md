@@ -41,6 +41,13 @@ Before opening a pull request, ensure:
 - `pytest` is green
 - Test coverage is above 90%
 
+## Testing Policy
+
+New features and major functionality changes must include tests added to the
+automated test suite (`pytest`). Bug fixes should include a regression test
+that reproduces the bug. All tests and coverage checks run automatically
+via GitHub Actions on every push and pull request.
+
 ## Pull Request Process
 
 1. Fork the repository.
