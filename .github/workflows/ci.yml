@@ -3,12 +3,14 @@ name: CI
 on:
   push:
     branches: [main]
-  pull_request:
+  
+pull_request:
 
 jobs:
   python:
     name: Python (lint, typecheck, tests)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         package:
@@ -28,6 +30,10 @@ jobs:
 
       - name: Install dev tools
         run: pip install ruff mypy pytest pytest-asyncio pytest-cov
+
+      - name: Install optional deps for type-checking
+        run: pip install pydantic-ai opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-grpc langchain-core langgraph
+        continue-on-error: true
 
       - name: Lint (ruff)
         run: |
